@@ -17,6 +17,8 @@
                         <a class="nav-link {{ request()->routeIs('encargado.home') ? 'active' : '' }}" href="{{ route('encargado.home') }}">{{ __('Dashboard') }}</a>
                     @elseif(Auth::user() && Auth::user()->hasRole('capturista'))
                         <a class="nav-link {{ request()->routeIs('capturista.home') ? 'active' : '' }}" href="{{ route('capturista.home') }}">{{ __('Dashboard') }}</a>
+                    @elseif(Auth::user() && Auth::user()->hasRole('psicologo'))
+                        <a class="nav-link {{ request()->routeIs('dashboard') ? 'active' : '' }}" href="{{ route('dashboard') }}">{{ __('Mis Pacientes') }}</a>
                     @else
                         <a class="nav-link {{ request()->routeIs('dashboard') ? 'active' : '' }}" href="{{ route('dashboard') }}">{{ __('Dashboard') }}</a>
                     @endif
@@ -30,9 +32,11 @@
                     @endif
                 </li>
                 @endrole
+                @if(!Auth::user() || !Auth::user()->hasRole('psicologo'))
                 <li class="nav-item">
                     <a class="nav-link {{ request()->routeIs('beneficiarios.create') ? 'active' : '' }}" href="{{ route('beneficiarios.create') }}">{{ __('Captura') }}</a>
                 </li>
+                @endif
                 @role('admin|encargado')
                 <li class="nav-item">
                     <a class="nav-link {{ request()->routeIs('domicilios.*') ? 'active' : '' }}" href="{{ route('domicilios.index') }}">{{ __('Domicilios') }}</a>
