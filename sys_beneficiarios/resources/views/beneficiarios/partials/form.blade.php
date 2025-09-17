@@ -65,31 +65,8 @@
         <input name="telefono" value="{{ old('telefono', $b->telefono ?? '') }}" class="form-control @error('telefono') is-invalid @enderror" required>
         @error('telefono')<div class="invalid-feedback">{{ $message }}</div>@enderror
     </div>
-    <div class="col-md-3">
-        <label class="form-label">Municipio</label>
-        <select name="municipio_id" class="form-select @error('municipio_id') is-invalid @enderror" required>
-            <option value="">—</option>
-            @foreach($municipios as $id=>$nombre)
-                <option value="{{ $id }}" @selected(old('municipio_id', $b->municipio_id ?? '')==$id)>{{ $nombre }}</option>
-            @endforeach
-        </select>
-        @error('municipio_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
-    </div>
-    <div class="col-md-3">
-        <label class="form-label">Seccional</label>
-        <input name="seccional" value="{{ old('seccional', $b->seccional ?? '') }}" class="form-control @error('seccional') is-invalid @enderror" required>
-        @error('seccional')<div class="invalid-feedback">{{ $message }}</div>@enderror
-    </div>
-    <div class="col-md-3">
-        <label class="form-label">Distrito local</label>
-        <input name="distrito_local" value="{{ old('distrito_local', $b->distrito_local ?? '') }}" class="form-control @error('distrito_local') is-invalid @enderror" required>
-        @error('distrito_local')<div class="invalid-feedback">{{ $message }}</div>@enderror
-    </div>
-    <div class="col-md-3">
-        <label class="form-label">Distrito federal</label>
-        <input name="distrito_federal" value="{{ old('distrito_federal', $b->distrito_federal ?? '') }}" class="form-control @error('distrito_federal') is-invalid @enderror" required>
-        @error('distrito_federal')<div class="invalid-feedback">{{ $message }}</div>@enderror
-    </div>
+    
+    
     
 </div>
 
@@ -116,11 +93,7 @@
         <input name="domicilio[colonia]" value="{{ old('domicilio.colonia', $domicilio->colonia ?? '') }}" class="form-control @error('domicilio.colonia') is-invalid @enderror">
         @error('domicilio.colonia')<div class="invalid-feedback">{{ $message }}</div>@enderror
     </div>
-    <div class="col-md-4">
-        <label class="form-label">Municipio (texto)</label>
-        <input name="domicilio[municipio]" value="{{ old('domicilio.municipio', $domicilio->municipio ?? '') }}" class="form-control @error('domicilio.municipio') is-invalid @enderror">
-        @error('domicilio.municipio')<div class="invalid-feedback">{{ $message }}</div>@enderror
-    </div>
+    
     <div class="col-md-2">
         <label class="form-label">CP</label>
         <input name="domicilio[codigo_postal]" value="{{ old('domicilio.codigo_postal', $domicilio->codigo_postal ?? '') }}" class="form-control @error('domicilio.codigo_postal') is-invalid @enderror">
@@ -128,8 +101,54 @@
     </div>
     <div class="col-md-3">
         <label class="form-label">Seccional</label>
-        <input name="domicilio[seccional]" value="{{ old('domicilio.seccional', $domicilio->seccional ?? '') }}" class="form-control @error('domicilio.seccional') is-invalid @enderror">
+        <input id="dom-seccional" name="domicilio[seccional]" value="{{ old('domicilio.seccional', $domicilio->seccional ?? '') }}" class="form-control @error('domicilio.seccional') is-invalid @enderror">
         @error('domicilio.seccional')<div class="invalid-feedback">{{ $message }}</div>@enderror
     </div>
+    <div class="col-md-3">
+        <label class="form-label">Municipio</label>
+        <select id="dom-municipio-id" name="domicilio[municipio_id]" class="form-select @error('domicilio.municipio_id') is-invalid @enderror">
+            <option value="">—</option>
+            @foreach($municipios as $id=>$nombre)
+                <option value="{{ $id }}" @selected(old('domicilio.municipio_id', $domicilio->municipio_id ?? ($b->municipio_id ?? ''))==$id)>{{ $nombre }}</option>
+            @endforeach
+        </select>
+        @error('domicilio.municipio_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
+    </div>
+    
 </div>
 
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const secc = document.getElementById('dom-seccional');
+  // Campos de distritos ahora se calculan en backend; no hay inputs visibles
+  const munSel = document.getElementById('dom-municipio-id');
+  if (!secc) return;
+
+  const applyData = (data) => {
+    if (!data) return;
+    if (munSel && data.municipio_id) munSel.value = String(data.municipio_id);
+  };
+  const clearData = () => applyData({ municipio_id: '' });
+
+  let timer = null;
+  const debounced = (fn, wait=400) => (...args) => { clearTimeout(timer); timer = setTimeout(() => fn(...args), wait); };
+
+  const fetchDistritos = async (val) => {
+    const query = (val || '').trim();
+    if (!query) { clearData(); return; }
+    try {
+      const res = await fetch(`/api/secciones/${encodeURIComponent(query)}`, { headers: { 'Accept': 'application/json' } });
+      if (!res.ok) { clearData(); return; }
+      const data = await res.json();
+      applyData(data);
+    } catch (_) { clearData(); }
+  };
+
+  const debouncedFetch = debounced(fetchDistritos, 400);
+  secc.addEventListener('input', (e) => debouncedFetch(e.target.value));
+  secc.addEventListener('change', (e) => fetchDistritos(e.target.value));
+  secc.addEventListener('blur', (e) => fetchDistritos(e.target.value));
+});
+</script>
+@endpush

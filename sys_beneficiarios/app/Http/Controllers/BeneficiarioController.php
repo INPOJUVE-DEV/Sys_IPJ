@@ -11,6 +11,7 @@ use App\Http\Requests\UpdateBeneficiarioRequest;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use App\Models\Seccion;
 
 class BeneficiarioController extends Controller
 {
@@ -68,6 +69,19 @@ class BeneficiarioController extends Controller
         $data = $request->validated();
 
         $beneficiario = new Beneficiario($data);
+        // Calcular distritos y municipio desde seccional capturado en domicilio
+        $dom = $request->input('domicilio', []);
+        if ($dom) {
+            $beneficiario->seccional = $dom['seccional'] ?? $beneficiario->seccional;
+            $comp = $this->computeFromSeccional($dom['seccional'] ?? null);
+            if ($comp) {
+                $beneficiario->distrito_local = $comp['distrito_local'];
+                $beneficiario->distrito_federal = $comp['distrito_federal'];
+                $beneficiario->municipio_id = $dom['municipio_id'] ?? $comp['municipio_id'];
+            } elseif (isset($dom['municipio_id'])) {
+                $beneficiario->municipio_id = $dom['municipio_id'];
+            }
+        }
         $beneficiario->id = (string) Str::uuid();
         $beneficiario->created_by = Auth::user()->uuid;
         $beneficiario->save();
@@ -90,6 +104,19 @@ class BeneficiarioController extends Controller
         $this->authorize('update', $beneficiario);
         $data = $request->validated();
         $beneficiario->fill($data);
+        // Calcular distritos/municipio desde seccional del domicilio
+        $dom = $request->input('domicilio', []);
+        if ($dom) {
+            $beneficiario->seccional = $dom['seccional'] ?? $beneficiario->seccional;
+            $comp = $this->computeFromSeccional($dom['seccional'] ?? null);
+            if ($comp) {
+                $beneficiario->distrito_local = $comp['distrito_local'];
+                $beneficiario->distrito_federal = $comp['distrito_federal'];
+                $beneficiario->municipio_id = $dom['municipio_id'] ?? $comp['municipio_id'];
+            } elseif (isset($dom['municipio_id'])) {
+                $beneficiario->municipio_id = $dom['municipio_id'];
+            }
+        }
         $beneficiario->save();
 
         $this->saveDomicilio($request, $beneficiario);
@@ -110,14 +137,24 @@ class BeneficiarioController extends Controller
         if (!$dom) {
             return;
         }
+        // Completar valores de domicilio desde seccional
+        $comp = $this->computeFromSeccional($dom['seccional'] ?? null);
+        if ($comp) {
+            $dom['distrito_local'] = $dom['distrito_local'] ?? $comp['distrito_local'];
+            $dom['distrito_federal'] = $dom['distrito_federal'] ?? $comp['distrito_federal'];
+            $dom['municipio_id'] = $dom['municipio_id'] ?? $comp['municipio_id'];
+        }
+
         $payload = array_filter([
             'calle' => $dom['calle'] ?? null,
             'numero_ext' => $dom['numero_ext'] ?? null,
             'numero_int' => $dom['numero_int'] ?? null,
             'colonia' => $dom['colonia'] ?? null,
-            'municipio' => $dom['municipio'] ?? null,
+            'municipio_id' => $dom['municipio_id'] ?? null,
             'codigo_postal' => $dom['codigo_postal'] ?? null,
             'seccional' => $dom['seccional'] ?? null,
+            'distrito_local' => $dom['distrito_local'] ?? null,
+            'distrito_federal' => $dom['distrito_federal'] ?? null,
         ], fn ($v) => !is_null($v));
 
         if (empty($payload)) {
@@ -128,5 +165,23 @@ class BeneficiarioController extends Controller
         $domicilio->fill($payload);
         $domicilio->beneficiario_id = $beneficiario->id;
         $domicilio->save();
+    }
+
+    private function computeFromSeccional(?string $raw): ?array
+    {
+        $raw = trim((string)($raw ?? ''));
+        if ($raw === '') return null;
+        $candidates = array_unique([
+            $raw,
+            ltrim($raw, '0'),
+            str_pad(ltrim($raw, '0'), 4, '0', STR_PAD_LEFT),
+        ]);
+        $sec = Seccion::whereIn('seccional', $candidates)->first();
+        if (!$sec) return null;
+        return [
+            'municipio_id' => $sec->municipio_id,
+            'distrito_local' => $sec->distrito_local,
+            'distrito_federal' => $sec->distrito_federal,
+        ];
     }
 }

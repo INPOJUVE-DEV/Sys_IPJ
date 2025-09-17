@@ -21,9 +21,11 @@ class Domicilio extends Model
         'numero_ext',
         'numero_int',
         'colonia',
-        'municipio',
+        'municipio_id',
         'codigo_postal',
         'seccional',
+        'distrito_local',
+        'distrito_federal',
     ];
 
     protected static $logName = 'domicilios';

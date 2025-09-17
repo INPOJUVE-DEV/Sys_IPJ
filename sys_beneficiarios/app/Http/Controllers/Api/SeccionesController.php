@@ -9,7 +9,13 @@ class SeccionesController extends Controller
 {
     public function show(string $seccional)
     {
-        $seccion = Seccion::where('seccional', $seccional)->first();
+        $raw = trim($seccional);
+        $candidates = array_unique([
+            $raw,
+            ltrim($raw, '0'),
+            str_pad(ltrim($raw, '0'), 4, '0', STR_PAD_LEFT),
+        ]);
+        $seccion = Seccion::whereIn('seccional', $candidates)->first();
         if (! $seccion) {
             abort(404);
         }
@@ -21,4 +27,3 @@ class SeccionesController extends Controller
         ];
     }
 }
-

@@ -9,6 +9,8 @@ class Seccion extends Model
 {
     use HasFactory;
 
+    protected $table = 'secciones';
+
     protected $fillable = [
         'seccional', 'municipio_id', 'distrito_local', 'distrito_federal'
     ];
@@ -18,4 +20,3 @@ class Seccion extends Model
         return $this->belongsTo(Municipio::class);
     }
 }
-

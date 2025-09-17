@@ -48,16 +48,28 @@ class CatalogosSeeder extends Seeder
         if (file_exists($secPath)) {
             $rows = $this->readCsv($secPath);
             foreach ($rows as $row) {
-                $seccional = trim((string)($row['seccional'] ?? ''));
-                $dl = trim((string)($row['distrito_local'] ?? ''));
-                $df = trim((string)($row['distrito_federal'] ?? ''));
+                // Normalizar claves a minúsculas para tolerar encabezados variados
+                $row = array_change_key_case($row, CASE_LOWER);
+                $rawSecc = trim((string)($row['seccional'] ?? ''));
+                // Normalizar seccional a 4 dígitos (preserva ceros a la izquierda)
+                $digits = preg_replace('/\D/', '', $rawSecc);
+                $seccional = $digits !== '' ? str_pad($digits, 4, '0', STR_PAD_LEFT) : $rawSecc;
+                // Aceptar alias: D_Local, d_local, dlocal, etc.
+                $dl = $this->val($row, ['distrito_local','d_local','dlocal','d local']);
+                $df = $this->val($row, ['distrito_federal','d_fed','df','dfederal','d federal']);
 
                 $munId = null;
                 if (isset($row['municipio_id']) && $row['municipio_id'] !== '') {
-                    $munId = (int)$row['municipio_id'];
+                    $candidate = (int)$row['municipio_id'];
+                    // Si existe como ID directo, úsalo; si no, intenta tratarlo como clave oficial
+                    $exists = Municipio::where('id', $candidate)->exists();
+                    $munId = $exists ? $candidate : Municipio::where('clave', $candidate)->value('id');
                 } elseif (isset($row['municipio_clave']) && $row['municipio_clave'] !== '') {
                     $clave = (int)$row['municipio_clave'];
                     $munId = Municipio::where('clave', $clave)->value('id');
+                } elseif (isset($row['municipio']) && $row['municipio'] !== '') {
+                    // También aceptar nombre exacto del municipio
+                    $munId = Municipio::where('nombre', trim((string)$row['municipio']))->value('id');
                 }
 
                 if ($seccional === '' || empty($munId)) {
@@ -93,7 +105,13 @@ class CatalogosSeeder extends Seeder
         }
         $headerLine = array_shift($contents);
         $delimiter = $this->detectDelimiter($headerLine);
-        $headers = str_getcsv($headerLine, $delimiter);
+        $rawHeaders = str_getcsv($headerLine, $delimiter);
+        // Normalizar encabezados: minúsculas y guiones/espacios -> guion bajo
+        $headers = array_map(function ($h) {
+            $h = strtolower(trim((string)$h));
+            $h = preg_replace('/[^a-z0-9]+/','_', $h ?? '');
+            return $h;
+        }, $rawHeaders);
         $rows = [];
         foreach ($contents as $line) {
             $cols = str_getcsv($line, $delimiter);
@@ -124,5 +142,16 @@ class CatalogosSeeder extends Seeder
         }
         Log::{$level}('[CatalogosSeeder] '.$message);
     }
-}
 
+    private function val(array $row, array $keys): string
+    {
+        foreach ($keys as $k) {
+            $k = strtolower($k);
+            if (array_key_exists($k, $row)) {
+                $v = trim((string)$row[$k]);
+                if ($v !== '') return $v;
+            }
+        }
+        return '';
+    }
+}
