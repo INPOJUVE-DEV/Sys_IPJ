@@ -25,11 +25,12 @@ class UserController extends Controller
 
     public function store(Request $request)
     {
+        $allRoles = Role::pluck('name')->toArray();
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
             'password' => ['required', 'string', PasswordRule::min(8)->mixedCase()->numbers()],
-            'role' => ['required', Rule::in(['admin','encargado','capturista'])],
+            'role' => ['required', Rule::in($allRoles)],
         ]);
 
         $user = new User();
@@ -57,11 +58,12 @@ class UserController extends Controller
 
     public function update(Request $request, User $usuario)
     {
+        $allRoles = Role::pluck('name')->toArray();
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users','email')->ignore($usuario->id)],
             'password' => ['nullable', 'string', PasswordRule::min(8)->mixedCase()->numbers()],
-            'role' => ['required', Rule::in(['admin','encargado','capturista'])],
+            'role' => ['required', Rule::in($allRoles)],
         ]);
 
         $usuario->name = $data['name'];
@@ -82,4 +84,3 @@ class UserController extends Controller
         return redirect()->route('admin.usuarios.index')->with('status', 'Usuario eliminado correctamente');
     }
 }
-
