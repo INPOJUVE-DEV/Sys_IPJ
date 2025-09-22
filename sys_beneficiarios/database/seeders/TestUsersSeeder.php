@@ -16,7 +16,7 @@ class TestUsersSeeder extends Seeder
 
         $users = [
             ['email' => 'admin2@example.com', 'name' => 'Admin Prueba', 'role' => 'admin'],
-            ['email' => 'encargado2@example.com', 'name' => 'Encargado Prueba', 'role' => 'encargado'],
+            ['email' => 'encargado2@example.com', 'name' => 'Encargado Prueba', 'role' => 'encargado_360'],
             ['email' => 'capturista2@example.com', 'name' => 'Capturista Prueba', 'role' => 'capturista'],
         ];
 
@@ -35,4 +35,3 @@ class TestUsersSeeder extends Seeder
         }
     }
 }
-

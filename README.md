@@ -48,7 +48,7 @@ docker compose exec node npm run build
 
 Credenciales iniciales (por seeders):
 - Admin: `admin@example.com` / `Password123`
-- Roles disponibles: `admin`, `encargado`, `capturista`
+- Roles disponibles: `admin`, `capturista`, `encargado_360`, `encargado_bienestar`, `psicologo`
 
 ## Catálogos (Municipios y Secciones)
 
@@ -84,15 +84,14 @@ Opciones:
   - Usuarios: `/admin/usuarios`
   - Beneficiarios: `/admin/beneficiarios` (+ export)
   - Catálogos: `/admin/catalogos`
-- Encargado:
-  - Panel: `/encargado`
-  - KPIs: `/encargado/kpis`
-  - Beneficiarios (listado/detalle/export): `/encargado/beneficiarios`
+- Encargado 360 (Salud360):
+  - Panel: `/s360/enc360` y `dash`
+  - Asignaciones: `/s360/enc360/asignaciones`, `/s360/enc360/assign*`
 - Capturista:
   - Panel: `/capturista`
   - KPIs personales: `/capturista/kpis` (alias de compatibilidad: `/mi-progreso/kpis`)
   - Mis registros: `/mis-registros`
-- Recursos comunes (autenticado con rol): `beneficiarios` y `domicilios`
+- Recursos comunes (autenticado con rol): `beneficiarios` y `domicilios` (roles: `admin|capturista`)
 - API pública (rate limit): `GET /api/secciones/{seccional}`
 
 Más detalle en `docs/rutas.md` y `docs/api.md`.
@@ -143,4 +142,3 @@ Guía extendida en `docs/despliegue.md`.
 ## Licencia
 
 Proyecto interno. Ver políticas de uso del equipo.
-

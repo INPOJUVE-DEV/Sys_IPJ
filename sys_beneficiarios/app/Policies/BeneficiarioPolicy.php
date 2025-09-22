@@ -9,15 +9,15 @@ class BeneficiarioPolicy
 {
     public function viewAny(User $user): bool
     {
-        return $user->hasAnyRole(['admin','encargado','capturista']);
+        return $user->hasAnyRole(['admin','capturista','encargado_360']);
     }
 
     public function view(User $user, Beneficiario $beneficiario): bool
     {
-        if ($user->hasRole('admin') || $user->hasRole('encargado')) {
+        if ($user->hasRole('admin')) {
             return true;
         }
-        if ($user->hasRole('capturista')) {
+        if ($user->hasRole('capturista') || $user->hasRole('encargado_360')) {
             return $beneficiario->created_by === $user->uuid;
         }
         return false;
@@ -25,15 +25,15 @@ class BeneficiarioPolicy
 
     public function create(User $user): bool
     {
-        return $user->hasAnyRole(['admin','encargado','capturista']);
+        return $user->hasAnyRole(['admin','capturista','encargado_360']);
     }
 
     public function update(User $user, Beneficiario $beneficiario): bool
     {
-        if ($user->hasRole('admin') || $user->hasRole('encargado')) {
+        if ($user->hasRole('admin')) {
             return true;
         }
-        if ($user->hasRole('capturista')) {
+        if ($user->hasRole('capturista') || $user->hasRole('encargado_360')) {
             return $beneficiario->created_by === $user->uuid;
         }
         return false;
@@ -41,8 +41,8 @@ class BeneficiarioPolicy
 
     public function delete(User $user, Beneficiario $beneficiario): bool
     {
-        // Soft delete permitido a admin y encargado
-        return $user->hasAnyRole(['admin','encargado']);
+        // Soft delete permitido solo a admin
+        return $user->hasAnyRole(['admin']);
     }
 
     public function restore(User $user, Beneficiario $beneficiario): bool
@@ -56,4 +56,3 @@ class BeneficiarioPolicy
         return $user->hasRole('admin');
     }
 }
-

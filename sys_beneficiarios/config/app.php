@@ -123,4 +123,10 @@ return [
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
     ],
 
+    'rate_limits' => [
+        'public' => env('RATE_LIMIT_PUBLIC', 60),
+    ],
+
 ];
+
+

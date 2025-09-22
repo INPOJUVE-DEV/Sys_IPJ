@@ -19,13 +19,16 @@ class UserController extends Controller
 
     public function create()
     {
-        $roles = Role::pluck('name', 'name');
+        $allowed = ['admin','capturista','encargado_360','encargado_bienestar','psicologo'];
+        $roles = Role::whereIn('name', $allowed)
+            ->orderByRaw("FIELD(name,'admin','capturista','encargado_360','encargado_bienestar','psicologo')")
+            ->pluck('name', 'name');
         return view('admin.users.create', compact('roles'));
     }
 
     public function store(Request $request)
     {
-        $allRoles = Role::pluck('name')->toArray();
+        $allRoles = Role::whereIn('name', ['admin','capturista','encargado_360','encargado_bienestar','psicologo'])->pluck('name')->toArray();
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
@@ -47,7 +50,9 @@ class UserController extends Controller
 
     public function edit(User $usuario)
     {
-        $roles = Role::pluck('name', 'name');
+        $roles = Role::whereIn('name', ['admin','capturista','encargado_360','encargado_bienestar','psicologo'])
+            ->orderByRaw("FIELD(name,'admin','capturista','encargado_360','encargado_bienestar','psicologo')")
+            ->pluck('name', 'name');
         $currentRole = $usuario->getRoleNames()->first();
         return view('admin.users.edit', [
             'user' => $usuario,
@@ -58,7 +63,7 @@ class UserController extends Controller
 
     public function update(Request $request, User $usuario)
     {
-        $allRoles = Role::pluck('name')->toArray();
+        $allRoles = Role::whereIn('name', ['admin','capturista','encargado_360','encargado_bienestar','psicologo'])->pluck('name')->toArray();
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users','email')->ignore($usuario->id)],

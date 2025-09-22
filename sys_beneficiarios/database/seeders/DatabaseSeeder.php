@@ -17,6 +17,7 @@ class DatabaseSeeder extends Seeder
             RoleSeeder::class,
             AdminUserSeeder::class,
             CatalogosSeeder::class,
+            NormalizeRolesSeeder::class,
             Salud360RolesSeeder::class,
         ]);
 

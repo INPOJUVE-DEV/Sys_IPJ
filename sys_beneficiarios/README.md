@@ -78,10 +78,10 @@ Opciones Ãºtiles:
   - Usuarios: `/admin/usuarios`
   - Beneficiarios: `/admin/beneficiarios` (incluye export)
   - CatÃ¡logos: `/admin/catalogos`
-- Encargado:
-  - Panel: `/encargado`
-  - KPIs: `/encargado/kpis`
-  - Beneficiarios: `/encargado/beneficiarios` (listado/detalle/export)
+- Encargado 360 (Salud360):
+  - Panel: `/s360/enc360`
+  - KPIs: `/s360/enc360/dash`
+  - Asignaciones: `/s360/enc360/asignaciones`, `/s360/enc360/assign*`
 - Capturista:
   - Panel: `/capturista`
   - KPIs personales: `/capturista/kpis` (alias: `/mi-progreso/kpis`)
@@ -172,3 +172,34 @@ docker compose exec app php artisan test
 ## Licencia
 
 Proyecto interno del equipo. Uso restringido segÃºn polÃ­ticas vigentes.
+
+## API REST /api/v1
+
+### Setup local
+1. Duplicar `.env.example` a `.env` y definir `APP_URL`, variables `DB_*`, `SANCTUM_STATEFUL_DOMAINS` y los orígenes `APP_IPJ_URL` / `APP_IPJ_PROD_URL`.
+2. Instalar dependencias de backend y frontend: `composer install` y `npm install`.
+3. Generar clave y cargar base de datos:
+   - `php artisan key:generate`
+   - `php artisan migrate --seed`
+   - `php artisan db:seed --class=NormalizeRolesSeeder` (solo si migras datos legacy).
+4. Publicar y migrar Sanctum la primera vez:
+   - `php artisan vendor:publish --provider="Laravel\Sanctum\SanctumServiceProvider"`
+   - `php artisan migrate`
+5. Ejecutar pruebas con Pest: `./vendor/bin/pest`.
+
+### Estándares de código
+- PSR-12 y guías de Laravel: ejecutar `./vendor/bin/pint` antes de subir cambios.
+- Organización de carpetas:
+  - `app/Http/Controllers/Auth` para endpoints de autenticación REST.
+  - `app/Http/Middleware` para cross-cutting concerns (ProblemJson, ETag, AccessLog).
+  - `app/Http/Requests` para validaciones.
+  - `app/Policies` y `app/Providers` para policies y gates.
+  - `app/Services` reservado para lógica de dominio reusable.
+- Rutas en kebab-case (`beneficiarios.index`), clases en StudlyCase y métodos en camelCase.
+
+### Comportamiento clave
+- `GET /api/v1/health` ? `200` + body `{ "status": "ok" }` con cabecera `ETag`.
+- `POST /api/v1/auth/login` ? `200` con token personal Sanctum (`token_type: Bearer`).
+- `POST /api/v1/auth/logout` ? `204` invalidando el token actual.
+- Errores de validación devuelven `422` en formato `application/problem+json`.
+- Respuestas JSON cacheables incluyen `ETag` y respetan `If-None-Match` devolviendo `304` cuando aplica.

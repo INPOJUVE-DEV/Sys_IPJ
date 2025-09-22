@@ -7,10 +7,11 @@
 - Gestión de beneficiarios (listado/detalle/export): `/admin/beneficiarios`
 - Importación de catálogos: `/admin/catalogos`
 
-## Encargado
+## Encargado 360
 
-- Acceso a dashboard: `/encargado` y KPIs en `/encargado/kpis`
-- Listado/detalle/export de beneficiarios: `/encargado/beneficiarios`
+- Acceso a dashboard: `/s360/enc360` y KPIs en `/s360/enc360/dash`
+- Asignaciones y gestión de sesiones según permisos S360
+- Navbar simplificada: solo muestra "Dashboard" y "Captura" para facilitar el uso.
 - Alcance puede limitarse por municipios asignados (ver `User::municipiosAsignados`)
 
 ## Capturista
@@ -23,4 +24,3 @@
 
 - CRUD `beneficiarios` y `domicilios` (según rol)
 - Perfil de usuario: `/profile`
-

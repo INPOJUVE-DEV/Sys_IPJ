@@ -1,17 +1,19 @@
 <?php
 
+use App\Http\Controllers\Admin\BeneficiariosController as AdminBeneficiariosController;
+use App\Http\Controllers\Admin\CatalogosController;
+use App\Http\Controllers\Admin\ComponentCatalogController;
+use App\Http\Controllers\Admin\PageController as AdminPageController;
+use App\Http\Controllers\Admin\ThemeController;
+use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\BeneficiarioController;
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DomicilioController;
+use App\Http\Controllers\Encargado\BeneficiariosController as EncargadoBeneficiariosController;
+use App\Http\Controllers\MisRegistrosController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Admin\UserController;
-use App\Http\Controllers\Admin\CatalogosController;
-use App\Http\Controllers\Admin\BeneficiariosController as AdminBeneficiariosController;
-use App\Http\Controllers\Encargado\BeneficiariosController as EncargadoBeneficiariosController;
-use App\Http\Controllers\BeneficiarioController;
-use App\Http\Controllers\DomicilioController;
-use App\Http\Controllers\MisRegistrosController;
-use App\Http\Controllers\DashboardController;
-
 Route::get('/', function () {
     if (! Auth::check()) {
         // Mostrar login directamente (200 OK) para mejorar DX/tests
@@ -21,8 +23,24 @@ Route::get('/', function () {
     if ($user->hasRole('admin')) {
         return redirect('/admin');
     }
-    if ($user->hasRole('encargado')) {
-        return redirect('/encargado');
+    if ($user->hasRole('encargado_360')) {
+        return redirect()->route('s360.enc360.view');
+    }
+    if ($user->hasRole('capturista')) {
+        return redirect('/capturista');
+    }
+    return redirect()->route('dashboard');
+});Route::get('/', function () {
+    if (! Auth::check()) {
+        // Mostrar login directamente (200 OK) para mejorar DX/tests
+        return view('auth.login');
+    }
+    $user = Auth::user();
+    if ($user->hasRole('admin')) {
+        return redirect('/admin');
+    }
+    if ($user->hasRole('encargado_360')) {
+        return redirect()->route('s360.enc360.view');
     }
     if ($user->hasRole('capturista')) {
         return redirect('/capturista');
@@ -38,14 +56,14 @@ Route::get('/dashboard', function () {
 Route::get('/mi-progreso/kpis', [DashboardController::class, 'miProgresoKpis'])->middleware(['auth','role:capturista']);
 
 // Alias de registro de captura usado en tests
-Route::post('/captura/registrar', [BeneficiarioController::class, 'store'])->name('captura.registrar')->middleware(['auth','role:admin|encargado|capturista']);
+Route::post('/captura/registrar', [BeneficiarioController::class, 'store'])->name('captura.registrar')->middleware(['auth','role:admin|capturista|encargado_360']);
 
 // Secciones por rol
 Route::middleware(['auth','role:admin'])->group(function () {
     Route::get('/admin', [DashboardController::class, 'admin'])->name('admin.home');
     Route::get('/admin/kpis', [DashboardController::class, 'adminKpis'])->name('admin.kpis');
 });
-Route::middleware(['auth','role:encargado'])->group(function () {
+Route::middleware(['auth','role:encargado_removed'])->group(function () {
     Route::get('/encargado', [DashboardController::class, 'encargado'])->name('encargado.home');
     Route::get('/encargado/kpis', [DashboardController::class, 'encargadoKpis'])->name('encargado.kpis');
     Route::get('/encargado/beneficiarios', [EncargadoBeneficiariosController::class, 'index'])->name('encargado.beneficiarios.index');
@@ -69,8 +87,8 @@ Route::middleware(['auth','role:capturista'])->group(function () {
     });
 });
 
-// Beneficiarios y Domicilios (admin, encargado, capturista)
-Route::middleware(['auth','role:admin|encargado|capturista'])->group(function () {
+// Beneficiarios y Domicilios (admin, capturista, encargado_360)
+Route::middleware(['auth','role:admin|capturista|encargado_360'])->group(function () {
     Route::resource('beneficiarios', BeneficiarioController::class)->except(['show']);
     Route::resource('domicilios', DomicilioController::class)->except(['show']);
 });
@@ -84,10 +102,26 @@ Route::middleware('auth')->group(function () {
 // Admin: gestión de usuarios
 Route::middleware(['auth','role:admin'])->prefix('admin')->name('admin.')->group(function () {
     Route::resource('usuarios', UserController::class)->parameters(['usuarios' => 'usuario']);
+
+    Route::prefix('pages')->name('pages.')->group(function () {
+        Route::get('/', [AdminPageController::class, 'index'])->name('index');
+        Route::post('/', [AdminPageController::class, 'store'])->name('store');
+        Route::get('{page:slug}/draft', [AdminPageController::class, 'showDraft'])->name('draft.show');
+        Route::put('{page:slug}/draft', [AdminPageController::class, 'updateDraft'])->name('draft.update');
+        Route::post('{page:slug}/publish', [AdminPageController::class, 'publish'])->name('publish');
+        Route::get('{page:slug}/versions', [AdminPageController::class, 'versions'])->name('versions');
+        Route::post('{page:slug}/rollback', [AdminPageController::class, 'rollback'])->name('rollback');
+    });
+
     Route::get('catalogos', [CatalogosController::class, 'index'])->name('catalogos.index');
+    Route::get('components', [ComponentCatalogController::class, 'index'])->name('components.index');
+    Route::post('components', [ComponentCatalogController::class, 'upsert'])->name('components.upsert');
+
+    Route::get('themes/current', [ThemeController::class, 'show'])->name('themes.current.show');
+    Route::put('themes/current', [ThemeController::class, 'update'])->name('themes.current.update');
     Route::post('catalogos/import', [CatalogosController::class, 'import'])->name('catalogos.import');
     Route::get('beneficiarios', [AdminBeneficiariosController::class, 'index'])->name('beneficiarios.index');
-    // Export antes de parámetro para no capturar "export" como {beneficiario}
+    // Export antes de par�metro para no capturar "export" como {beneficiario}
     Route::get('beneficiarios/export', [AdminBeneficiariosController::class, 'export'])->name('beneficiarios.export');
     Route::get('beneficiarios/{beneficiario}', [AdminBeneficiariosController::class, 'show'])->name('beneficiarios.show');
 });
@@ -146,3 +180,20 @@ Route::middleware(['auth','role:psicologo','access.log'])->prefix('s360/psico')-
     Route::get('sesiones/{beneficiario}', [S360PsicoController::class, 'historial'])->name('sesiones.historial')->middleware('permission:s360.psico.view_history');
     Route::get('sesiones/{beneficiario}/show', [S360PsicoController::class, 'historialView'])->name('sesiones.historial.view');
 });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

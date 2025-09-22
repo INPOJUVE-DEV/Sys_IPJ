@@ -6,7 +6,7 @@
 - Patrón: MVC con Blade para vistas
 - Frontend: Bootstrap 5 con Vite (bundling) y algunos recursos en `resources/js` y `resources/scss`
 - Autenticación: Laravel Breeze (Blade)
-- Autorización: Spatie Permission (roles `admin`, `encargado`, `capturista`)
+- Autorización: Spatie Permission (roles `admin`, `capturista`, `encargado_360`, `encargado_bienestar`, `psicologo`)
 - Auditoría: Spatie Activitylog (tabla `activity_log`)
 - BD: MySQL 8
 - Servidor: Nginx + PHP-FPM
@@ -38,11 +38,10 @@
 ## Permisos y roles
 
 - Paquete: `spatie/laravel-permission`
-- Seeder: `RoleSeeder` crea `admin`, `encargado`, `capturista`
+- Seeder: `RoleSeeder` crea `admin`, `capturista` (roles de Salud360 en `Salud360RolesSeeder`)
 - Asignación inicial en `RolesUsersSeeder` y `AdminUserSeeder`
 
 ## Logs de actividad
 
 - Paquete: `spatie/laravel-activitylog`
 - Migraciones incluidas (`activity_log`); configuración por defecto
-

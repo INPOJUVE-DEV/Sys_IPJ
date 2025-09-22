@@ -1,6 +1,6 @@
 <nav class="navbar navbar-expand-lg navbar-dark bg-primary border-bottom sticky-top py-0">
     <div class="container-fluid px-0">
-        <a class="navbar-brand d-flex align-items-center" href="{{ Auth::user() && Auth::user()->hasRole('admin') ? route('admin.home') : (Auth::user() && Auth::user()->hasRole('encargado') ? route('encargado.home') : (Auth::user() && Auth::user()->hasRole('capturista') ? route('capturista.home') : route('dashboard'))) }}">
+        <a class="navbar-brand d-flex align-items-center" href="{{ Auth::user() && Auth::user()->hasRole('admin') ? route('admin.home') : (Auth::user() && Auth::user()->hasRole('encargado_360') ? route('s360.enc360.view') : (Auth::user() && Auth::user()->hasRole('capturista') ? route('capturista.home') : route('dashboard'))) }}">
             <span class="fw-semibold text-white">Sys_IPJ</span>
         </a>
 
@@ -13,8 +13,7 @@
                 <li class="nav-item">
                     @if(Auth::user() && Auth::user()->hasRole('admin'))
                         <a class="nav-link {{ request()->routeIs('admin.home') ? 'active' : '' }}" href="{{ route('admin.home') }}">{{ __('Dashboard') }}</a>
-                    @elseif(Auth::user() && Auth::user()->hasRole('encargado'))
-                        <a class="nav-link {{ request()->routeIs('encargado.home') ? 'active' : '' }}" href="{{ route('encargado.home') }}">{{ __('Dashboard') }}</a>
+                    
                     @elseif(Auth::user() && Auth::user()->hasRole('capturista'))
                         <a class="nav-link {{ request()->routeIs('capturista.home') ? 'active' : '' }}" href="{{ route('capturista.home') }}">{{ __('Dashboard') }}</a>
                     @elseif(Auth::user() && Auth::user()->hasRole('psicologo'))
@@ -23,13 +22,9 @@
                         <a class="nav-link {{ request()->routeIs('dashboard') ? 'active' : '' }}" href="{{ route('dashboard') }}">{{ __('Dashboard') }}</a>
                     @endif
                 </li>
-                @role('admin|encargado')
+                @role('admin|capturista')
                 <li class="nav-item">
-                    @if(Auth::user()->hasRole('admin'))
-                        <a class="nav-link {{ request()->routeIs('admin.beneficiarios.*') ? 'active' : '' }}" href="{{ route('admin.beneficiarios.index') }}">{{ __('Beneficiarios') }}</a>
-                    @else
-                        <a class="nav-link {{ request()->routeIs('encargado.beneficiarios.*') ? 'active' : '' }}" href="{{ route('encargado.beneficiarios.index') }}">{{ __('Beneficiarios') }}</a>
-                    @endif
+                    <a class="nav-link {{ (Auth::user()->hasRole('admin') ? request()->routeIs('admin.beneficiarios.*') : request()->routeIs('beneficiarios.*')) ? 'active' : '' }}" href="{{ Auth::user()->hasRole('admin') ? route('admin.beneficiarios.index') : route('beneficiarios.index') }}">{{ __('Beneficiarios') }}</a>
                 </li>
                 @endrole
                 @if(!Auth::user() || !Auth::user()->hasRole('psicologo'))
@@ -37,7 +32,7 @@
                     <a class="nav-link {{ request()->routeIs('beneficiarios.create') ? 'active' : '' }}" href="{{ route('beneficiarios.create') }}">{{ __('Captura') }}</a>
                 </li>
                 @endif
-                @role('admin|encargado')
+                @role('admin|capturista')
                 <li class="nav-item">
                     <a class="nav-link {{ request()->routeIs('domicilios.*') ? 'active' : '' }}" href="{{ route('domicilios.index') }}">{{ __('Domicilios') }}</a>
                 </li>
@@ -70,13 +65,7 @@
 
                 @role('encargado_360')
                 <li class="nav-item">
-                    <a class="nav-link {{ request()->routeIs('s360.enc360.view') ? 'active' : '' }}" href="{{ route('s360.enc360.view') }}">Enc360 Dash</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link {{ request()->routeIs('s360.enc360.asignaciones') ? 'active' : '' }}" href="{{ route('s360.enc360.asignaciones') }}">Asignaciones</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link {{ request()->routeIs('s360.enc360.psicologos.*') ? 'active' : '' }}" href="{{ route('s360.enc360.psicologos.view') }}">Psicólogos</a>
+                    <a class="nav-link {{ request()->routeIs('s360.enc360.view') ? 'active' : '' }}" href="{{ route('s360.enc360.view') }}">Dashboard</a>
                 </li>
                 @endrole
 
@@ -110,9 +99,6 @@
         </div>
     </div>
 </nav>
-
-
-
 
 
 

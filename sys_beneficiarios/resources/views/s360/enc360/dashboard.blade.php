@@ -1,6 +1,12 @@
-<x-app-layout>
+﻿<x-app-layout>
 <div class="container py-4">
-  <h1 class="h4 mb-4">Salud360 — Encargado 360</h1>
+  <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-3 gap-2">
+    <h1 class="h4 m-0">Mi Panel</h1>
+    <a href="{{ route('beneficiarios.create') }}" class="btn btn-success btn-lg">
+      <i class="bi bi-plus-circle"></i>
+      Capturar beneficiario
+    </a>
+  </div>
 
   <div class="row g-3 mb-4">
     <div class="col-12 col-md-4">
@@ -34,7 +40,7 @@
         <div class="card-body">
           <div class="d-flex justify-content-between align-items-center">
             <div>
-              <div class="text-muted small">PrÃ³ximas citas â‰¤ 7 dÃ­as</div>
+              <div class="text-muted small">PrÃƒÂ³ximas citas Ã¢â€°Â¤ 7 dÃƒÂ­as</div>
               <div class="display-6" id="kpi-proximas">0</div>
             </div>
             <i class="bi bi-alarm fs-2 text-warning"></i>
@@ -49,7 +55,7 @@
       <div class="card h-100">
         <div class="card-header bg-white">
           <div class="d-flex gap-2 align-items-center">
-            <span class="fw-semibold">Ãšltimas sesiones</span>
+            <span class="fw-semibold">ÃƒÅ¡ltimas sesiones</span>
             <input type="text" class="form-control form-control-sm" placeholder="Beneficiario" id="filtro-sesiones">
             <select class="form-select form-select-sm" id="filtro-sesiones-select">
               <option value="">Todos</option>
@@ -65,7 +71,7 @@
       <div class="card h-100">
         <div class="card-header bg-white">
           <div class="d-flex gap-2 align-items-center">
-            <span class="fw-semibold">PrÃ³ximas citas</span>
+            <span class="fw-semibold">PrÃƒÂ³ximas citas</span>
             <input type="text" class="form-control form-control-sm" placeholder="Beneficiario" id="filtro-citas">
             <select class="form-select form-select-sm" id="filtro-citas-select">
               <option value="">Todos</option>
@@ -75,7 +81,7 @@
         <div class="card-body" style="max-height:420px; overflow:auto;">
           <table class="table table-sm align-middle mb-0">
             <thead class="table-light">
-              <tr><th>Beneficiario</th><th>PsicÃ³logo</th><th>Fecha</th></tr>
+              <tr><th>Beneficiario</th><th>PsicÃƒÂ³logo</th><th>Fecha</th></tr>
             </thead>
             <tbody id="tabla-citas"></tbody>
           </table>
@@ -86,7 +92,7 @@
       <div class="card h-100">
         <div class="card-header bg-white">
           <div class="d-flex gap-2 align-items-center">
-            <span class="fw-semibold">PsicÃ³logos con mÃ¡s carga</span>
+            <span class="fw-semibold">PsicÃƒÂ³logos con mÃƒÂ¡s carga</span>
             <input type="text" class="form-control form-control-sm" placeholder="Beneficiario" id="filtro-top">
             <select class="form-select form-select-sm" id="filtro-top-select">
               <option value="">Todos</option>
@@ -124,7 +130,7 @@
       if (ult.ok) {
         const data = await ult.json();
         document.getElementById('lista-sesiones').innerHTML = (data.items||[]).map(s => {
-          return `<li class="list-group-item"><div class="d-flex justify-content-between"><span>${s.beneficiario}</span><span class="text-muted">${s.session_date}</span></div><div class="small text-muted">${s.psicologo}${s.is_first?' â€¢ Primera':''}</div></li>`;
+          return `<li class="list-group-item"><div class="d-flex justify-content-between"><span>${s.beneficiario}</span><span class="text-muted">${s.session_date}</span></div><div class="small text-muted">${s.psicologo}${s.is_first?' Ã¢â‚¬Â¢ Primera':''}</div></li>`;
         }).join('');
       }
       const prox = await fetch('{{ route('s360.enc360.citas.upcoming') }}');
@@ -136,3 +142,5 @@
   });
 </script>
 @endpush
+
+

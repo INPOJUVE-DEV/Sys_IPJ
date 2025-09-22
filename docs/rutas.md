@@ -2,7 +2,7 @@
 
 Archivo: `sys_beneficiarios/routes/web.php`
 
-- `/` redirige según rol autenticado (`admin` → `/admin`, `encargado` → `/encargado`, `capturista` → `/capturista`). Si no autenticado, muestra login.
+- `/` redirige según rol autenticado (`admin` → `/admin`, `capturista` → `/capturista`). Si no autenticado, muestra login.
 - `/dashboard` (autenticado + verificado): dashboard base
 
 ## Admin (middleware: `auth`, `role:admin`)
@@ -16,13 +16,12 @@ Archivo: `sys_beneficiarios/routes/web.php`
 - `GET /admin/beneficiarios/export` → exportación
 - `GET /admin/beneficiarios/{beneficiario}` → detalle
 
-## Encargado (middleware: `auth`, `role:encargado`)
+## Encargado 360 (middleware: `auth`, `role:encargado_360`)
 
-- `GET /encargado` → vista dashboard encargado
-- `GET /encargado/kpis` → KPIs JSON
-- `GET /encargado/beneficiarios` → listado
-- `GET /encargado/beneficiarios/export` → exportación
-- `GET /encargado/beneficiarios/{beneficiario}` → detalle
+- `GET /s360/enc360` → vista dashboard Enc360
+- `GET /s360/enc360/dash` → KPIs JSON
+- `GET /s360/enc360/asignaciones` → vista asignaciones
+- `POST /s360/enc360/assign` y `PUT /s360/enc360/assign/{beneficiario}` → asignar/reasignar
 
 ## Capturista (middleware: `auth`, `role:capturista`)
 
@@ -31,7 +30,7 @@ Archivo: `sys_beneficiarios/routes/web.php`
 - `GET /mi-progreso/kpis` → alias compatibilidad
 - `GET /mis-registros` `GET /mis-registros/{id}` `PUT /mis-registros/{id}` → gestionar los propios registros
 
-## Recursos (middleware: `auth`, `role:admin|encargado|capturista`)
+## Recursos (middleware: `auth`, `role:admin|capturista`)
 
 - `Route::resource('beneficiarios', BeneficiarioController)` (excepto `show`)
 - `Route::resource('domicilios', DomicilioController)` (excepto `show`)
@@ -45,4 +44,3 @@ Archivo: `sys_beneficiarios/routes/web.php`
 Archivo: `sys_beneficiarios/routes/api.php`
 
 - `GET /api/secciones/{seccional}` (throttle `30,1`) → datos de seccional
-
