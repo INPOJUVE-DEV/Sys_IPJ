@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 use App\Http\Controllers\Admin\BeneficiariosController as AdminBeneficiariosController;
 use App\Http\Controllers\Admin\CatalogosController;
@@ -10,6 +10,7 @@ use App\Http\Controllers\BeneficiarioController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DomicilioController;
 use App\Http\Controllers\Encargado\BeneficiariosController as EncargadoBeneficiariosController;
+use App\Http\Controllers\Volante\ReportController as VolanteReportController;
 use App\Http\Controllers\MisRegistrosController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Auth;
@@ -67,7 +68,7 @@ Route::middleware(['auth','role:encargado_removed'])->group(function () {
     Route::get('/encargado', [DashboardController::class, 'encargado'])->name('encargado.home');
     Route::get('/encargado/kpis', [DashboardController::class, 'encargadoKpis'])->name('encargado.kpis');
     Route::get('/encargado/beneficiarios', [EncargadoBeneficiariosController::class, 'index'])->name('encargado.beneficiarios.index');
-    // Export debe ir antes de la ruta con parámetro para evitar colisiones
+    // Export debe ir antes de la ruta con parÃ¡metro para evitar colisiones
     Route::get('/encargado/beneficiarios/export', [EncargadoBeneficiariosController::class, 'export'])->name('encargado.beneficiarios.export');
     Route::get('/encargado/beneficiarios/{beneficiario}', [EncargadoBeneficiariosController::class, 'show'])->name('encargado.beneficiarios.show');
 });
@@ -75,7 +76,7 @@ Route::middleware(['auth','role:capturista'])->group(function () {
     Route::get('/capturista', [DashboardController::class, 'capturista'])->name('capturista.home');
     // KPIs capturista consistente bajo /capturista/kpis
     Route::get('/capturista/kpis', [DashboardController::class, 'miProgresoKpis'])->name('capturista.kpis');
-    // Redirección de compatibilidad desde ruta anterior
+    // RedirecciÃ³n de compatibilidad desde ruta anterior
     // REDIRECT DISABLED
 
     // Mis registros (solo capturista)
@@ -99,7 +100,7 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
-// Admin: gestión de usuarios
+// Admin: gestiÃ³n de usuarios
 Route::middleware(['auth','role:admin'])->prefix('admin')->name('admin.')->group(function () {
     Route::resource('usuarios', UserController::class)->parameters(['usuarios' => 'usuario']);
 
@@ -121,11 +122,14 @@ Route::middleware(['auth','role:admin'])->prefix('admin')->name('admin.')->group
     Route::put('themes/current', [ThemeController::class, 'update'])->name('themes.current.update');
     Route::post('catalogos/import', [CatalogosController::class, 'import'])->name('catalogos.import');
     Route::get('beneficiarios', [AdminBeneficiariosController::class, 'index'])->name('beneficiarios.index');
-    // Export antes de par�metro para no capturar "export" como {beneficiario}
+    // Export antes de parámetro para no capturar "export" como {beneficiario}
     Route::get('beneficiarios/export', [AdminBeneficiariosController::class, 'export'])->name('beneficiarios.export');
     Route::get('beneficiarios/{beneficiario}', [AdminBeneficiariosController::class, 'show'])->name('beneficiarios.show');
 });
 
+Route::middleware(['auth','permission:vol.reports.view'])->prefix('vol')->name('vol.')->group(function () {
+    Route::get('dashboard', [VolanteReportController::class, 'dashboard'])->name('dashboard');
+});
 require __DIR__.'/auth.php';
 
 // Compatibilidad adicional: asegurar que /mi-progreso/kpis responda 200 OK
@@ -169,7 +173,7 @@ Route::middleware(['auth','role:encargado_360','access.log'])->prefix('s360/enc3
     Route::put('sesiones/{session}', [S360Enc360Controller::class, 'updateSession'])->name('sesiones.update')->middleware('permission:s360.data.update_by_enc360');
 });
 
-// Psicólogo
+// PsicÃ³logo
 Route::middleware(['auth','role:psicologo','access.log'])->prefix('s360/psico')->name('s360.psico.')->group(function () {
     Route::get('/', [S360PsicoController::class, 'pacientesView'])->name('view');
     Route::get('pacientes', [S360PsicoController::class, 'pacientes'])->name('pacientes')->middleware('permission:s360.psico.read_patients');
