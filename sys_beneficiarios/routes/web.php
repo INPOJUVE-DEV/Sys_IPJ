@@ -9,7 +9,6 @@ use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\BeneficiarioController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DomicilioController;
-use App\Http\Controllers\Encargado\BeneficiariosController as EncargadoBeneficiariosController;
 use App\Http\Controllers\Volante\ReportController as VolanteReportController;
 use App\Http\Controllers\Vol\AjaxController as VolAjaxController;
 use App\Http\Controllers\Vol\EnrollmentWebController;
@@ -21,22 +20,6 @@ use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 Route::get('/', function () {
-    if (! Auth::check()) {
-        // Mostrar login directamente (200 OK) para mejorar DX/tests
-        return view('auth.login');
-    }
-    $user = Auth::user();
-    if ($user->hasRole('admin')) {
-        return redirect('/admin');
-    }
-    if ($user->hasRole('encargado_360')) {
-        return redirect()->route('s360.enc360.view');
-    }
-    if ($user->hasRole('capturista')) {
-        return redirect('/capturista');
-    }
-    return redirect()->route('dashboard');
-});Route::get('/', function () {
     if (! Auth::check()) {
         // Mostrar login directamente (200 OK) para mejorar DX/tests
         return view('auth.login');
@@ -68,14 +51,6 @@ Route::post('/captura/registrar', [BeneficiarioController::class, 'store'])->nam
 Route::middleware(['auth','role:admin'])->group(function () {
     Route::get('/admin', [DashboardController::class, 'admin'])->name('admin.home');
     Route::get('/admin/kpis', [DashboardController::class, 'adminKpis'])->name('admin.kpis');
-});
-Route::middleware(['auth','role:encargado_removed'])->group(function () {
-    Route::get('/encargado', [DashboardController::class, 'encargado'])->name('encargado.home');
-    Route::get('/encargado/kpis', [DashboardController::class, 'encargadoKpis'])->name('encargado.kpis');
-    Route::get('/encargado/beneficiarios', [EncargadoBeneficiariosController::class, 'index'])->name('encargado.beneficiarios.index');
-    // Export debe ir antes de la ruta con parÃ¡metro para evitar colisiones
-    Route::get('/encargado/beneficiarios/export', [EncargadoBeneficiariosController::class, 'export'])->name('encargado.beneficiarios.export');
-    Route::get('/encargado/beneficiarios/{beneficiario}', [EncargadoBeneficiariosController::class, 'show'])->name('encargado.beneficiarios.show');
 });
 Route::middleware(['auth','role:capturista'])->group(function () {
     Route::get('/capturista', [DashboardController::class, 'capturista'])->name('capturista.home');
