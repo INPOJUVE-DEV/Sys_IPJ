@@ -18,13 +18,6 @@ class DashboardController extends Controller
         return view('roles.admin', compact('municipios','capturistas'));
     }
 
-    public function encargado()
-    {
-        $municipios = Municipio::orderBy('nombre')->pluck('nombre','id');
-        $capturistas = User::role('capturista')->orderBy('name')->get(['uuid','name']);
-        return view('roles.encargado', compact('municipios','capturistas'));
-    }
-
     public function capturista()
     {
         return view('roles.capturista');
@@ -34,14 +27,6 @@ class DashboardController extends Controller
     public function adminKpis(Request $request)
     {
         $query = $this->applyFilters(Beneficiario::query(), $request);
-        return $this->buildKpis($query);
-    }
-
-    public function encargadoKpis(Request $request)
-    {
-        // Si se requiere filtrar por algún ámbito del encargado, aplicar aquí.
-        $query = $this->applyFilters(Beneficiario::query(), $request);
-        $query = $this->applyEncargadoScope($query, $request);
         return $this->buildKpis($query);
     }
 
@@ -96,17 +81,6 @@ class DashboardController extends Controller
             })
             ->when($request->filled('from'), fn($q)=>$q->whereDate('created_at','>=', $request->date('from')))
             ->when($request->filled('to'), fn($q)=>$q->whereDate('created_at','<=', $request->date('to')));
-    }
-
-    protected function applyEncargadoScope($query, Request $request)
-    {
-        if ($request->user()->hasRole('encargado')) {
-            $ids = $request->user()->municipiosAsignados()->pluck('municipios.id');
-            if ($ids->count() > 0) {
-                $query->whereIn('municipio_id', $ids);
-            }
-        }
-        return $query;
     }
 
     protected function buildKpis($baseQuery)

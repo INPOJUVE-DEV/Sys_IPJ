@@ -9,7 +9,6 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Spatie\Permission\Traits\HasRoles;
 use Illuminate\Support\Str;
-use App\Models\Municipio;
 
 class User extends Authenticatable
 {
@@ -62,11 +61,6 @@ class User extends Authenticatable
                 $user->uuid = (string) Str::uuid();
             }
         });
-    }
-
-    public function municipiosAsignados()
-    {
-        return $this->belongsToMany(Municipio::class, 'encargado_municipios', 'user_uuid', 'municipio_id', 'uuid', 'id');
     }
 
     // Salud360 relations
