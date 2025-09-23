@@ -272,17 +272,6 @@ class VolEnrollmentFeatureTest extends TestCase
             ]);
     }
 
-    private function createPublishedGroupForSite(VolSite $site, array $overrides = []): VolGroup
-    {
-        return VolGroup::factory()
-            ->for($site, 'site')
-            ->create(array_merge([
-                'state' => 'publicado',
-                'capacity' => 12,
-                'created_by' => $this->admin->id,
-            ], $overrides));
-    }
-
     private function createBeneficiario(): Beneficiario
     {
         return Beneficiario::factory()->create([
