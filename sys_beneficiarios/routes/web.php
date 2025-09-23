@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 
 use App\Http\Controllers\Admin\BeneficiariosController as AdminBeneficiariosController;
 use App\Http\Controllers\Admin\CatalogosController;
@@ -11,6 +11,11 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DomicilioController;
 use App\Http\Controllers\Encargado\BeneficiariosController as EncargadoBeneficiariosController;
 use App\Http\Controllers\Volante\ReportController as VolanteReportController;
+use App\Http\Controllers\Vol\AjaxController as VolAjaxController;
+use App\Http\Controllers\Vol\EnrollmentWebController;
+use App\Http\Controllers\Vol\GroupWebController;
+use App\Http\Controllers\Vol\PaymentWebController;
+use App\Http\Controllers\Vol\SiteWebController;
 use App\Http\Controllers\MisRegistrosController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Auth;
@@ -127,8 +132,48 @@ Route::middleware(['auth','role:admin'])->prefix('admin')->name('admin.')->group
     Route::get('beneficiarios/{beneficiario}', [AdminBeneficiariosController::class, 'show'])->name('beneficiarios.show');
 });
 
-Route::middleware(['auth','permission:vol.reports.view'])->prefix('vol')->name('vol.')->group(function () {
-    Route::get('dashboard', [VolanteReportController::class, 'dashboard'])->name('dashboard');
+Route::middleware('auth')->prefix('vol')->name('vol.')->group(function () {
+    Route::get('dashboard', [VolanteReportController::class, 'dashboard'])
+        ->middleware('permission:vol.reports.view')
+        ->name('dashboard');
+
+    Route::middleware('permission:vol.groups.manage')->group(function () {
+        Route::get('groups/create', [GroupWebController::class, 'create'])->name('groups.create');
+        Route::post('groups', [GroupWebController::class, 'store'])->name('groups.store');
+        Route::get('groups/{group}/edit', [GroupWebController::class, 'edit'])->name('groups.edit');
+        Route::put('groups/{group}', [GroupWebController::class, 'update'])->name('groups.update');
+        Route::post('groups/{group}/publish', [GroupWebController::class, 'publish'])->name('groups.publish');
+        Route::post('groups/{group}/close', [GroupWebController::class, 'close'])->name('groups.close');
+        Route::delete('groups/{group}', [GroupWebController::class, 'destroy'])->name('groups.destroy');
+    });
+
+    Route::middleware('permission:vol.groups.view|vol.groups.manage')->group(function () {
+        Route::get('groups', [GroupWebController::class, 'index'])->name('groups.index');
+        Route::get('groups/{group}', [GroupWebController::class, 'show'])->name('groups.show');
+    });
+
+    Route::middleware('permission:vol.enrollments.manage')->group(function () {
+        Route::get('groups/{group}/enrollments/create', [EnrollmentWebController::class, 'create'])->name('enrollments.create');
+        Route::post('groups/{group}/enrollments', [EnrollmentWebController::class, 'store'])->name('enrollments.store');
+        Route::delete('enrollments/{enrollment}', [EnrollmentWebController::class, 'destroy'])->name('enrollments.destroy');
+    });
+
+    Route::middleware('permission:vol.sites.manage')->group(function () {
+        Route::get('sites', [SiteWebController::class, 'index'])->name('sites.index');
+        Route::post('sites', [SiteWebController::class, 'store'])->name('sites.store');
+        Route::put('sites/{site}', [SiteWebController::class, 'update'])->name('sites.update');
+        Route::delete('sites/{site}', [SiteWebController::class, 'destroy'])->name('sites.destroy');
+    });
+
+    Route::middleware('permission:vol.groups.manage')->group(function () {
+        Route::get('payments/create', [PaymentWebController::class, 'create'])->name('payments.create');
+        Route::post('payments', [PaymentWebController::class, 'store'])->name('payments.store');
+    });
+
+    Route::middleware('permission:vol.groups.manage|vol.enrollments.manage')->prefix('ajax')->name('ajax.')->group(function () {
+        Route::get('beneficiarios', [VolAjaxController::class, 'lookupBeneficiario'])->name('beneficiarios.lookup');
+        Route::get('groups/{group}/validate', [VolAjaxController::class, 'validateGroup'])->name('groups.validate');
+    });
 });
 require __DIR__.'/auth.php';
 
@@ -184,8 +229,6 @@ Route::middleware(['auth','role:psicologo','access.log'])->prefix('s360/psico')-
     Route::get('sesiones/{beneficiario}', [S360PsicoController::class, 'historial'])->name('sesiones.historial')->middleware('permission:s360.psico.view_history');
     Route::get('sesiones/{beneficiario}/show', [S360PsicoController::class, 'historialView'])->name('sesiones.historial.view');
 });
-
-
 
 
 

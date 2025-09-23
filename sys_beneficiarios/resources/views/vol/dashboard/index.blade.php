@@ -2,8 +2,74 @@
     <x-slot name="header">
         <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
             <h1 class="h4 m-0">Dashboard Voluntariado</h1>
+            <button class="btn btn-primary" type="button" data-bs-toggle="collapse" data-bs-target="#createGroupCard" aria-expanded="false" aria-controls="createGroupCard">
+                Crear grupo
+            </button>
         </div>
     </x-slot>
+
+    @if($errors->any())
+        <div class="alert alert-danger">
+            <ul class="mb-0">
+                @foreach($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
+
+    <div id="createGroupCard" class="collapse mb-4 {{ $errors->any() ? 'show' : '' }}">
+        <div class="card">
+            <div class="card-body">
+                <form action="{{ route('vol.groups.store') }}" method="POST" class="row g-3">
+                    @csrf
+                    <div class="col-md-4">
+                        <label class="form-label">Sede</label>
+                        <select name="site_id" class="form-select" required>
+                            <option value="">Seleccione</option>
+                            @foreach($sites as $id => $name)
+                                <option value="{{ $id }}" @selected(old('site_id') == $id)>{{ $name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Nombre del grupo</label>
+                        <input type="text" name="name" value="{{ old('name') }}" class="form-control" required>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Tipo</label>
+                        <select name="type" class="form-select" required>
+                            @foreach(['semanal' => 'Semanal', 'sabatino' => 'Sabatino'] as $value => $label)
+                                <option value="{{ $value }}" @selected(old('type') === $value)>{{ $label }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Plantilla</label>
+                        <select name="schedule_template" class="form-select" required>
+                            @foreach(['lmv' => 'Lunes a Miercoles', 'mj' => 'Jueves y Viernes', 'sab' => 'Sabado'] as $value => $label)
+                                <option value="{{ $value }}" @selected(old('schedule_template') === $value)>{{ $label }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Fecha de inicio</label>
+                        <input type="date" name="start_date" value="{{ old('start_date', now()->format('Y-m-d')) }}" class="form-control" required>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Capacidad</label>
+                        <input type="number" name="capacity" min="0" value="{{ old('capacity', 12) }}" class="form-control" required>
+                    </div>
+                    <div class="col-12">
+                        <small class="text-muted">El programa se asigna automaticamente a Jóvenes al Volante y la fecha de cierre se ajusta al ultimo día del mes.</small>
+                    </div>
+                    <div class="col-12 text-end">
+                        <button type="submit" class="btn btn-success">Guardar grupo</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 
     <div class="card mb-4">
         <div class="card-body">
@@ -71,7 +137,7 @@
     </div>
 
     <div class="row g-4 mb-4">
-        <div class="col-xl-6">
+        <div class="col-xl-12">
             <div class="card h-100">
                 <div class="card-header">Resumen mensual por sede</div>
                 <div class="card-body p-0">
@@ -81,6 +147,10 @@
                                 <tr>
                                     <th>Sede</th>
                                     <th class="text-end">Inscritos</th>
+                                    <th class="text-end">Hombres</th>
+                                    <th class="text-end">Mujeres</th>
+                                    <th class="text-end">Menores</th>
+                                    <th class="text-end">Mayores</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -88,73 +158,18 @@
                                     <tr>
                                         <td>{{ $site['site_name'] ?? 'N/D' }}</td>
                                         <td class="text-end">{{ $site['total'] ?? 0 }}</td>
+                                        <td class="text-end">{{ $site['male'] ?? 0 }}</td>
+                                        <td class="text-end">{{ $site['female'] ?? 0 }}</td>
+                                        <td class="text-end">{{ $site['minors'] ?? 0 }}</td>
+                                        <td class="text-end">{{ $site['adults'] ?? 0 }}</td>
                                     </tr>
                                 @empty
-                                    <tr><td colspan="2" class="text-center py-3">Sin datos para el mes.</td></tr>
+                                    <tr><td colspan="6" class="text-center py-3">Sin datos para el mes.</td></tr>
                                 @endforelse
                             </tbody>
                         </table>
                     </div>
                 </div>
-            </div>
-        </div>
-        <div class="col-xl-6">
-            <div class="card h-100">
-                <div class="card-header">Top grupos del mes</div>
-                <div class="card-body p-0">
-                    <div class="table-responsive">
-                        <table class="table table-dark table-sm mb-0">
-                            <thead>
-                                <tr>
-                                    <th>Grupo</th>
-                                    <th>Sede</th>
-                                    <th class="text-end">Inscritos</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @forelse($monthly['per_group'] ?? [] as $group)
-                                    <tr>
-                                        <td>{{ $group['group_name'] ?? 'N/D' }}<br><span class="text-muted small">{{ $group['code'] ?? '' }}</span></td>
-                                        <td>{{ $group['site_name'] ?? 'N/D' }}</td>
-                                        <td class="text-end">{{ $group['total'] ?? 0 }}</td>
-                                    </tr>
-                                @empty
-                                    <tr><td colspan="3" class="text-center py-3">Sin datos para el mes.</td></tr>
-                                @endforelse
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="card mb-4">
-        <div class="card-header">Detalle de beneficiarios (ultimos registros)</div>
-        <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-dark table-sm mb-0">
-                    <thead>
-                        <tr>
-                            <th>Beneficiario</th>
-                            <th>Grupo</th>
-                            <th>Sede</th>
-                            <th>Fecha</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @forelse($monthly['beneficiaries'] ?? [] as $beneficiario)
-                            <tr>
-                                <td>{{ $beneficiario['nombre'] ?? 'N/D' }}</td>
-                                <td>{{ $beneficiario['group_name'] ?? 'N/D' }}</td>
-                                <td>{{ $beneficiario['site_name'] ?? 'N/D' }}</td>
-                                <td>{{ $beneficiario['enrolled_at'] ?? '' }}</td>
-                            </tr>
-                        @empty
-                            <tr><td colspan="4" class="text-center py-3">Aun no hay inscripciones registradas para este periodo.</td></tr>
-                        @endforelse
-                    </tbody>
-                </table>
             </div>
         </div>
     </div>
@@ -240,7 +255,7 @@
                                 <td class="text-end">{{ $group['available'] ?? 0 }}</td>
                             </tr>
                         @empty
-                            <tr><td colspan="5" class="text-center py-3">Sin grupos registrados.</td></tr>
+                            <tr><td colspan="5" class="text-center py-3">Sin grupos con cupo disponible.</td></tr>
                         @endforelse
                     </tbody>
                 </table>

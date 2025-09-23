@@ -42,7 +42,26 @@
                     <a class="nav-link {{ request()->routeIs('admin.usuarios.*') ? 'active' : '' }}" href="{{ route('admin.usuarios.index') }}">{{ __('Usuarios') }}</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link {{ request()->routeIs('admin.catalogos.*') ? 'active' : '' }}" href="{{ route('admin.catalogos.index') }}">{{ __('Catálogos') }}</a>
+                    <a class="nav-link {{ request()->routeIs('admin.catalogos.*') ? 'active' : '' }}" href="{{ route('admin.catalogos.index') }}">{{ __('Catalogos') }}</a>
+                </li>
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle {{ request()->is('vol/*') ? 'active' : '' }}" href="#" id="volDropdownAdmin" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        Jovenes al Volante
+                    </a>
+                    <ul class="dropdown-menu" aria-labelledby="volDropdownAdmin">
+                        @if(auth()->user()->can('vol.reports.view'))
+                            <li><a class="dropdown-item" href="{{ route('vol.dashboard') }}">Dashboard</a></li>
+                        @endif
+                        @can('viewAny', App\Models\VolGroup::class)
+                            <li><a class="dropdown-item" href="{{ route('vol.groups.index') }}">Grupos</a></li>
+                        @endcan
+                        @can('create', App\Models\VolPayment::class)
+                            <li><a class="dropdown-item" href="{{ route('vol.payments.create') }}">Registrar pago</a></li>
+                        @endcan
+                        @can('viewAny', App\Models\VolSite::class)
+                            <li><a class="dropdown-item" href="{{ route('vol.sites.index') }}">Sedes</a></li>
+                        @endcan
+                    </ul>
                 </li>
                 <!-- Salud360 (Admin) -->
                 <li class="nav-item dropdown">
@@ -57,17 +76,55 @@
                 </li>
                 @endrole
 
-                @role('encargado_bienestar')
+@role('encargado_bienestar')
                 <li class="nav-item">
                     <a class="nav-link {{ request()->routeIs('s360.bienestar.*') ? 'active' : '' }}" href="{{ route('s360.bienestar.view') }}">Bienestar Dash</a>
                 </li>
-                @endrole
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle {{ request()->is('vol/*') ? 'active' : '' }}" href="#" id="volDropdownBienestar" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        Jovenes al Volante
+                    </a>
+                    <ul class="dropdown-menu" aria-labelledby="volDropdownBienestar">
+                        @if(auth()->user()->can('vol.reports.view'))
+                            <li><a class="dropdown-item" href="{{ route('vol.dashboard') }}">Dashboard</a></li>
+                        @endif
+                        @can('viewAny', App\Models\VolGroup::class)
+                            <li><a class="dropdown-item" href="{{ route('vol.groups.index') }}">Grupos</a></li>
+                        @endcan
+                        @can('create', App\Models\VolPayment::class)
+                            <li><a class="dropdown-item" href="{{ route('vol.payments.create') }}">Registrar pago</a></li>
+                        @endcan
+                        @can('viewAny', App\Models\VolSite::class)
+                            <li><a class="dropdown-item" href="{{ route('vol.sites.index') }}">Sedes</a></li>
+                        @endcan
+                    </ul>
+                </li>
+@endrole
 
-                @role('encargado_360')
+@role('encargado_360')
                 <li class="nav-item">
                     <a class="nav-link {{ request()->routeIs('s360.enc360.view') ? 'active' : '' }}" href="{{ route('s360.enc360.view') }}">Dashboard</a>
                 </li>
-                @endrole
+@endrole
+
+@hasanyrole('encargado_JAV|encargado_jav')
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle {{ request()->is('vol/*') ? 'active' : '' }}" href="#" id="volDropdownJav" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        Jovenes al Volante
+                    </a>
+                    <ul class="dropdown-menu" aria-labelledby="volDropdownJav">
+                        @if(auth()->user()->can('vol.reports.view'))
+                            <li><a class="dropdown-item" href="{{ route('vol.dashboard') }}">Dashboard</a></li>
+                        @endif
+                        @can('viewAny', App\Models\VolGroup::class)
+                            <li><a class="dropdown-item" href="{{ route('vol.groups.index') }}">Grupos</a></li>
+                        @endcan
+                        @can('create', App\Models\VolPayment::class)
+                            <li><a class="dropdown-item" href="{{ route('vol.payments.create') }}">Registrar pago</a></li>
+                        @endcan
+                    </ul>
+                </li>
+@endhasanyrole
 
                 @role('psicologo')
                 <li class="nav-item">
@@ -99,8 +156,3 @@
         </div>
     </div>
 </nav>
-
-
-
-
-

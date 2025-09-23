@@ -221,6 +221,7 @@ class ReportController extends Controller
             ->orderBy('site_id')
             ->orderBy('name')
             ->get()
+            ->filter(fn (VolGroup $group) => ($group->available_slots ?? 0) > 0)
             ->map(fn (VolGroup $group) => [
                 'group_id' => $group->id,
                 'group_name' => $group->name,
@@ -231,6 +232,7 @@ class ReportController extends Controller
                 'active' => (int) ($group->active_enrollments ?? 0),
                 'available' => (int) $group->available_slots,
             ])
+            ->values()
             ->toArray();
 
         $totals = [
@@ -248,13 +250,25 @@ class ReportController extends Controller
 
     private function aggregateBySite(Carbon $start, Carbon $end, ?int $siteId = null): array
     {
+        $referenceDate = $end->toDateString();
+
         return DB::table('vol_enrollments')
             ->join('vol_groups', 'vol_groups.id', '=', 'vol_enrollments.group_id')
             ->join('vol_sites', 'vol_sites.id', '=', 'vol_groups.site_id')
+            ->join('beneficiarios', 'beneficiarios.id', '=', 'vol_enrollments.beneficiario_id')
             ->where('vol_enrollments.status', 'inscrito')
             ->whereBetween('vol_enrollments.enrolled_at', [$start, $end])
             ->when($siteId, fn ($query) => $query->where('vol_groups.site_id', $siteId))
-            ->select('vol_sites.id as site_id', 'vol_sites.name as site_name', DB::raw('COUNT(*) as total'))
+            ->selectRaw(
+                "vol_sites.id as site_id, " .
+                "vol_sites.name as site_name, " .
+                "COUNT(*) as total, " .
+                "SUM(CASE WHEN UPPER(beneficiarios.sexo) = 'M' THEN 1 ELSE 0 END) as male_total, " .
+                "SUM(CASE WHEN UPPER(beneficiarios.sexo) = 'F' THEN 1 ELSE 0 END) as female_total, " .
+                "SUM(CASE WHEN beneficiarios.fecha_nacimiento IS NOT NULL AND TIMESTAMPDIFF(YEAR, beneficiarios.fecha_nacimiento, ?) < 18 THEN 1 ELSE 0 END) as minors_total, " .
+                "SUM(CASE WHEN beneficiarios.fecha_nacimiento IS NOT NULL AND TIMESTAMPDIFF(YEAR, beneficiarios.fecha_nacimiento, ?) >= 18 THEN 1 ELSE 0 END) as adults_total",
+                [$referenceDate, $referenceDate]
+            )
             ->groupBy('vol_sites.id', 'vol_sites.name')
             ->orderByDesc('total')
             ->get()
@@ -262,6 +276,10 @@ class ReportController extends Controller
                 'site_id' => (int) $row->site_id,
                 'site_name' => $row->site_name,
                 'total' => (int) $row->total,
+                'male' => (int) $row->male_total,
+                'female' => (int) $row->female_total,
+                'minors' => (int) $row->minors_total,
+                'adults' => (int) $row->adults_total,
             ])
             ->toArray();
     }

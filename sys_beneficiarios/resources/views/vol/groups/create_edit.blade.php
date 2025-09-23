@@ -21,16 +21,6 @@
                 @endif
 
                 <div class="col-md-6">
-                    <label class="form-label">Programa</label>
-                    <select name="program_id" class="form-select" required>
-                        <option value="">Seleccione</option>
-                        @foreach($programs as $id => $name)
-                            <option value="{{ $id }}" @selected(old('program_id', $group->program_id ?? '') == $id)>{{ $name }}</option>
-                        @endforeach
-                    </select>
-                </div>
-
-                <div class="col-md-6">
                     <label class="form-label">Sede</label>
                     <select name="site_id" class="form-select" required>
                         <option value="">Seleccione</option>
@@ -69,13 +59,12 @@
                 </div>
 
                 <div class="col-md-3">
-                    <label class="form-label">Fecha de cierre</label>
-                    <input type="date" name="end_date" value="{{ old('end_date', optional($group->end_date ?? null)->format('Y-m-d')) }}" class="form-control">
-                </div>
-
-                <div class="col-md-3">
                     <label class="form-label">Capacidad</label>
                     <input type="number" min="0" name="capacity" value="{{ old('capacity', $group->capacity ?? 12) }}" class="form-control" required>
+                </div>
+
+                <div class="col-12">
+                    <small class="text-muted">La fecha de cierre se calculara automaticamente como el ultimo dia del mes de inicio.</small>
                 </div>
 
                 @if($isEdit)
