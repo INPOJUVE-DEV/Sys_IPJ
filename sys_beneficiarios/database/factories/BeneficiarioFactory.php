@@ -1,4 +1,6 @@
-﻿<?php
+<?php
+
+declare(strict_types=1);
 
 namespace Database\Factories;
 
@@ -7,6 +9,9 @@ use App\Models\Municipio;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
 
+/**
+ * @extends Factory<\App\Models\Beneficiario>
+ */
 class BeneficiarioFactory extends Factory
 {
     protected $model = Beneficiario::class;
@@ -24,7 +29,7 @@ class BeneficiarioFactory extends Factory
             'curp' => Str::upper(Str::random(18)),
             'fecha_nacimiento' => fake()->date('Y-m-d', '-18 years'),
             'edad' => fake()->numberBetween(18, 65),
-            'sexo' => fake()->randomElement(['M','F','X']),
+            'sexo' => fake()->randomElement(['M', 'F', 'X']),
             'discapacidad' => false,
             'telefono' => fake()->numerify('##########'),
             'municipio_id' => $municipioId,
