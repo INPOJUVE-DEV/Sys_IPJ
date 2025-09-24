@@ -1,11 +1,17 @@
 ﻿<x-app-layout>
 <div class="container py-4">
-  <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-3 gap-2">
+  <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-3 gap-3">
     <h1 class="h4 m-0">Mi Panel</h1>
-    <a href="{{ route('beneficiarios.create') }}" class="btn btn-success btn-lg">
-      <i class="bi bi-plus-circle"></i>
-      Capturar beneficiario
-    </a>
+    <div class="d-flex flex-column flex-sm-row gap-2">
+      <a href="{{ route('beneficiarios.create') }}" class="btn btn-success btn-lg">
+        <i class="bi bi-plus-circle"></i>
+        Capturar beneficiario
+      </a>
+      <a href="{{ route('s360.enc360.asignaciones') }}" class="btn btn-primary btn-lg">
+        <i class="bi bi-person-plus-fill"></i>
+        Asignar paciente
+      </a>
+    </div>
   </div>
 
   <div class="card mb-4">
@@ -23,12 +29,32 @@
     </div>
   </div>
 
+  <div class="card mb-4">
+    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+      <div>
+        <span class="fw-semibold">Actividad reciente</span>
+        <p class="text-muted small mb-0">Seguimiento de las asignaciones y sesiones más recientes.</p>
+      </div>
+      <button type="button" class="btn btn-sm btn-outline-secondary" id="recentActivityRefresh">
+        <i class="bi bi-arrow-repeat me-1"></i>Actualizar
+      </button>
+    </div>
+    <div class="card-body p-0">
+      <div id="recentActivityLoading" class="px-3 py-3 border-bottom text-muted small d-flex align-items-center gap-2">
+        <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+        <span>Cargando actividad…</span>
+      </div>
+      <div class="list-group list-group-flush" id="recentActivityList"></div>
+      <div id="recentActivityEmpty" class="text-muted small text-center py-3 d-none">No hay actividad reciente registrada.</div>
+    </div>
+  </div>
+
   <div class="row g-3">
     <div class="col-12 col-lg-4">
       <div class="card h-100">
         <div class="card-header bg-white">
           <div class="d-flex gap-2 align-items-center">
-            <span class="fw-semibold">ÃƒÅ¡ltimas sesiones</span>
+            <span class="fw-semibold">Últimas sesiones</span>
             <input type="text" class="form-control form-control-sm" placeholder="Beneficiario" id="filtro-sesiones">
             <select class="form-select form-select-sm" id="filtro-sesiones-select">
               <option value="">Todos</option>
@@ -44,7 +70,7 @@
       <div class="card h-100">
         <div class="card-header bg-white">
           <div class="d-flex gap-2 align-items-center">
-            <span class="fw-semibold">PrÃƒÂ³ximas citas</span>
+            <span class="fw-semibold">Próximas citas</span>
             <input type="text" class="form-control form-control-sm" placeholder="Beneficiario" id="filtro-citas">
             <select class="form-select form-select-sm" id="filtro-citas-select">
               <option value="">Todos</option>
@@ -61,7 +87,7 @@
       <div class="card h-100">
         <div class="card-header bg-white">
           <div class="d-flex gap-2 align-items-center">
-            <span class="fw-semibold">PsicÃƒÂ³logos con mÃƒÂ¡s carga</span>
+            <span class="fw-semibold">Psicólogos con más carga</span>
             <input type="text" class="form-control form-control-sm" placeholder="Beneficiario" id="filtro-top">
             <select class="form-select form-select-sm" id="filtro-top-select">
               <option value="">Todos</option>
@@ -90,8 +116,118 @@ document.addEventListener('DOMContentLoaded', async () => {
     const listaSesiones = document.getElementById('lista-sesiones');
     const tablaCitas = document.getElementById('tabla-citas');
     const citasEmpty = document.getElementById('citasEmpty');
-
+    const activityList = document.getElementById('recentActivityList');
+    const activityEmpty = document.getElementById('recentActivityEmpty');
+    const activityLoading = document.getElementById('recentActivityLoading');
+    const activityRefresh = document.getElementById('recentActivityRefresh');
+    const beneficiaryDetailTemplate = @json(route('beneficiarios.edit', ['beneficiario' => '__ID__']));
+    const parseDateValue = (value) => {
+        if (!value) return null;
+        const normalized = value.includes('T') ? value : `${value}T00:00:00`;
+        const date = new Date(normalized);
+        return Number.isNaN(date.getTime()) ? null : date;
+    };
+    const dateFormatter = (() => {
+        try {
+            return new Intl.DateTimeFormat('es-MX', { dateStyle: 'medium', timeStyle: 'short' });
+        } catch (error) {
+            console.warn('No se pudo crear el formateador de fechas', error);
+            return null;
+        }
+    })();
+    const formatDateValue = (value) => {
+        const date = parseDateValue(value);
+        if (!date) return 'Sin fecha';
+        return dateFormatter ? dateFormatter.format(date) : date.toLocaleString();
+    };
+    const buildBeneficiaryUrl = (id) => {
+        if (!id) return null;
+        return beneficiaryDetailTemplate.replace('__ID__', id);
+    };
+    const renderActivityItems = (items) => {
+        if (!activityList) return;
+        if (!items.length) {
+            activityList.innerHTML = '';
+            activityEmpty?.classList.remove('d-none');
+            return;
+        }
+        activityEmpty?.classList.add('d-none');
+        activityList.innerHTML = items.map(item => {
+            const tag = item.url ? 'a' : 'div';
+            const typeLabel = item.type === 'assignment' ? 'Asignación' : 'Sesión';
+            const badgeClass = item.type === 'assignment' ? 'bg-primary' : 'bg-success';
+            const hrefAttr = item.url ? ` href="${item.url}"` : '';
+            const description = item.description ? `${typeLabel} • ${item.description}` : typeLabel;
+            return `<${tag} class="list-group-item list-group-item-action d-flex gap-3 align-items-start"${hrefAttr}>
+                <div class="pt-1">
+                    <span class="badge rounded-pill ${badgeClass} text-white"><i class="bi ${item.icon}"></i></span>
+                </div>
+                <div class="flex-grow-1">
+                    <div class="d-flex justify-content-between align-items-center gap-2">
+                        <span class="fw-semibold">${item.label}</span>
+                        <span class="small text-muted">${item.dateLabel}</span>
+                    </div>
+                    <div class="small text-muted">${description}</div>
+                </div>
+            </${tag}>`;
+        }).join('');
+    };
+    const loadRecentActivity = async () => {
+        if (!activityList) return;
+        if (activityLoading) activityLoading.classList.remove('d-none');
+        activityList.innerHTML = '';
+        activityEmpty?.classList.add('d-none');
+        try {
+            const [assignRes, sessionsRes] = await Promise.all([
+                fetch('{{ route('s360.enc360.patients') }}?status=active&per_page=10', { headers: { 'Accept': 'application/json' } }),
+                fetch('{{ route('s360.enc360.sesiones.latest') }}', { headers: { 'Accept': 'application/json' } }),
+            ]);
+            const assignmentsData = assignRes.ok ? await assignRes.json() : { data: [] };
+            const sessionsData = sessionsRes.ok ? await sessionsRes.json() : { items: [] };
+            const items = [];
+            (assignmentsData.data || assignmentsData.items || []).forEach(item => {
+                const nombre = [item.ben_nombre, item.ben_apellido_paterno, item.ben_apellido_materno].filter(Boolean).join(' ').replace(/\s+/g, ' ').trim() || 'Beneficiario sin nombre';
+                const assignedAt = item.assigned_at || item.created_at || null;
+                const date = parseDateValue(assignedAt);
+                items.push({
+                    type: 'assignment',
+                    label: nombre,
+                    description: item.psicologo_name ? `Asignado a ${item.psicologo_name}` : 'Asignación registrada',
+                    dateValue: date ? date.getTime() : 0,
+                    dateLabel: formatDateValue(assignedAt),
+                    icon: 'bi-person-plus-fill',
+                    url: buildBeneficiaryUrl(item.beneficiario_id),
+                });
+            });
+            (sessionsData.items || []).forEach(session => {
+                const date = parseDateValue(session.session_date);
+                items.push({
+                    type: 'session',
+                    label: session.beneficiario || 'Beneficiario sin nombre',
+                    description: `${session.psicologo || 'Sin psicólogo'}${session.is_first ? ' • Primera sesión' : ''}`,
+                    dateValue: date ? date.getTime() : 0,
+                    dateLabel: formatDateValue(session.session_date),
+                    icon: 'bi-journal-check',
+                    url: buildBeneficiaryUrl(session.beneficiario_id),
+                });
+            });
+            items.sort((a, b) => b.dateValue - a.dateValue);
+            renderActivityItems(items.slice(0, 8));
+        } catch (error) {
+            console.error('Error cargando actividad reciente', error);
+            if (activityList) {
+                activityList.innerHTML = '<div class="list-group-item small text-warning">No se pudo cargar la actividad reciente.</div>';
+            }
+            activityEmpty?.classList.add('d-none');
+        } finally {
+            activityLoading?.classList.add('d-none');
+        }
+    };
+    activityRefresh?.addEventListener('click', () => loadRecentActivity());
+    loadRecentActivity();
     let ChartModule;
+
+
     try {
         ChartModule = await import('https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js');
     } catch (error) {
