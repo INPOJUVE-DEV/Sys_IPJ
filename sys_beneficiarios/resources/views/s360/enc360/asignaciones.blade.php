@@ -109,22 +109,11 @@
 
   <div class="card">
     <div class="card-body">
-      <div class="table-responsive">
-        <table class="table table-sm align-middle">
-          <thead class="table-light">
-            <tr>
-              <th>Beneficiario</th>
-              <th>Psicólogo</th>
-              <th>Municipio</th>
-              <th>Asignada</th>
-              <th>Estado</th>
-              <th style="width:140px">Acciones</th>
-            </tr>
-          </thead>
-          <tbody id="rows"></tbody>
-        </table>
+      <div id="assignmentEmpty" class="text-center text-muted py-4 d-none">
+        No hay coincidencias con los filtros seleccionados.
       </div>
-      <div id="pager" class="small text-muted"></div>
+      <div id="rows" class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-3"></div>
+      <div id="pager" class="small text-muted mt-3"></div>
     </div>
   </div>
 </div>
@@ -408,7 +397,8 @@ function initAssignmentWizard() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    const tbody = document.getElementById('rows');
+    const grid = document.getElementById('rows');
+    const emptyState = document.getElementById('assignmentEmpty');
     const pager = document.getElementById('pager');
     const searchInput = document.getElementById('beneficiarioSearch');
     const statusSelect = document.getElementById('f-status');
@@ -430,18 +420,38 @@ document.addEventListener('DOMContentLoaded', () => {
     const buildRowHtml = (row) => {
         const nombre = `${row.ben_nombre || ''} ${row.ben_apellido_paterno || ''} ${row.ben_apellido_materno || ''}`.replace(/\s+/g, ' ').trim() || 'Sin nombre';
         const estado = row.active ? '<span class="badge bg-success">Activa</span>' : '<span class="badge bg-secondary">Inactiva</span>';
-        const psicologo = row.psicologo_name || '<span class="text-muted">Sin asignar</span>';
+        const psicologo = row.psicologo_name || 'Sin asignar';
         const fecha = (row.assigned_at || '').toString().substring(0, 10);
-        return `<tr>
-      <td>${nombre}</td>
-      <td>${psicologo}</td>
-      <td>${row.municipio_id ?? ''}</td>
-      <td>${fecha}</td>
-      <td>${estado}</td>
-      <td>
-        <button class="btn btn-sm btn-outline-primary" data-action="reassign" data-ben="${row.beneficiario_id}" data-currentpsi="${row.psicologo_id || ''}">Cambiar</button>
-      </td>
-    </tr>`;
+        const municipio = row.municipio_id ?? '—';
+        return `<div class="col">
+          <div class="card bg-dark border border-white text-white h-100 shadow-sm">
+            <div class="card-body d-flex flex-column gap-3">
+              <div>
+                <h3 class="h6 text-white mb-1">${nombre}</h3>
+                <div class="small text-white-50"><i class="bi bi-person-video3 me-1"></i>${psicologo}</div>
+              </div>
+              <div class="d-flex flex-column gap-2 small">
+                <div class="d-flex justify-content-between align-items-center text-white-50">
+                  <span><i class="bi bi-geo-alt me-1"></i>Municipio</span>
+                  <span class="text-white fw-semibold">${municipio}</span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center text-white-50">
+                  <span><i class="bi bi-calendar-event me-1"></i>Asignada</span>
+                  <span class="text-white">${fecha || '—'}</span>
+                </div>
+              </div>
+              <div class="d-flex justify-content-between align-items-center">
+                <span class="text-white-50 small text-uppercase">Estado</span>
+                ${estado}
+              </div>
+              <div class="mt-auto">
+                <button class="btn btn-outline-light btn-sm w-100" data-action="reassign" data-ben="${row.beneficiario_id}" data-currentpsi="${row.psicologo_id || ''}">
+                  <i class="bi bi-arrow-repeat me-1"></i>Cambiar psicólogo
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>`;
     };
 
     function attachReassign() {
@@ -458,7 +468,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function renderRows() {
-        if (!tbody) return;
+        if (!grid) return;
         const query = normalize(searchInput ? searchInput.value : '');
         const filtered = currentRows.filter(row => {
             const fullName = normalize(`${row.ben_nombre || ''} ${row.ben_apellido_paterno || ''} ${row.ben_apellido_materno || ''}`);
@@ -466,9 +476,13 @@ document.addEventListener('DOMContentLoaded', () => {
             return !query || fullName.includes(query) || psychologist.includes(query);
         });
         if (!filtered.length) {
-            tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-3">No hay coincidencias con los filtros seleccionados.</td></tr>';
+            grid.innerHTML = '';
+            grid.classList.add('d-none');
+            emptyState?.classList.remove('d-none');
         } else {
-            tbody.innerHTML = filtered.map(buildRowHtml).join('');
+            grid.innerHTML = filtered.map(buildRowHtml).join('');
+            grid.classList.remove('d-none');
+            emptyState?.classList.add('d-none');
         }
         attachReassign();
         if (pager) {

@@ -21,13 +21,11 @@
 
   <div class="card">
     <div class="card-body">
-      <div class="table-responsive">
-        <table class="table table-sm align-middle">
-          <thead class="table-light"><tr><th>Nombre</th><th>Correo</th><th>Carga</th><th style="width:140px">Acciones</th></tr></thead>
-          <tbody id="rows"></tbody>
-        </table>
+      <div id="emptyState" class="text-center text-muted py-4 d-none">
+        No se encontraron psicólogos con los filtros seleccionados.
       </div>
-      <div id="pager" class="small text-muted"></div>
+      <div id="rows" class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-3"></div>
+      <div id="pager" class="small text-muted mt-3"></div>
     </div>
   </div>
 </div>
@@ -61,15 +59,45 @@
       const res = await fetch(`/s360/enc360/psicologos/list?${p.toString()}`);
       data = await res.json();
     } catch (e) { showToast('Error cargando psicólogos','danger'); return; }
-    const tbody = document.getElementById('rows');
-    tbody.innerHTML = (data.data||[]).map(r => `<tr>
-      <td>${r.name}</td>
-      <td>${r.email}</td>
-      <td><span class='badge bg-secondary'>${r.cargas}</span></td>
-      <td>
-        <a class='btn btn-sm btn-outline-primary' href='/s360/enc360/asignaciones?psicologo_id=${r.id}'>Ver pacientes</a>
-      </td>
-    </tr>`).join('');
+    const grid = document.getElementById('rows');
+    const empty = document.getElementById('emptyState');
+    const buildCard = (r = {}) => {
+      const cargas = typeof r.cargas !== 'undefined' ? r.cargas : 0;
+      const cargaLabel = cargas === 1 ? 'paciente' : 'pacientes';
+      const name = r.name || 'Sin nombre';
+      const email = r.email || 'Sin correo';
+      const id = r.id || '';
+      return `<div class="col">
+        <div class="card bg-dark border border-white text-white h-100 shadow-sm">
+          <div class="card-body d-flex flex-column gap-3">
+            <div>
+              <h3 class="h6 text-white mb-1">${name}</h3>
+              <div class="small text-white-50"><i class="bi bi-envelope me-1"></i>${email}</div>
+            </div>
+            <div class="d-flex justify-content-between align-items-center">
+              <span class="text-white-50 small text-uppercase">Carga</span>
+              <span class="badge bg-primary bg-opacity-75 text-white">${cargas} ${cargaLabel}</span>
+            </div>
+            <div class="mt-auto d-flex flex-column gap-2">
+              <a class="btn btn-outline-light w-100" href="/s360/enc360/asignaciones?psicologo_id=${id}">
+                <i class="bi bi-people me-1"></i>Ver pacientes
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>`;
+    };
+    if (grid) {
+      const cards = (data.data || []).map(buildCard).join('');
+      grid.innerHTML = cards;
+      if (!cards) {
+        grid.classList.add('d-none');
+        empty?.classList.remove('d-none');
+      } else {
+        grid.classList.remove('d-none');
+        empty?.classList.add('d-none');
+      }
+    }
     const pager = document.getElementById('pager');
     const cur = data.current_page||1; const last = data.last_page||1; const total = data.total||0;
     pager.innerHTML = `<div class="d-flex justify-content-between align-items-center"><div>Página ${cur} de ${last} • ${total} psicólogos</div><div class="btn-group btn-group-sm" role="group"><button class="btn btn-outline-secondary" ${cur<=1?'disabled':''} id="pg-prev">« Anterior</button><button class="btn btn-outline-secondary" ${cur>=last?'disabled':''} id="pg-next">Siguiente »</button></div></div>`;

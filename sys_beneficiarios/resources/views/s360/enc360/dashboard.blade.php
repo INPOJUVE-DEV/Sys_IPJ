@@ -52,12 +52,8 @@
           </div>
         </div>
         <div class="card-body" style="max-height:420px; overflow:auto;">
-          <table class="table table-sm align-middle mb-0">
-            <thead class="table-light">
-              <tr><th>Beneficiario</th><th>PsicÃƒÂ³logo</th><th>Fecha</th></tr>
-            </thead>
-            <tbody id="tabla-citas"></tbody>
-          </table>
+          <div id="citasEmpty" class="text-muted small text-center py-3 d-none">Sin próximas citas registradas.</div>
+          <div id="tabla-citas" class="d-grid gap-3"></div>
         </div>
       </div>
     </div>
@@ -93,6 +89,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const listaTop = document.getElementById('lista-top');
     const listaSesiones = document.getElementById('lista-sesiones');
     const tablaCitas = document.getElementById('tabla-citas');
+    const citasEmpty = document.getElementById('citasEmpty');
 
     let ChartModule;
     try {
@@ -188,7 +185,32 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (prox.ok) {
             const data = await prox.json();
             if (tablaCitas) {
-                tablaCitas.innerHTML = (data.items || []).map(r => `<tr><td>${r.beneficiario}</td><td>${r.psicologo}</td><td>${r.next_session_date}</td></tr>`).join('');
+                const buildCard = (item = {}) => {
+                    const beneficiario = item.beneficiario || 'Beneficiario sin nombre';
+                    const psicologo = item.psicologo || 'Sin asignar';
+                    const fecha = item.next_session_date || 'Sin fecha';
+                    return `<div class="card bg-dark border border-white text-white shadow-sm">
+                        <div class="card-body d-flex flex-column gap-2">
+                            <div>
+                                <h3 class="h6 text-white mb-1">${beneficiario}</h3>
+                                <div class="small text-white-50"><i class="bi bi-person-video3 me-1"></i>${psicologo}</div>
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                <i class="bi bi-calendar-event"></i>
+                                <span>${fecha}</span>
+                            </div>
+                        </div>
+                    </div>`;
+                };
+                const cards = (data.items || []).map(buildCard).join('');
+                tablaCitas.innerHTML = cards;
+                if (!cards) {
+                    tablaCitas.classList.add('d-none');
+                    citasEmpty?.classList.remove('d-none');
+                } else {
+                    tablaCitas.classList.remove('d-none');
+                    citasEmpty?.classList.add('d-none');
+                }
             }
         }
     } catch (error) {
