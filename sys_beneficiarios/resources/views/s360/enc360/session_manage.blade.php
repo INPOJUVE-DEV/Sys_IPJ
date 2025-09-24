@@ -36,6 +36,10 @@
           <div class="col-12 @if(!$session->is_first) d-none @endif">
             <label class="form-label">Motivo de consulta (1ª)</label>
             <textarea class="form-control" name="motivo_consulta" rows="2" @if(!$session->is_first) disabled @endif disabled>{{ old('motivo_consulta', $session->motivo_consulta) }}</textarea>
+            <div class="mt-2 suggestion-box d-none" id="motivoSuggestions">
+              <div class="form-text mb-1">Sugerencias rápidas</div>
+              <div class="d-flex flex-wrap gap-2 suggestion-items"></div>
+            </div>
           </div>
           <div class="col-12 col-md-6 @if(!$session->is_first) d-none @endif">
             <label class="form-label">Riesgo suicida</label>
@@ -58,6 +62,10 @@
         <div class="mt-3">
           <label class="form-label">Notas</label>
           <textarea class="form-control" name="notes" rows="3" disabled>{{ old('notes', $session->notes) }}</textarea>
+          <div class="mt-2 suggestion-box d-none" id="notesSuggestions">
+            <div class="form-text mb-1">Notas sugeridas</div>
+            <div class="d-flex flex-wrap gap-2 suggestion-items"></div>
+          </div>
         </div>
 
         <div class="mt-3 d-flex gap-2">
@@ -74,14 +82,85 @@
   document.addEventListener('DOMContentLoaded', () => {
     const btn = document.getElementById('btn-edit');
     const save = document.getElementById('btn-save');
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('#form [name], #form textarea, #form select').forEach(el => {
-        if (el.getAttribute('name') === '_token' || el.getAttribute('name') === '_method') return;
-        el.removeAttribute('disabled');
+    const form = document.getElementById('form');
+    const suggestionBoxes = document.querySelectorAll('.suggestion-box');
+
+    const normalizeList = (values) => Array.from(new Set(values.filter(Boolean)));
+    const loadStored = (key) => {
+      try {
+        const raw = localStorage.getItem(key);
+        const parsed = JSON.parse(raw || '[]');
+        return Array.isArray(parsed) ? parsed : [];
+      } catch (error) {
+        return [];
+      }
+    };
+    const storeValue = (key, value) => {
+      const existing = loadStored(key);
+      if (existing.includes(value)) return;
+      existing.unshift(value);
+      localStorage.setItem(key, JSON.stringify(existing.slice(0, 20)));
+    };
+
+    const attachSuggestions = (fieldName, containerId, storageKey, defaults = []) => {
+      const field = form?.querySelector(`[name="${fieldName}"]`);
+      const container = document.getElementById(containerId);
+      if (!field || !container) return;
+      const itemsWrap = container.querySelector('.suggestion-items');
+      const render = (term = '') => {
+        const source = normalizeList([...defaults, ...loadStored(storageKey)]);
+        const filtered = term ? source.filter(value => value.toLowerCase().includes(term.toLowerCase())) : source;
+        if (!filtered.length) {
+          itemsWrap.innerHTML = '<span class="text-muted small">Sin sugerencias disponibles.</span>';
+          return;
+        }
+        itemsWrap.innerHTML = filtered.slice(0, 6).map(value => {
+          const encoded = value.replace(/"/g, '&quot;');
+          return `<button type="button" class="btn btn-sm btn-outline-light" data-value="${encoded}">${value}</button>`;
+        }).join('');
+      };
+      itemsWrap.addEventListener('click', (event) => {
+        const target = event.target.closest('button[data-value]');
+        if (!target) return;
+        field.value = target.getAttribute('data-value');
+        field.dispatchEvent(new Event('input'));
       });
-      save.removeAttribute('disabled');
-      btn.setAttribute('disabled', 'disabled');
-    });
+      field.addEventListener('input', () => render(field.value));
+      form?.addEventListener('submit', () => {
+        const value = field.value.trim();
+        if (value) {
+          storeValue(storageKey, value);
+        }
+      });
+      render();
+    };
+
+    const defaultMotives = [
+      'Evaluación inicial',
+      'Seguimiento emocional',
+      'Situación familiar',
+    ];
+    const defaultNotes = [
+      'Se asignan ejercicios de respiración consciente.',
+      'Se acuerda seguimiento en próxima sesión.',
+      'Se refuerzan estrategias de afrontamiento.',
+    ];
+
+    attachSuggestions('motivo_consulta', 'motivoSuggestions', 'enc360_motivo_suggestions', defaultMotives);
+    attachSuggestions('notes', 'notesSuggestions', 'enc360_notes_suggestions', defaultNotes);
+
+    if (btn) {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('#form [name], #form textarea, #form select').forEach(el => {
+          const name = el.getAttribute('name');
+          if (name === '_token' || name === '_method') return;
+          el.removeAttribute('disabled');
+        });
+        save?.removeAttribute('disabled');
+        btn.setAttribute('disabled', 'disabled');
+        suggestionBoxes.forEach(box => box.classList.remove('d-none'));
+      });
+    }
   });
 </script>
 @endpush

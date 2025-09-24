@@ -106,6 +106,36 @@
         </div>
     </div>
 
+    <div class="row g-4 mb-4">
+        <div class="col-xl-4">
+            <div class="card h-100">
+                <div class="card-header">Inscripciones totales (trimestre)</div>
+                <div class="card-body">
+                    <canvas id="chartTotals" height="200" aria-label="Inscripciones totales" role="img"></canvas>
+                    <div class="text-muted small mt-2" id="chartTotalsEmpty" style="display:none;">Sin datos disponibles para el periodo seleccionado.</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-4">
+            <div class="card h-100">
+                <div class="card-header">Inscritos por sede (mes)</div>
+                <div class="card-body">
+                    <canvas id="chartSites" height="200" aria-label="Inscripciones por sede" role="img"></canvas>
+                    <div class="text-muted small mt-2" id="chartSitesEmpty" style="display:none;">No se registran inscripciones en el mes.</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-4">
+            <div class="card h-100">
+                <div class="card-header">Estado de pagos</div>
+                <div class="card-body">
+                    <canvas id="chartPayments" height="200" aria-label="Estado de pagos" role="img"></canvas>
+                    <div class="text-muted small mt-2" id="chartPaymentsEmpty" style="display:none;">Aún no hay pagos registrados en el periodo.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="row g-3 mb-4">
         <div class="col-md-4">
             <div class="card text-bg-dark h-100">
@@ -267,3 +297,112 @@
         <strong>Notas operativas:</strong> {{ $copy['message'] ?? '' }}
     </div>
 </x-app-layout>
+
+@push('scripts')
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js" integrity="sha384-Mww7VW2PHy1/Ml5fpvcxAWWNjPJ6sWz5PaJjzTHnGp0VjcHFLMLpXZYmNbPliF6O" crossorigin="anonymous"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const totalsCanvas = document.getElementById('chartTotals');
+            const totalsEmpty = document.getElementById('chartTotalsEmpty');
+            const totalsRaw = @json($quarterly['per_month'] ?? []);
+            const totalsData = Array.isArray(totalsRaw) ? totalsRaw : [];
+
+            if (totalsCanvas && totalsData.length > 0) {
+                if (totalsEmpty) totalsEmpty.style.display = 'none';
+                new Chart(totalsCanvas, {
+                    type: 'bar',
+                    data: {
+                        labels: totalsData.map(row => row.period ?? ''),
+                        datasets: [{
+                            label: 'Inscripciones',
+                            data: totalsData.map(row => row.total ?? 0),
+                            backgroundColor: '#38bdf8',
+                        }],
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: { display: false },
+                        },
+                        scales: {
+                            y: {
+                                ticks: { precision: 0 },
+                                beginAtZero: true,
+                            },
+                        },
+                    },
+                });
+            } else if (totalsCanvas) {
+                totalsCanvas.style.display = 'none';
+            }
+
+            const sitesCanvas = document.getElementById('chartSites');
+            const sitesEmpty = document.getElementById('chartSitesEmpty');
+            const sitesRaw = @json($monthly['per_site'] ?? []);
+            const sitesData = Array.isArray(sitesRaw) ? sitesRaw : [];
+
+            if (sitesCanvas && sitesData.length > 0) {
+                if (sitesEmpty) sitesEmpty.style.display = 'none';
+                new Chart(sitesCanvas, {
+                    type: 'bar',
+                    data: {
+                        labels: sitesData.map(row => row.site_name ?? 'N/D'),
+                        datasets: [{
+                            label: 'Inscritos',
+                            data: sitesData.map(row => row.total ?? 0),
+                            backgroundColor: '#c084fc',
+                        }],
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: { display: false },
+                        },
+                        scales: {
+                            y: {
+                                ticks: { precision: 0 },
+                                beginAtZero: true,
+                            },
+                        },
+                    },
+                });
+            } else if (sitesCanvas) {
+                sitesCanvas.style.display = 'none';
+            }
+
+            const paymentCanvas = document.getElementById('chartPayments');
+            const paymentEmpty = document.getElementById('chartPaymentsEmpty');
+            const paymentStats = @json($payments ?? []);
+            const paymentValues = [paymentStats.paid ?? 0, paymentStats.pending ?? 0];
+            const paymentTotal = paymentValues.reduce((sum, value) => sum + (Number(value) || 0), 0);
+
+            if (paymentCanvas && paymentTotal > 0) {
+                if (paymentEmpty) paymentEmpty.style.display = 'none';
+                new Chart(paymentCanvas, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Pagado', 'Pendiente'],
+                        datasets: [{
+                            data: paymentValues,
+                            backgroundColor: ['#34d399', '#fbbf24'],
+                            borderWidth: 0,
+                        }],
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: {
+                                    usePointStyle: true,
+                                },
+                            },
+                        },
+                    },
+                });
+            } else if (paymentCanvas) {
+                paymentCanvas.style.display = 'none';
+            }
+        });
+    </script>
+@endpush

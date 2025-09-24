@@ -14,7 +14,7 @@
 
     <div class="card">
         <div class="card-body">
-            <form action="{{ $action }}" method="POST" class="row g-3">
+            <form id="vol-group-form" action="{{ $action }}" method="POST" class="row g-3 needs-validation" novalidate>
                 @csrf
                 @if($isEdit)
                     @method('PUT')
@@ -28,11 +28,13 @@
                             <option value="{{ $id }}" @selected(old('site_id', $group->site_id ?? '') == $id)>{{ $name }}</option>
                         @endforeach
                     </select>
+                    <div class="invalid-feedback" data-feedback-for="site_id"></div>
                 </div>
 
                 <div class="col-md-6">
                     <label class="form-label">Nombre del grupo</label>
                     <input type="text" name="name" value="{{ old('name', $group->name ?? '') }}" class="form-control" required>
+                    <div class="invalid-feedback" data-feedback-for="name"></div>
                 </div>
 
                 <div class="col-md-3">
@@ -42,6 +44,7 @@
                             <option value="{{ $value }}" @selected(old('type', $group->type ?? '') === $value)>{{ $label }}</option>
                         @endforeach
                     </select>
+                    <div class="invalid-feedback" data-feedback-for="type"></div>
                 </div>
 
                 <div class="col-md-3">
@@ -51,16 +54,19 @@
                             <option value="{{ $value }}" @selected(old('schedule_template', $group->schedule_template ?? '') === $value)>{{ $label }}</option>
                         @endforeach
                     </select>
+                    <div class="invalid-feedback" data-feedback-for="schedule_template"></div>
                 </div>
 
                 <div class="col-md-3">
                     <label class="form-label">Fecha de inicio</label>
                     <input type="date" name="start_date" value="{{ old('start_date', optional($group->start_date ?? null)->format('Y-m-d')) }}" class="form-control" required>
+                    <div class="invalid-feedback" data-feedback-for="start_date"></div>
                 </div>
 
                 <div class="col-md-3">
                     <label class="form-label">Capacidad</label>
                     <input type="number" min="0" name="capacity" value="{{ old('capacity', $group->capacity ?? 12) }}" class="form-control" required>
+                    <div class="invalid-feedback" data-feedback-for="capacity"></div>
                 </div>
 
                 <div class="col-12">
@@ -85,3 +91,115 @@
         </div>
     </div>
 </x-app-layout>
+
+@push('scripts')
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const form = document.getElementById('vol-group-form');
+            if (!form) return;
+
+            const escapeSelector = value => {
+                if (window.CSS && typeof window.CSS.escape === 'function') {
+                    return window.CSS.escape(value);
+                }
+                return value.replace(/([ #;?%&,.+*~':"!^$\[\]()=>|\/])/g, '\\$1');
+            };
+
+            const rules = [
+                {
+                    name: 'site_id',
+                    validate: value => value !== '',
+                    message: 'Seleccione una sede válida.',
+                    events: ['change'],
+                },
+                {
+                    name: 'name',
+                    validate: value => value.length >= 4,
+                    message: 'El nombre debe tener al menos 4 caracteres.',
+                    events: ['input', 'blur'],
+                },
+                {
+                    name: 'type',
+                    validate: value => value !== '',
+                    message: 'Seleccione el tipo de grupo.',
+                    events: ['change'],
+                },
+                {
+                    name: 'schedule_template',
+                    validate: value => value !== '',
+                    message: 'Elija una plantilla de horario.',
+                    events: ['change'],
+                },
+                {
+                    name: 'start_date',
+                    validate: value => !!value,
+                    message: 'Indique la fecha de inicio.',
+                    events: ['change', 'input'],
+                },
+                {
+                    name: 'capacity',
+                    validate: value => {
+                        const numeric = Number(value);
+                        return Number.isFinite(numeric) && numeric > 0;
+                    },
+                    message: 'Capture una capacidad mayor a cero.',
+                    events: ['input', 'change'],
+                },
+            ];
+
+            function setValidity(fieldName) {
+                const config = rules.find(rule => rule.name === fieldName);
+                if (!config) return true;
+
+                const input = form.elements.namedItem(fieldName);
+                if (!input) return true;
+
+                const value = (input.value || '').trim();
+                const isValid = config.validate(value, input);
+                const message = isValid === true ? '' : (typeof isValid === 'string' ? isValid : config.message);
+
+                input.classList.toggle('is-invalid', !!message);
+                if (!message && value !== '') {
+                    input.classList.add('is-valid');
+                } else {
+                    input.classList.remove('is-valid');
+                }
+
+                if (typeof input.setCustomValidity === 'function') {
+                    input.setCustomValidity(message);
+                }
+
+                const selector = `.invalid-feedback[data-feedback-for="${escapeSelector(fieldName)}"]`;
+                const feedback = form.querySelector(selector);
+                if (feedback) {
+                    feedback.textContent = message;
+                }
+
+                return !message;
+            }
+
+            rules.forEach(rule => {
+                const input = form.elements.namedItem(rule.name);
+                if (!input) return;
+                (rule.events || ['input']).forEach(eventName => {
+                    input.addEventListener(eventName, () => setValidity(rule.name));
+                });
+                setValidity(rule.name);
+            });
+
+            form.addEventListener('submit', event => {
+                let valid = true;
+                rules.forEach(rule => {
+                    valid = setValidity(rule.name) && valid;
+                });
+
+                if (!valid) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    const firstInvalid = form.querySelector('.is-invalid');
+                    firstInvalid?.focus();
+                }
+            });
+        });
+    </script>
+@endpush
