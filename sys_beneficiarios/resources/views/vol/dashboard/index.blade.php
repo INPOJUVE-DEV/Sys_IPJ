@@ -170,34 +170,45 @@
         <div class="col-xl-12">
             <div class="card h-100">
                 <div class="card-header">Resumen mensual por sede</div>
-                <div class="card-body p-0">
-                    <div class="table-responsive">
-                        <table class="table table-dark table-sm mb-0">
-                            <thead>
-                                <tr>
-                                    <th>Sede</th>
-                                    <th class="text-end">Inscritos</th>
-                                    <th class="text-end">Hombres</th>
-                                    <th class="text-end">Mujeres</th>
-                                    <th class="text-end">Menores</th>
-                                    <th class="text-end">Mayores</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @forelse($monthly['per_site'] ?? [] as $site)
-                                    <tr>
-                                        <td>{{ $site['site_name'] ?? 'N/D' }}</td>
-                                        <td class="text-end">{{ $site['total'] ?? 0 }}</td>
-                                        <td class="text-end">{{ $site['male'] ?? 0 }}</td>
-                                        <td class="text-end">{{ $site['female'] ?? 0 }}</td>
-                                        <td class="text-end">{{ $site['minors'] ?? 0 }}</td>
-                                        <td class="text-end">{{ $site['adults'] ?? 0 }}</td>
-                                    </tr>
-                                @empty
-                                    <tr><td colspan="6" class="text-center py-3">Sin datos para el mes.</td></tr>
-                                @endforelse
-                            </tbody>
-                        </table>
+                <div class="card-body">
+                    <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-3">
+                        @forelse($monthly['per_site'] ?? [] as $site)
+                            <div class="col">
+                                <div class="card bg-dark border border-white text-white h-100 shadow-sm">
+                                    <div class="card-body d-flex flex-column gap-3">
+                                        <div class="d-flex justify-content-between align-items-start gap-2">
+                                            <div>
+                                                <h3 class="h6 text-white mb-1">{{ $site['site_name'] ?? 'N/D' }}</h3>
+                                                <div class="small text-white-50">Resumen mensual</div>
+                                            </div>
+                                            <span class="badge bg-primary bg-opacity-75 text-white">{{ $site['total'] ?? 0 }} totales</span>
+                                        </div>
+                                        <div class="d-flex flex-column gap-2 small">
+                                            <div class="d-flex justify-content-between text-white-50">
+                                                <span><i class="bi bi-gender-male me-1"></i>Hombres</span>
+                                                <span class="text-white fw-semibold">{{ $site['male'] ?? 0 }}</span>
+                                            </div>
+                                            <div class="d-flex justify-content-between text-white-50">
+                                                <span><i class="bi bi-gender-female me-1"></i>Mujeres</span>
+                                                <span class="text-white fw-semibold">{{ $site['female'] ?? 0 }}</span>
+                                            </div>
+                                            <div class="d-flex justify-content-between text-white-50">
+                                                <span><i class="bi bi-people me-1"></i>Menores</span>
+                                                <span class="text-white fw-semibold">{{ $site['minors'] ?? 0 }}</span>
+                                            </div>
+                                            <div class="d-flex justify-content-between text-white-50">
+                                                <span><i class="bi bi-person-vcard me-1"></i>Mayores</span>
+                                                <span class="text-white fw-semibold">{{ $site['adults'] ?? 0 }}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        @empty
+                            <div class="col-12">
+                                <div class="text-center text-muted py-3">Sin datos para el mes.</div>
+                            </div>
+                        @endforelse
                     </div>
                 </div>
             </div>
@@ -208,26 +219,24 @@
         <div class="col-xl-6">
             <div class="card h-100">
                 <div class="card-header">Resumen trimestral</div>
-                <div class="card-body p-0">
-                    <div class="table-responsive">
-                        <table class="table table-dark table-sm mb-0">
-                            <thead>
-                                <tr>
-                                    <th>Periodo</th>
-                                    <th class="text-end">Inscritos</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @forelse($quarterly['per_month'] ?? [] as $row)
-                                    <tr>
-                                        <td>{{ $row['period'] ?? 'N/D' }}</td>
-                                        <td class="text-end">{{ $row['total'] ?? 0 }}</td>
-                                    </tr>
-                                @empty
-                                    <tr><td colspan="2" class="text-center py-3">Sin datos para el trimestre.</td></tr>
-                                @endforelse
-                            </tbody>
-                        </table>
+                <div class="card-body">
+                    <div class="row row-cols-1 row-cols-md-2 g-3">
+                        @forelse($quarterly['per_month'] ?? [] as $row)
+                            <div class="col">
+                                <div class="card bg-dark border border-white text-white h-100 shadow-sm">
+                                    <div class="card-body d-flex flex-column gap-2">
+                                        <span class="text-white-50 small text-uppercase">Periodo</span>
+                                        <h3 class="h5 text-white mb-1">{{ $row['period'] ?? 'N/D' }}</h3>
+                                        <div class="display-6 fw-bold">{{ $row['total'] ?? 0 }}</div>
+                                        <div class="text-white-50 small">Inscripciones registradas</div>
+                                    </div>
+                                </div>
+                            </div>
+                        @empty
+                            <div class="col-12">
+                                <div class="text-center text-muted py-3">Sin datos para el trimestre.</div>
+                            </div>
+                        @endforelse
                     </div>
                 </div>
             </div>
@@ -235,26 +244,25 @@
         <div class="col-xl-6">
             <div class="card h-100">
                 <div class="card-header">Trimestre por sede</div>
-                <div class="card-body p-0">
-                    <div class="table-responsive">
-                        <table class="table table-dark table-sm mb-0">
-                            <thead>
-                                <tr>
-                                    <th>Sede</th>
-                                    <th class="text-end">Inscritos</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @forelse($quarterly['per_site'] ?? [] as $site)
-                                    <tr>
-                                        <td>{{ $site['site_name'] ?? 'N/D' }}</td>
-                                        <td class="text-end">{{ $site['total'] ?? 0 }}</td>
-                                    </tr>
-                                @empty
-                                    <tr><td colspan="2" class="text-center py-3">Sin datos para el trimestre.</td></tr>
-                                @endforelse
-                            </tbody>
-                        </table>
+                <div class="card-body">
+                    <div class="row row-cols-1 row-cols-md-2 g-3">
+                        @forelse($quarterly['per_site'] ?? [] as $site)
+                            <div class="col">
+                                <div class="card bg-dark border border-white text-white h-100 shadow-sm">
+                                    <div class="card-body d-flex flex-column gap-2">
+                                        <h3 class="h6 text-white mb-1">{{ $site['site_name'] ?? 'N/D' }}</h3>
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <span class="text-white-50 small text-uppercase">Inscritos</span>
+                                            <span class="badge bg-secondary text-white">{{ $site['total'] ?? 0 }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        @empty
+                            <div class="col-12">
+                                <div class="text-center text-muted py-3">Sin datos para el trimestre.</div>
+                            </div>
+                        @endforelse
                     </div>
                 </div>
             </div>
@@ -263,32 +271,39 @@
 
     <div class="card mb-4">
         <div class="card-header">Disponibilidad de grupos</div>
-        <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-dark table-sm mb-0">
-                    <thead>
-                        <tr>
-                            <th>Grupo</th>
-                            <th>Sede</th>
-                            <th class="text-end">Capacidad</th>
-                            <th class="text-end">Inscritos</th>
-                            <th class="text-end">Disponibles</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @forelse($availability['groups'] ?? [] as $group)
-                            <tr>
-                                <td>{{ $group['group_name'] ?? 'N/D' }}<br><span class="text-muted small">{{ $group['code'] ?? '' }}</span></td>
-                                <td>{{ $group['site_name'] ?? 'N/D' }}</td>
-                                <td class="text-end">{{ $group['capacity'] ?? 0 }}</td>
-                                <td class="text-end">{{ $group['active'] ?? 0 }}</td>
-                                <td class="text-end">{{ $group['available'] ?? 0 }}</td>
-                            </tr>
-                        @empty
-                            <tr><td colspan="5" class="text-center py-3">Sin grupos con cupo disponible.</td></tr>
-                        @endforelse
-                    </tbody>
-                </table>
+        <div class="card-body">
+            <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-3">
+                @forelse($availability['groups'] ?? [] as $group)
+                    <div class="col">
+                        <div class="card bg-dark border border-white text-white h-100 shadow-sm">
+                            <div class="card-body d-flex flex-column gap-3">
+                                <div>
+                                    <h3 class="h6 text-white mb-1">{{ $group['group_name'] ?? 'N/D' }}</h3>
+                                    <div class="small text-white-50">{{ $group['code'] ?? '' }}</div>
+                                    <div class="small text-white-50"><i class="bi bi-geo-alt me-1"></i>{{ $group['site_name'] ?? 'N/D' }}</div>
+                                </div>
+                                <div class="d-flex flex-column gap-2 small">
+                                    <div class="d-flex justify-content-between text-white-50">
+                                        <span><i class="bi bi-people-fill me-1"></i>Capacidad</span>
+                                        <span class="text-white fw-semibold">{{ $group['capacity'] ?? 0 }}</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between text-white-50">
+                                        <span><i class="bi bi-person-check me-1"></i>Inscritos</span>
+                                        <span class="text-white fw-semibold">{{ $group['active'] ?? 0 }}</span>
+                                    </div>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="text-white-50 small text-uppercase">Disponibles</span>
+                                    <span class="badge bg-success">{{ $group['available'] ?? 0 }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                @empty
+                    <div class="col-12">
+                        <div class="text-center text-muted py-3">Sin grupos con cupo disponible.</div>
+                    </div>
+                @endforelse
             </div>
         </div>
     </div>

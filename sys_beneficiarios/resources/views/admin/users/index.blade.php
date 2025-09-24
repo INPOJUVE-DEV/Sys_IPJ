@@ -28,39 +28,41 @@
                 @endforeach
             </div>
         </div>
-        <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
-                <thead class="table-light">
-                    <tr>
-                        <th>Nombre</th>
-                        <th>Email</th>
-                        <th>Rol</th>
-                        <th class="text-end">Acciones</th>
-                    </tr>
-                </thead>
-                <tbody id="usersTableBody">
-                    @forelse($users as $user)
-                        @php($roleNames = $user->roles->pluck('name')->map(fn($name) => \Illuminate\Support\Str::of($name)->lower()->slug('-'))->toArray())
-                        <tr data-name="{{ \Illuminate\Support\Str::lower($user->name) }}" data-email="{{ \Illuminate\Support\Str::lower($user->email) }}" data-roles="{{ implode(' ', $roleNames) }}">
-                            <td>{{ $user->name }}</td>
-                            <td>{{ $user->email }}</td>
-                            <td>{{ $user->roles->pluck('name')->join(', ') }}</td>
-                            <td class="text-end">
-                                <a href="{{ route('admin.usuarios.edit', $user) }}" class="btn btn-sm btn-outline-secondary">Editar</a>
-                                <form action="{{ route('admin.usuarios.destroy', $user) }}" method="POST" class="d-inline" onsubmit="return confirm('¿Eliminar usuario?');">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="btn btn-sm btn-outline-danger">Eliminar</button>
-                                </form>
-                            </td>
-                        </tr>
-                    @empty
-                        <tr>
-                            <td colspan="4" class="text-center text-muted">Sin usuarios</td>
-                        </tr>
-                    @endforelse
-                </tbody>
-            </table>
+        <div class="card-body">
+            <div id="usersGrid" class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-3">
+                @forelse($users as $user)
+                    @php($roleNames = $user->roles->pluck('name')->map(fn($name) => \Illuminate\Support\Str::of($name)->lower()->slug('-'))->toArray())
+                    <div class="col" data-user-card data-name="{{ \Illuminate\Support\Str::lower($user->name) }}" data-email="{{ \Illuminate\Support\Str::lower($user->email) }}" data-roles="{{ implode(' ', $roleNames) }}">
+                        <div class="card bg-dark border border-white text-white h-100 shadow-sm">
+                            <div class="card-body d-flex flex-column gap-3">
+                                <div>
+                                    <h3 class="h6 text-white mb-1">{{ $user->name }}</h3>
+                                    <div class="small text-white-50"><i class="bi bi-envelope me-1"></i>{{ $user->email }}</div>
+                                </div>
+                                <div class="text-white-50 small">
+                                    <i class="bi bi-person-badge me-1"></i>{{ $user->roles->pluck('name')->join(', ') }}
+                                </div>
+                                <div class="mt-auto d-flex flex-column gap-2">
+                                    <a href="{{ route('admin.usuarios.edit', $user) }}" class="btn btn-outline-light btn-sm w-100">
+                                        <i class="bi bi-pencil-square me-1"></i>Editar
+                                    </a>
+                                    <form action="{{ route('admin.usuarios.destroy', $user) }}" method="POST" class="m-0" onsubmit="return confirm('¿Eliminar usuario?');">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="btn btn-outline-danger btn-sm w-100">
+                                            <i class="bi bi-trash me-1"></i>Eliminar
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                @empty
+                    <div class="col-12">
+                        <div class="text-center text-muted py-4">Sin usuarios</div>
+                    </div>
+                @endforelse
+            </div>
         </div>
         <div class="card-footer d-flex justify-content-between align-items-center flex-wrap gap-2">
             <div class="text-muted small" id="usersSummary"></div>
@@ -76,7 +78,7 @@
 document.addEventListener('DOMContentLoaded', function () {
     const searchInput = document.getElementById('userSearch');
     const chipContainer = document.getElementById('roleChips');
-    const rows = Array.from(document.querySelectorAll('#usersTableBody tr'));
+    const cards = Array.from(document.querySelectorAll('[data-user-card]'));
     const summary = document.getElementById('usersSummary');
     let currentRole = 'all';
 
@@ -85,15 +87,16 @@ document.addEventListener('DOMContentLoaded', function () {
     function applyFilters() {
         const query = normalize(searchInput.value);
         let visible = 0;
-        rows.forEach(row => {
-            const matchesRole = currentRole === 'all' || row.dataset.roles.split(' ').includes(currentRole);
-            const matchesQuery = !query || row.dataset.name.includes(query) || row.dataset.email.includes(query);
+        cards.forEach(card => {
+            const roles = (card.dataset.roles || '').split(' ').filter(Boolean);
+            const matchesRole = currentRole === 'all' || roles.includes(currentRole);
+            const matchesQuery = !query || (card.dataset.name || '').includes(query) || (card.dataset.email || '').includes(query);
             const shouldShow = matchesRole && matchesQuery;
-            row.classList.toggle('d-none', !shouldShow);
+            card.classList.toggle('d-none', !shouldShow);
             if (shouldShow) visible++;
         });
         if (summary) {
-            const total = rows.length;
+            const total = cards.length;
             summary.textContent = visible === total
                 ? `${total} usuarios` : `${visible} de ${total} usuarios mostrados`;
         }

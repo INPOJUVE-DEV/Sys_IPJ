@@ -6,36 +6,43 @@
     @endif
 
     <div class="card shadow-sm">
-        <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
-                <thead class="table-light">
-                    <tr>
-                        <th>Folio</th>
-                        <th>Nombre</th>
-                        <th>Municipio</th>
-                        <th>Seccional</th>
-                        <th>Estatus</th>
-                        <th class="text-end">Acciones</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse($items as $b)
-                        <tr>
-                            <td>{{ $b->folio_tarjeta }}</td>
-                            <td>{{ $b->nombre }} {{ $b->apellido_paterno }} {{ $b->apellido_materno }}</td>
-                            <td>{{ optional($b->municipio)->nombre }}</td>
-                            <td>{{ $b->seccional }}</td>
-                            <td>{!! $b->is_draft ? '<span class="badge bg-warning">Borrador</span>' : '<span class="badge bg-success">Final</span>' !!}</td>
-                            <td class="text-end">
-                                <a class="btn btn-sm btn-outline-primary" href="{{ route('mis-registros.show', $b) }}">Ver</a>
-                                <a class="btn btn-sm btn-outline-secondary" href="{{ route('mis-registros.edit', $b) }}">Editar</a>
-                            </td>
-                        </tr>
-                    @empty
-                        <tr><td colspan="6" class="text-center text-muted">Sin registros</td></tr>
-                    @endforelse
-                </tbody>
-            </table>
+        <div class="card-body">
+            <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-3">
+                @forelse($items as $b)
+                    <div class="col">
+                        <div class="card bg-dark border border-white text-white h-100 shadow-sm">
+                            <div class="card-body d-flex flex-column gap-3">
+                                <div>
+                                    <div class="d-flex justify-content-between align-items-start gap-2">
+                                        <div>
+                                            <span class="text-white-50 small text-uppercase">Folio</span>
+                                            <div class="h6 text-white mb-0">{{ $b->folio_tarjeta }}</div>
+                                        </div>
+                                        {!! $b->is_draft ? '<span class="badge bg-warning text-dark">Borrador</span>' : '<span class="badge bg-success">Final</span>' !!}
+                                    </div>
+                                    <div class="fw-semibold">{{ $b->nombre }} {{ $b->apellido_paterno }} {{ $b->apellido_materno }}</div>
+                                </div>
+                                <div class="small text-white-50 d-flex flex-column gap-1">
+                                    <div><i class="bi bi-geo-alt me-1"></i>{{ optional($b->municipio)->nombre ?? 'Sin municipio' }}</div>
+                                    <div><i class="bi bi-diagram-3 me-1"></i>Seccional {{ $b->seccional ?? 'N/D' }}</div>
+                                </div>
+                                <div class="mt-auto d-flex flex-column gap-2">
+                                    <a class="btn btn-outline-light btn-sm w-100" href="{{ route('mis-registros.show', $b) }}">
+                                        <i class="bi bi-eye me-1"></i>Ver
+                                    </a>
+                                    <a class="btn btn-outline-secondary btn-sm w-100" href="{{ route('mis-registros.edit', $b) }}">
+                                        <i class="bi bi-pencil-square me-1"></i>Editar
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                @empty
+                    <div class="col-12">
+                        <div class="text-center text-muted py-4">Sin registros</div>
+                    </div>
+                @endforelse
+            </div>
         </div>
         @if($items->hasPages())
             <div class="card-footer">{{ $items->links() }}</div>

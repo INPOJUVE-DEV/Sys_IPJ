@@ -98,50 +98,48 @@
             <span class="fw-semibold">Inscripciones</span>
             <span class="text-muted small">Mostrando {{ $enrollments->firstItem() ?? 0 }}-{{ $enrollments->lastItem() ?? 0 }} de {{ $enrollments->total() }}</span>
         </div>
-        <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-dark table-hover align-middle mb-0">
-                    <thead>
-                        <tr>
-                            <th>Beneficiario</th>
-                            <th>CURP</th>
-                            <th>Estado</th>
-                            <th>Fecha de inscripcion</th>
-                            <th class="text-end">Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @forelse($enrollments as $enrollment)
-                            <tr>
-                                <td>{{ $enrollment->beneficiario->nombre ?? 'N/D' }} {{ $enrollment->beneficiario->apellido_paterno ?? '' }} {{ $enrollment->beneficiario->apellido_materno ?? '' }}</td>
-                                <td>{{ $enrollment->beneficiario->curp ?? 'N/D' }}</td>
-                                <td>
+        <div class="card-body">
+            <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-3">
+                @forelse($enrollments as $enrollment)
+                    <div class="col">
+                        <div class="card bg-dark border border-white text-white h-100 shadow-sm">
+                            <div class="card-body d-flex flex-column gap-3">
+                                <div>
+                                    <h3 class="h6 text-white mb-1">{{ $enrollment->beneficiario->nombre ?? 'N/D' }} {{ $enrollment->beneficiario->apellido_paterno ?? '' }} {{ $enrollment->beneficiario->apellido_materno ?? '' }}</h3>
+                                    <div class="small text-white-50"><i class="bi bi-person-vcard me-1"></i>{{ $enrollment->beneficiario->curp ?? 'N/D' }}</div>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="text-white-50 small text-uppercase">Estado</span>
                                     @if($enrollment->status === 'inscrito')
                                         <span class="badge bg-success">Activo</span>
                                     @else
                                         <span class="badge bg-secondary text-uppercase">{{ $enrollment->status }}</span>
                                     @endif
-                                </td>
-                                <td>{{ optional($enrollment->enrolled_at)->format('Y-m-d H:i') ?? 'N/D' }}</td>
-                                <td class="text-end">
-                                    @can('delete', $enrollment)
-                                        @if($enrollment->status === 'inscrito')
-                                            <form action="{{ route('vol.enrollments.destroy', $enrollment) }}" method="POST" class="d-inline" onsubmit="return confirm('Dar de baja esta inscripcion?');">
+                                </div>
+                                <div class="text-white-50 small">
+                                    <i class="bi bi-calendar-event me-1"></i>{{ optional($enrollment->enrolled_at)->format('Y-m-d H:i') ?? 'N/D' }}
+                                </div>
+                                @can('delete', $enrollment)
+                                    @if($enrollment->status === 'inscrito')
+                                        <div class="mt-auto">
+                                            <form action="{{ route('vol.enrollments.destroy', $enrollment) }}" method="POST" class="m-0" onsubmit="return confirm('Dar de baja esta inscripcion?');">
                                                 @csrf
                                                 @method('DELETE')
-                                                <button type="submit" class="btn btn-sm btn-outline-danger">Dar de baja</button>
+                                                <button type="submit" class="btn btn-outline-danger btn-sm w-100">
+                                                    <i class="bi bi-person-dash me-1"></i>Dar de baja
+                                                </button>
                                             </form>
-                                        @endif
-                                    @endcan
-                                </td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="5" class="text-center py-4">Aun no hay inscripciones registradas.</td>
-                            </tr>
-                        @endforelse
-                    </tbody>
-                </table>
+                                        </div>
+                                    @endif
+                                @endcan
+                            </div>
+                        </div>
+                    </div>
+                @empty
+                    <div class="col-12">
+                        <div class="text-center text-muted py-4">Aun no hay inscripciones registradas.</div>
+                    </div>
+                @endforelse
             </div>
         </div>
         <div class="card-footer">{{ $enrollments->links() }}</div>
