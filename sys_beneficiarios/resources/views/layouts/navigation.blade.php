@@ -9,7 +9,19 @@
         </button>
 
         <div class="collapse navbar-collapse" id="mainNavbar">
+            @php($authUser = Auth::user())
             <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                @if($authUser && $authUser->hasRole('encargado_360'))
+                    <li class="nav-item">
+                        <a class="nav-link {{ request()->routeIs('s360.enc360.view') ? 'active' : '' }}" href="{{ route('s360.enc360.view') }}">{{ __('Dashboard') }}</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {{ request()->routeIs('s360.enc360.asignaciones') ? 'active' : '' }}" href="{{ route('s360.enc360.asignaciones') }}">{{ __('Pacientes Asignados') }}</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {{ request()->routeIs('s360.enc360.psicologos.*') ? 'active' : '' }}" href="{{ route('s360.enc360.psicologos.view') }}">{{ __('Gestión de Psicólogos') }}</a>
+                    </li>
+                @else
                 <li class="nav-item">
                     @if(Auth::user() && Auth::user()->hasRole('admin'))
                         <a class="nav-link {{ request()->routeIs('admin.home') ? 'active' : '' }}" href="{{ route('admin.home') }}">{{ __('Dashboard') }}</a>
@@ -52,6 +64,7 @@
                         <li>
                             <a class="dropdown-item {{ request()->routeIs('admin.catalogos.*') ? 'active' : '' }}" href="{{ route('admin.catalogos.index') }}">{{ __('Catálogos') }}</a>
                         </li>
+                @endif
                     </ul>
                 </li>
                 <li class="nav-item dropdown">
@@ -111,11 +124,6 @@
                 </li>
 @endrole
 
-@role('encargado_360')
-                <li class="nav-item">
-                    <a class="nav-link {{ request()->routeIs('s360.enc360.view') ? 'active' : '' }}" href="{{ route('s360.enc360.view') }}">Dashboard</a>
-                </li>
-@endrole
 
 @hasanyrole('encargado_JAV|encargado_jav')
                 <li class="nav-item dropdown">
@@ -144,6 +152,7 @@
                     <a class="nav-link {{ request()->routeIs('s360.psico.sesiones.*') ? 'active' : '' }}" href="{{ route('s360.psico.view') }}">Historial</a>
                 </li>
                 @endrole
+                @endif
             </ul>
 
             <ul class="navbar-nav ms-auto">

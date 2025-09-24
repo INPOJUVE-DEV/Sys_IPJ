@@ -6,6 +6,9 @@
       <p class="text-muted small mb-0">Gestiona las asignaciones activas y utiliza el asistente para vincular nuevos beneficiarios.</p>
     </div>
     <div class="d-flex flex-wrap gap-2">
+      <button class="btn btn-primary btn-sm" type="button" data-wizard-start>
+        <i class="bi bi-person-plus-fill me-1"></i>Asignar paciente
+      </button>
       <button class="btn btn-outline-light btn-sm" type="button" id="refreshAssignments"><i class="bi bi-arrow-repeat me-1"></i>Actualizar lista</button>
     </div>
   </div>
@@ -49,7 +52,7 @@
           <select id="wizardPsychologistSelect" class="form-select">
             <option value="">Selecciona…</option>
           </select>
-          <div class="form-text">Cada opción muestra la carga actual de pacientes asignados.</div>
+          <div class="form-text">Cada opción muestra la carga actual y un indicador visual (🟢 ligera, 🟡 media, 🟠 alta, 🔴 crítica).</div>
         </div>
         <div id="wizardAssignError" class="alert alert-warning small d-none"></div>
       </div>
@@ -140,6 +143,14 @@
 
 @push('scripts')
 <script>
+const workloadSignal = (value) => {
+    const total = Number(value) || 0;
+    if (total >= 12) return { symbol: '🔴', label: 'Carga crítica' };
+    if (total >= 8) return { symbol: '🟠', label: 'Carga alta' };
+    if (total >= 4) return { symbol: '🟡', label: 'Carga media' };
+    return { symbol: '🟢', label: 'Carga ligera' };
+};
+
 let reloadAssignments = () => {};
 
 async function loadPsicologosOptions(current = '') {
@@ -150,8 +161,12 @@ async function loadPsicologosOptions(current = '') {
         const res = await fetch('/s360/enc360/psicologos/list');
         const data = await res.json();
         const options = (data.data || []).map(r => {
-            const carga = typeof r.cargas !== 'undefined' ? ` — ${r.cargas}` : '';
-            return `<option value="${r.id}" ${String(current) === String(r.id) ? 'selected' : ''}>${r.name} (${r.email})${carga}</option>`;
+            const count = Number(r.cargas ?? 0);
+            const indicator = workloadSignal(count);
+            const carga = Number.isFinite(count) ? ` · ${count} pacientes` : '';
+            const label = `${indicator.symbol} ${r.name} (${r.email})${carga}`;
+            const title = `${indicator.label}${carga ? ` (${count} pacientes)` : ''}`;
+            return `<option value="${r.id}" ${String(current) === String(r.id) ? 'selected' : ''} data-workload="${count}" title="${title}">${label}</option>`;
         }).join('');
         sel.innerHTML = '<option value="">Seleccione…</option>' + options;
     } catch (error) {
@@ -174,6 +189,7 @@ function initAssignmentWizard() {
     const summaryBox = wizard.querySelector('#wizardBeneficiarioSummary');
     const select = wizard.querySelector('#wizardPsychologistSelect');
     const errorBox = wizard.querySelector('#wizardAssignError');
+    const startButtons = document.querySelectorAll('[data-wizard-start]');
     const assignUrl = wizard.dataset.assignUrl;
     const searchUrl = wizard.dataset.beneficiarioSearchUrl;
     const psicologosUrl = wizard.dataset.psicologosUrl;
@@ -230,6 +246,14 @@ function initAssignmentWizard() {
         if (nextBtn) nextBtn.disabled = !selectedBeneficiario;
         if (submitBtn) submitBtn.disabled = !select?.value || !selectedBeneficiario;
     };
+    startButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            setSelectedBeneficiario(null);
+            toggleStep(0);
+            wizard?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            searchInput?.focus();
+        });
+    });
 
     const renderResults = (items) => {
         if (!resultsList) return;
@@ -286,8 +310,11 @@ function initAssignmentWizard() {
             const data = await res.json();
             const items = data.data || data.items || [];
             select.innerHTML = '<option value="">Selecciona…</option>' + items.map(item => {
-                const carga = typeof item.cargas !== 'undefined' ? ` · ${item.cargas} pacientes` : '';
-                return `<option value="${item.id}">${item.name || 'Psicólogo'}${carga}</option>`;
+                const count = Number(item.cargas ?? 0);
+                const indicator = workloadSignal(count);
+                const carga = Number.isFinite(count) ? ` · ${count} pacientes` : '';
+                const title = `${indicator.label}${carga ? ` (${count} pacientes)` : ''}`;
+                return `<option value="${item.id}" data-workload="${count}" title="${title}">${indicator.symbol} ${item.name || 'Psicólogo'}${carga}</option>`;
             }).join('');
             psicologosLoaded = true;
         } catch (error) {
@@ -525,14 +552,18 @@ document.addEventListener('DOMContentLoaded', () => {
             allBtn.dataset.psi = '';
             allBtn.className = `btn btn-sm btn-outline-secondary ${selectedPsychologist ? '' : 'active'}`;
             allBtn.textContent = 'Todos';
+            allBtn.title = 'Mostrar todos los psicólogos';
             fragment.appendChild(allBtn);
             items.forEach(item => {
                 const btn = document.createElement('button');
                 btn.type = 'button';
                 btn.dataset.psi = item.id;
                 btn.className = `btn btn-sm btn-outline-secondary ${String(item.id) === String(selectedPsychologist) ? 'active' : ''}`;
-                const carga = typeof item.cargas !== 'undefined' ? ` · ${item.cargas} pacientes` : '';
-                btn.textContent = `${item.name || 'Psicólogo'}${carga}`;
+                const count = Number(item.cargas ?? 0);
+                const indicator = workloadSignal(count);
+                const carga = Number.isFinite(count) ? ` · ${count} pacientes` : '';
+                btn.textContent = `${indicator.symbol} ${item.name || 'Psicólogo'}${carga}`;
+                btn.title = `${indicator.label}${carga ? ` (${count} pacientes)` : ''}`;
                 fragment.appendChild(btn);
             });
             chipContainer.innerHTML = '';
@@ -541,6 +572,7 @@ document.addEventListener('DOMContentLoaded', () => {
             chipContainer.innerHTML = '<div class="text-warning small">No se pudieron cargar los psicólogos disponibles.</div>';
         }
     }
+
 
     if (chipContainer) {
         chipContainer.addEventListener('click', (event) => {
