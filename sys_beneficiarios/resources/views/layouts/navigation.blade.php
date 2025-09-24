@@ -38,11 +38,21 @@
                 </li>
                 @endrole
                 @role('admin')
-                <li class="nav-item">
-                    <a class="nav-link {{ request()->routeIs('admin.usuarios.*') ? 'active' : '' }}" href="{{ route('admin.usuarios.index') }}">{{ __('Usuarios') }}</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link {{ request()->routeIs('admin.catalogos.*') ? 'active' : '' }}" href="{{ route('admin.catalogos.index') }}">{{ __('Catalogos') }}</a>
+                <li class="nav-item dropdown">
+                    @php
+                        $adminMenuActive = request()->routeIs('admin.usuarios.*') || request()->routeIs('admin.catalogos.*');
+                    @endphp
+                    <a class="nav-link dropdown-toggle {{ $adminMenuActive ? 'active' : '' }}" href="#" id="adminToolsDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        {{ __('Administración') }}
+                    </a>
+                    <ul class="dropdown-menu" aria-labelledby="adminToolsDropdown">
+                        <li>
+                            <a class="dropdown-item {{ request()->routeIs('admin.usuarios.*') ? 'active' : '' }}" href="{{ route('admin.usuarios.index') }}">{{ __('Gestión de usuarios') }}</a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item {{ request()->routeIs('admin.catalogos.*') ? 'active' : '' }}" href="{{ route('admin.catalogos.index') }}">{{ __('Catálogos') }}</a>
+                        </li>
+                    </ul>
                 </li>
                 <li class="nav-item dropdown">
                     <a class="nav-link dropdown-toggle {{ request()->is('vol/*') ? 'active' : '' }}" href="#" id="volDropdownAdmin" role="button" data-bs-toggle="dropdown" aria-expanded="false">

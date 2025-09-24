@@ -50,6 +50,71 @@ Credenciales iniciales (por seeders):
 - Admin: `admin@example.com` / `Password123`
 - Roles disponibles: `admin`, `capturista`, `encargado_360`, `encargado_bienestar`, `psicologo`
 
+## Guías de despliegue
+
+### Windows 11 + Docker Desktop
+
+1. **Activa WSL 2 y Virtual Machine Platform** si no lo has hecho:
+   ```powershell
+   dism.exe /online /enable-feature /featurename:Microsoft-Windows-Subsystem-Linux /all /norestart
+   dism.exe /online /enable-feature /featurename:VirtualMachinePlatform /all /norestart
+   wsl --set-default-version 2
+   ```
+2. **Instala Docker Desktop** (última versión estable) y habilita la integración con WSL para la distribución donde trabajarás.
+3. **Clona el repositorio** dentro de tu directorio WSL (ej. Ubuntu) para evitar problemas de permisos:
+   ```bash
+   git clone https://github.com/tu-org/Sys_ipj_2025-web.git
+   cd Sys_ipj_2025-web/sys_beneficiarios
+   cp .env.example .env
+   ```
+4. **Ajusta recursos de Docker Desktop**: asigna al menos 4 GB de RAM y 2 CPUs desde *Settings → Resources*.
+5. **Levanta los contenedores** desde la terminal de WSL:
+   ```bash
+   cd /path/al/proyecto
+   docker compose up -d --build
+   docker compose exec app php artisan key:generate
+   docker compose exec app php artisan migrate --seed
+   docker compose exec node npm install
+   docker compose exec node npm run build
+   ```
+6. **Accede** desde tu navegador en Windows a `http://localhost`.
+
+### Ubuntu Server (20.04/22.04)
+
+1. **Instala dependencias básicas**:
+   ```bash
+   sudo apt update && sudo apt install -y ca-certificates curl gnupg git
+   ```
+2. **Instala Docker Engine y el plugin de Compose** siguiendo la guía oficial (resumen):
+   ```bash
+   curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+   echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+   sudo apt update
+   sudo apt install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
+   sudo usermod -aG docker $USER
+   newgrp docker
+   ```
+3. **Clona el proyecto y configura variables**:
+   ```bash
+   git clone https://github.com/tu-org/Sys_ipj_2025-web.git
+   cd Sys_ipj_2025-web/sys_beneficiarios
+   cp .env.example .env
+   sed -i 's|APP_URL=http://localhost|APP_URL=https://tudominio|g' .env
+   ```
+4. **Arranca los servicios y prepara la aplicación**:
+   ```bash
+   cd .. # raíz del repositorio
+   docker compose up -d --build
+   docker compose exec app php artisan key:generate
+   docker compose exec app php artisan migrate --seed
+   docker compose exec node npm install
+   docker compose exec node npm run build
+   docker compose exec app php artisan config:cache
+   docker compose exec app php artisan route:cache
+   docker compose exec app php artisan view:cache
+   ```
+5. **Configura Nginx/SSL externo** si expones el sitio públicamente (puedes usar un proxy reverso como Nginx o Traefik apuntando al servicio `web` definido en `docker-compose.yml`).
+
 ## Catálogos (Municipios y Secciones)
 
 Para importar catálogos desde CSV coloca archivos en `sys_beneficiarios/database/seeders/data/`:

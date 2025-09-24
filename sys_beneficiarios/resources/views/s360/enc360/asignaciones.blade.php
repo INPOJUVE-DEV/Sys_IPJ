@@ -1,14 +1,85 @@
 <x-app-layout>
 <div class="container py-4">
-  <h1 class="h5 mb-3">Asignaciones</h1>
+  <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-end gap-3 mb-4">
+    <div>
+      <h1 class="h4 mb-1">Asignaciones</h1>
+      <p class="text-muted small mb-0">Gestiona las asignaciones activas y utiliza el asistente para vincular nuevos beneficiarios.</p>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+      <button class="btn btn-outline-light btn-sm" type="button" id="refreshAssignments"><i class="bi bi-arrow-repeat me-1"></i>Actualizar lista</button>
+    </div>
+  </div>
+
+  <div class="card mb-4" id="assignmentWizard"
+       data-assign-url="{{ route('s360.enc360.assign') }}"
+       data-beneficiario-search-url="{{ route('beneficiarios.index') }}"
+       data-psicologos-url="{{ route('s360.enc360.psicologos.list') }}">
+    <div class="card-header bg-white">
+      <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+        <div>
+          <span class="fw-semibold">Flujo guiado de asignación</span>
+          <p class="text-muted small mb-0">Selecciona un beneficiario disponible y asigna al psicólogo con la carga adecuada.</p>
+        </div>
+        <div class="d-flex align-items-center gap-2 wizard-indicator">
+          <span class="badge rounded-pill bg-primary text-white" data-step-indicator="1">1</span>
+          <span class="text-muted small">Beneficiario</span>
+          <i class="bi bi-arrow-right text-muted"></i>
+          <span class="badge rounded-pill bg-secondary bg-opacity-25 text-muted" data-step-indicator="2">2</span>
+          <span class="text-muted small">Psicólogo</span>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="wizard-step active" data-step="1">
+        <label class="form-label text-uppercase small text-muted">Buscar beneficiario</label>
+        <div class="input-group input-group-sm mb-3">
+          <span class="input-group-text bg-secondary text-white"><i class="bi bi-search"></i></span>
+          <input id="wizardBeneficiarioSearch" type="search" class="form-control" placeholder="CURP, folio o nombre">
+        </div>
+        <div id="wizardSearchHint" class="alert alert-secondary py-2 small">Escribe al menos 3 caracteres para iniciar la búsqueda.</div>
+        <div class="list-group" id="wizardBeneficiarioResults"></div>
+      </div>
+      <div class="wizard-step" data-step="2">
+        <div class="mb-3">
+          <label class="form-label text-uppercase small text-muted">Beneficiario seleccionado</label>
+          <div id="wizardBeneficiarioSummary" class="p-3 border rounded-3 bg-body-tertiary">Ningún beneficiario seleccionado.</div>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Selecciona psicólogo disponible</label>
+          <select id="wizardPsychologistSelect" class="form-select">
+            <option value="">Selecciona…</option>
+          </select>
+          <div class="form-text">Cada opción muestra la carga actual de pacientes asignados.</div>
+        </div>
+        <div id="wizardAssignError" class="alert alert-warning small d-none"></div>
+      </div>
+    </div>
+    <div class="card-footer d-flex justify-content-between align-items-center">
+      <button type="button" class="btn btn-outline-light" data-wizard-prev>Anterior</button>
+      <div class="d-flex gap-2">
+        <button type="button" class="btn btn-outline-secondary" data-wizard-next>Siguiente</button>
+        <button type="button" class="btn btn-primary d-none" data-wizard-submit><i class="bi bi-check-circle me-1"></i>Asignar</button>
+      </div>
+    </div>
+  </div>
+
+  @once
+      <style>
+          #assignmentWizard .wizard-step { display: none; }
+          #assignmentWizard .wizard-step.active { display: block; }
+          #assignmentWizard .wizard-indicator .badge { transition: all .2s ease-in-out; }
+          #assignmentWizard .wizard-indicator .badge.active { background: var(--bs-primary); color: #fff; }
+      </style>
+  @endonce
+
   <div class="card mb-3">
     <div class="card-body">
       <div class="row g-3 align-items-end">
         <div class="col-12 col-lg-6">
-          <label class="form-label small text-uppercase text-muted">Buscar beneficiario</label>
+          <label class="form-label small text-uppercase text-muted">Filtrar listado</label>
           <div class="input-group input-group-sm">
-            <span class="input-group-text bg-secondary text-white"><i class="bi bi-search"></i></span>
-            <input id="beneficiarioSearch" type="search" class="form-control" placeholder="Nombre, apellidos o correo">
+            <span class="input-group-text bg-secondary text-white"><i class="bi bi-filter"></i></span>
+            <input id="beneficiarioSearch" type="search" class="form-control" placeholder="Buscar en asignaciones">
           </div>
         </div>
         <div class="col-6 col-lg-3">
@@ -43,7 +114,7 @@
           <thead class="table-light">
             <tr>
               <th>Beneficiario</th>
-              <th>PsicÃ³logo</th>
+              <th>Psicólogo</th>
               <th>Municipio</th>
               <th>Asignada</th>
               <th>Estado</th>
@@ -58,15 +129,15 @@
   </div>
 </div>
 
-<!-- Modal cambiar psicÃ³logo -->
+<!-- Modal cambiar psicólogo -->
 <div class="modal fade" id="modalReassign" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog">
     <div class="modal-content">
-      <div class="modal-header"><h5 class="modal-title">Cambiar psicÃ³logo</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+      <div class="modal-header"><h5 class="modal-title">Cambiar psicólogo</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
       <div class="modal-body">
         <input type="hidden" id="m-ben">
         <input type="hidden" id="m-current">
-        <label class="form-label">Nuevo psicÃ³logo</label>
+        <label class="form-label">Nuevo psicólogo</label>
         <select id="m-psi" class="form-select"></select>
         <div class="small text-danger mt-2" id="m-err"></div>
       </div>
@@ -99,6 +170,243 @@ async function loadPsicologosOptions(current = '') {
     }
 }
 
+function initAssignmentWizard() {
+    const wizard = document.getElementById('assignmentWizard');
+    if (!wizard) return;
+
+    const steps = Array.from(wizard.querySelectorAll('.wizard-step'));
+    const indicators = Array.from(wizard.querySelectorAll('[data-step-indicator]'));
+    const prevBtn = wizard.querySelector('[data-wizard-prev]');
+    const nextBtn = wizard.querySelector('[data-wizard-next]');
+    const submitBtn = wizard.querySelector('[data-wizard-submit]');
+    const searchInput = wizard.querySelector('#wizardBeneficiarioSearch');
+    const resultsList = wizard.querySelector('#wizardBeneficiarioResults');
+    const searchHint = wizard.querySelector('#wizardSearchHint');
+    const summaryBox = wizard.querySelector('#wizardBeneficiarioSummary');
+    const select = wizard.querySelector('#wizardPsychologistSelect');
+    const errorBox = wizard.querySelector('#wizardAssignError');
+    const assignUrl = wizard.dataset.assignUrl;
+    const searchUrl = wizard.dataset.beneficiarioSearchUrl;
+    const psicologosUrl = wizard.dataset.psicologosUrl;
+    const csrf = document.querySelector('meta[name="csrf-token"]')?.content;
+
+    let currentStep = 0;
+    let selectedBeneficiario = null;
+    let debounceTimer = null;
+    let psicologosLoaded = false;
+    let isLoadingPsychologists = false;
+
+    const toggleStep = (step = currentStep) => {
+        currentStep = Math.max(0, Math.min(step, steps.length - 1));
+        steps.forEach((el, index) => el.classList.toggle('active', index === currentStep));
+        indicators.forEach((badge, index) => {
+            badge.classList.toggle('active', index === currentStep);
+            if (index === currentStep) {
+                badge.classList.remove('bg-secondary', 'bg-opacity-25', 'text-muted');
+                badge.classList.add('bg-primary', 'text-white');
+            } else {
+                badge.classList.remove('bg-primary', 'text-white');
+                badge.classList.add('bg-secondary', 'bg-opacity-25', 'text-muted');
+            }
+        });
+        if (prevBtn) prevBtn.disabled = currentStep === 0;
+        if (nextBtn) {
+            nextBtn.classList.toggle('d-none', currentStep === steps.length - 1);
+            nextBtn.disabled = currentStep === 0 && !selectedBeneficiario;
+        }
+        if (submitBtn) {
+            submitBtn.classList.toggle('d-none', currentStep !== steps.length - 1);
+            submitBtn.disabled = currentStep !== steps.length - 1 || !select?.value || !selectedBeneficiario;
+        }
+        if (errorBox) errorBox.classList.add('d-none');
+        if (currentStep === 1 && !psicologosLoaded && !isLoadingPsychologists) {
+            loadWizardPsychologists();
+        }
+    };
+
+    const setSelectedBeneficiario = (item) => {
+        selectedBeneficiario = item;
+        if (summaryBox) {
+            if (!item) {
+                summaryBox.textContent = 'Ningún beneficiario seleccionado.';
+            } else {
+                summaryBox.innerHTML = `<div class="fw-semibold">${item.nombre}</div>
+                    <div class="small text-muted">${item.curp || ''}${item.curp && item.folio ? ' · ' : ''}${item.folio || ''}</div>
+                    <div class="small text-muted">${item.municipio || ''}</div>`;
+            }
+        }
+        if (!item && resultsList) {
+            resultsList.querySelectorAll('.active').forEach(el => el.classList.remove('active'));
+        }
+        if (nextBtn) nextBtn.disabled = !selectedBeneficiario;
+        if (submitBtn) submitBtn.disabled = !select?.value || !selectedBeneficiario;
+    };
+
+    const renderResults = (items) => {
+        if (!resultsList) return;
+        if (!items.length) {
+            resultsList.innerHTML = '<div class="list-group-item text-muted small">Sin resultados. Intenta con otro término.</div>';
+            return;
+        }
+        resultsList.innerHTML = items.map(item => {
+            const detalle = [item.curp, item.folio].filter(Boolean).join(' · ');
+            const municipio = item.municipio ? `<span class="small text-muted">${item.municipio}</span>` : '';
+            return `<button type="button" class="list-group-item list-group-item-action" data-beneficiario-id="${item.id}"
+                        data-beneficiario-nombre="${item.nombre}" data-beneficiario-curp="${item.curp || ''}" data-beneficiario-folio="${item.folio || ''}" data-beneficiario-municipio="${item.municipio || ''}">
+                        <div class="fw-semibold">${item.nombre}</div>
+                        <div class="small text-muted">${detalle || 'Sin identificadores'}</div>
+                        ${municipio}
+                    </button>`;
+        }).join('');
+    };
+
+    const searchBeneficiarios = async (term) => {
+        if (!resultsList) return;
+        resultsList.innerHTML = '<div class="list-group-item small">Cargando…</div>';
+        try {
+            const url = new URL(searchUrl, window.location.origin);
+            url.searchParams.set('q', term);
+            url.searchParams.set('limit', '12');
+            const res = await fetch(url.toString(), { headers: { 'Accept': 'application/json' } });
+            if (!res.ok) throw new Error('request failed');
+            const data = await res.json();
+            const items = (data.items || data.data || []).map(row => ({
+                id: row.id,
+                nombre: row.nombre || row.full_name || '',
+                curp: row.curp || '',
+                folio: row.folio_tarjeta || row.folio || '',
+                municipio: row.municipio || '',
+            }));
+            renderResults(items);
+        } catch (error) {
+            resultsList.innerHTML = '<div class="list-group-item text-warning small">No se pudo completar la búsqueda.</div>';
+        }
+    };
+
+    const debouncedSearch = (term) => {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => searchBeneficiarios(term), 350);
+    };
+
+    const loadWizardPsychologists = async () => {
+        if (!select) return;
+        isLoadingPsychologists = true;
+        select.innerHTML = '<option value="">Cargando…</option>';
+        try {
+            const res = await fetch(psicologosUrl, { headers: { 'Accept': 'application/json' } });
+            const data = await res.json();
+            const items = data.data || data.items || [];
+            select.innerHTML = '<option value="">Selecciona…</option>' + items.map(item => {
+                const carga = typeof item.cargas !== 'undefined' ? ` · ${item.cargas} pacientes` : '';
+                return `<option value="${item.id}">${item.name || 'Psicólogo'}${carga}</option>`;
+            }).join('');
+            psicologosLoaded = true;
+        } catch (error) {
+            select.innerHTML = '<option value="">Error al cargar psicólogos</option>';
+        }
+        isLoadingPsychologists = false;
+        if (submitBtn) submitBtn.disabled = !select.value || !selectedBeneficiario;
+    };
+
+    searchInput?.addEventListener('input', (event) => {
+        const term = (event.target.value || '').trim();
+        setSelectedBeneficiario(null);
+        if (currentStep !== 0) toggleStep(0);
+        if (term.length < 3) {
+            if (resultsList) resultsList.innerHTML = '';
+            if (searchHint) searchHint.classList.remove('d-none');
+            return;
+        }
+        if (searchHint) searchHint.classList.add('d-none');
+        debouncedSearch(term);
+    });
+
+    resultsList?.addEventListener('click', (event) => {
+        const button = event.target.closest('[data-beneficiario-id]');
+        if (!button) return;
+        resultsList.querySelectorAll('.active').forEach(el => el.classList.remove('active'));
+        button.classList.add('active');
+        setSelectedBeneficiario({
+            id: button.dataset.beneficiarioId,
+            nombre: button.dataset.beneficiarioNombre,
+            curp: button.dataset.beneficiarioCurp,
+            folio: button.dataset.beneficiarioFolio,
+            municipio: button.dataset.beneficiarioMunicipio,
+        });
+    });
+
+    prevBtn?.addEventListener('click', () => {
+        toggleStep(currentStep - 1);
+    });
+
+    nextBtn?.addEventListener('click', () => {
+        if (!selectedBeneficiario) return;
+        toggleStep(currentStep + 1);
+    });
+
+    select?.addEventListener('change', () => {
+        if (submitBtn) submitBtn.disabled = !select.value || !selectedBeneficiario;
+        if (errorBox) errorBox.classList.add('d-none');
+    });
+
+    submitBtn?.addEventListener('click', async () => {
+        if (!selectedBeneficiario || !select?.value) {
+            if (errorBox) {
+                errorBox.textContent = 'Selecciona un beneficiario y un psicólogo.';
+                errorBox.classList.remove('d-none');
+            }
+            return;
+        }
+        if (errorBox) errorBox.classList.add('d-none');
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span>Asignando…';
+        try {
+            const res = await fetch(assignUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrf || '',
+                    'Accept': 'application/json',
+                },
+                body: JSON.stringify({
+                    beneficiario_id: selectedBeneficiario.id,
+                    psicologo_id: select.value,
+                }),
+            });
+            if (!res.ok) {
+                const data = await res.json().catch(() => ({ message: 'No se pudo completar la asignación.' }));
+                if (errorBox) {
+                    errorBox.textContent = data.message || 'No se pudo completar la asignación.';
+                    errorBox.classList.remove('d-none');
+                }
+                submitBtn.innerHTML = '<i class="bi bi-check-circle me-1"></i>Asignar';
+                submitBtn.disabled = false;
+                return;
+            }
+            window.showToast?.('Asignación creada correctamente', 'success');
+            if (searchInput) searchInput.value = '';
+            if (resultsList) resultsList.innerHTML = '';
+            if (searchHint) searchHint.classList.remove('d-none');
+            select.value = '';
+            psicologosLoaded = false;
+            setSelectedBeneficiario(null);
+            toggleStep(0);
+            submitBtn.innerHTML = '<i class="bi bi-check-circle me-1"></i>Asignar';
+            submitBtn.disabled = true;
+            reloadAssignments?.();
+        } catch (error) {
+            if (errorBox) {
+                errorBox.textContent = 'Ocurrió un error al guardar la asignación.';
+                errorBox.classList.remove('d-none');
+            }
+            submitBtn.innerHTML = '<i class="bi bi-check-circle me-1"></i>Asignar';
+            submitBtn.disabled = false;
+        }
+    });
+
+    toggleStep(0);
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     const tbody = document.getElementById('rows');
     const pager = document.getElementById('pager');
@@ -107,6 +415,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const municipioInput = document.getElementById('f-mun');
     const chipContainer = document.getElementById('psicologoChips');
     const refreshBtn = document.getElementById('refreshPsicologos');
+    const refreshAssignmentsBtn = document.getElementById('refreshAssignments');
     let selectedPsychologist = '';
     let currentRows = [];
     let pagination = { current_page: 1, last_page: 1, total: 0 };
@@ -230,9 +539,8 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    if (refreshBtn) {
-        refreshBtn.addEventListener('click', () => renderPsychologistChips());
-    }
+    refreshBtn?.addEventListener('click', () => renderPsychologistChips());
+    refreshAssignmentsBtn?.addEventListener('click', () => fetchAssignments(pagination.current_page ?? 1));
     statusSelect?.addEventListener('change', () => fetchAssignments());
     municipioInput?.addEventListener('input', debounce(() => fetchAssignments()));
     searchInput?.addEventListener('input', () => renderRows());
@@ -245,6 +553,7 @@ document.addEventListener('DOMContentLoaded', () => {
     reloadAssignments = fetchAssignments;
     renderPsychologistChips();
     fetchAssignments();
+    initAssignmentWizard();
 });
 
 document.addEventListener('DOMContentLoaded', () => {
