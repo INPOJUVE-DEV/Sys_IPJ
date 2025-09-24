@@ -1,6 +1,26 @@
+@php
+    $authUser = Auth::user();
+    $isAdmin = $authUser?->hasRole('admin') ?? false;
+    $isCapturista = $authUser?->hasRole('capturista') ?? false;
+    $isPsicologo = $authUser?->hasRole('psicologo') ?? false;
+    $isEncargado360 = $authUser?->hasRole('encargado_360') ?? false;
+    $homeRoute = route('dashboard');
+
+    if ($isAdmin) {
+        $homeRoute = route('admin.home');
+    } elseif ($isEncargado360) {
+        $homeRoute = route('s360.enc360.view');
+    } elseif ($isCapturista) {
+        $homeRoute = route('capturista.home');
+    }
+
+    $beneficiariosActive = $isAdmin ? request()->routeIs('admin.beneficiarios.*') : request()->routeIs('beneficiarios.*');
+    $beneficiariosRoute = $isAdmin ? route('admin.beneficiarios.index') : route('beneficiarios.index');
+@endphp
+
 <nav class="navbar navbar-expand-lg navbar-dark bg-primary border-bottom sticky-top py-0">
     <div class="container-fluid px-0">
-        <a class="navbar-brand d-flex align-items-center" href="{{ Auth::user() && Auth::user()->hasRole('admin') ? route('admin.home') : (Auth::user() && Auth::user()->hasRole('encargado_360') ? route('s360.enc360.view') : (Auth::user() && Auth::user()->hasRole('capturista') ? route('capturista.home') : route('dashboard'))) }}">
+        <a class="navbar-brand d-flex align-items-center" href="{{ $homeRoute }}">
             <span class="fw-semibold text-white">Sys_IPJ</span>
         </a>
 
@@ -9,9 +29,8 @@
         </button>
 
         <div class="collapse navbar-collapse" id="mainNavbar">
-            @php($authUser = Auth::user())
             <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-                @if($authUser && $authUser->hasRole('encargado_360'))
+                @if($isEncargado360)
                     <li class="nav-item">
                         <a class="nav-link {{ request()->routeIs('s360.enc360.view') ? 'active' : '' }}" href="{{ route('s360.enc360.view') }}">{{ __('Dashboard') }}</a>
                     </li>
@@ -19,16 +38,16 @@
                         <a class="nav-link {{ request()->routeIs('s360.enc360.asignaciones') ? 'active' : '' }}" href="{{ route('s360.enc360.asignaciones') }}">{{ __('Pacientes Asignados') }}</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link {{ request()->routeIs('s360.enc360.psicologos.*') ? 'active' : '' }}" href="{{ route('s360.enc360.psicologos.view') }}">{{ __('Gestión de Psicólogos') }}</a>
+                        <a class="nav-link {{ request()->routeIs('s360.enc360.psicologos.*') ? 'active' : '' }}" href="{{ route('s360.enc360.psicologos.view') }}">{{ __('Gestion de Psicologos') }}</a>
                     </li>
                 @else
                 <li class="nav-item">
-                    @if(Auth::user() && Auth::user()->hasRole('admin'))
+                    @if($isAdmin)
                         <a class="nav-link {{ request()->routeIs('admin.home') ? 'active' : '' }}" href="{{ route('admin.home') }}">{{ __('Dashboard') }}</a>
                     
-                    @elseif(Auth::user() && Auth::user()->hasRole('capturista'))
+                    @elseif($isCapturista)
                         <a class="nav-link {{ request()->routeIs('capturista.home') ? 'active' : '' }}" href="{{ route('capturista.home') }}">{{ __('Dashboard') }}</a>
-                    @elseif(Auth::user() && Auth::user()->hasRole('psicologo'))
+                    @elseif($isPsicologo)
                         <a class="nav-link {{ request()->routeIs('dashboard') ? 'active' : '' }}" href="{{ route('dashboard') }}">{{ __('Mis Pacientes') }}</a>
                     @else
                         <a class="nav-link {{ request()->routeIs('dashboard') ? 'active' : '' }}" href="{{ route('dashboard') }}">{{ __('Dashboard') }}</a>
@@ -36,10 +55,10 @@
                 </li>
                 @role('admin|capturista')
                 <li class="nav-item">
-                    <a class="nav-link {{ (Auth::user()->hasRole('admin') ? request()->routeIs('admin.beneficiarios.*') : request()->routeIs('beneficiarios.*')) ? 'active' : '' }}" href="{{ Auth::user()->hasRole('admin') ? route('admin.beneficiarios.index') : route('beneficiarios.index') }}">{{ __('Beneficiarios') }}</a>
+                    <a class="nav-link {{ $beneficiariosActive ? 'active' : '' }}" href="{{ $beneficiariosRoute }}">{{ __('Beneficiarios') }}</a>
                 </li>
                 @endrole
-                @if(!Auth::user() || !Auth::user()->hasRole('psicologo'))
+                @if(!$isPsicologo)
                 <li class="nav-item">
                     <a class="nav-link {{ request()->routeIs('beneficiarios.create') ? 'active' : '' }}" href="{{ route('beneficiarios.create') }}">{{ __('Captura') }}</a>
                 </li>
@@ -55,16 +74,15 @@
                         $adminMenuActive = request()->routeIs('admin.usuarios.*') || request()->routeIs('admin.catalogos.*');
                     @endphp
                     <a class="nav-link dropdown-toggle {{ $adminMenuActive ? 'active' : '' }}" href="#" id="adminToolsDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                        {{ __('Administración') }}
+                        {{ __('Administracion') }}
                     </a>
                     <ul class="dropdown-menu" aria-labelledby="adminToolsDropdown">
                         <li>
-                            <a class="dropdown-item {{ request()->routeIs('admin.usuarios.*') ? 'active' : '' }}" href="{{ route('admin.usuarios.index') }}">{{ __('Gestión de usuarios') }}</a>
+                            <a class="dropdown-item {{ request()->routeIs('admin.usuarios.*') ? 'active' : '' }}" href="{{ route('admin.usuarios.index') }}">{{ __('Gestion de usuarios') }}</a>
                         </li>
                         <li>
-                            <a class="dropdown-item {{ request()->routeIs('admin.catalogos.*') ? 'active' : '' }}" href="{{ route('admin.catalogos.index') }}">{{ __('Catálogos') }}</a>
+                            <a class="dropdown-item {{ request()->routeIs('admin.catalogos.*') ? 'active' : '' }}" href="{{ route('admin.catalogos.index') }}">{{ __('Catalogos') }}</a>
                         </li>
-                @endif
                     </ul>
                 </li>
                 <li class="nav-item dropdown">
@@ -158,7 +176,7 @@
             <ul class="navbar-nav ms-auto">
                 <li class="nav-item dropdown">
                     <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                        {{ Auth::user()->name }}
+                        {{ $authUser?->name }}
                     </a>
                     <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
                         <li><a class="dropdown-item" href="{{ route('profile.edit') }}">{{ __('Profile') }}</a></li>

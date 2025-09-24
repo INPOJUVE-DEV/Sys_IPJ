@@ -9,6 +9,8 @@ use Illuminate\Http\Request;
 use App\Http\Requests\StoreBeneficiarioRequest;
 use App\Http\Requests\UpdateBeneficiarioRequest;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use App\Models\Seccion;
@@ -89,29 +91,48 @@ class BeneficiarioController extends Controller
     {
         $data = $request->validated();
 
-        $beneficiario = new Beneficiario($data);
-        // Calcular distritos y municipio desde seccional capturado en domicilio
-        $dom = $request->input('domicilio', []);
-        if ($dom) {
-            $beneficiario->seccional = $dom['seccional'] ?? $beneficiario->seccional;
-            $comp = $this->computeFromSeccional($dom['seccional'] ?? null);
-            if ($comp) {
-                $beneficiario->distrito_local = $comp['distrito_local'];
-                $beneficiario->distrito_federal = $comp['distrito_federal'];
-                $beneficiario->municipio_id = $dom['municipio_id'] ?? $comp['municipio_id'];
-            } elseif (isset($dom['municipio_id'])) {
-                $beneficiario->municipio_id = $dom['municipio_id'];
-            }
+        try {
+            $beneficiario = DB::transaction(function () use ($request, $data) {
+                $beneficiario = new Beneficiario($data);
+                // Calcular distritos y municipio desde seccional capturado en domicilio
+                $dom = $request->input('domicilio', []);
+                if ($dom) {
+                    $beneficiario->seccional = $dom['seccional'] ?? $beneficiario->seccional;
+                    $comp = $this->computeFromSeccional($dom['seccional'] ?? null);
+                    if ($comp) {
+                        $beneficiario->distrito_local = $comp['distrito_local'];
+                        $beneficiario->distrito_federal = $comp['distrito_federal'];
+                        $beneficiario->municipio_id = $dom['municipio_id'] ?? $comp['municipio_id'];
+                    } elseif (isset($dom['municipio_id'])) {
+                        $beneficiario->municipio_id = $dom['municipio_id'];
+                    }
+                }
+                $beneficiario->id = (string) Str::uuid();
+                $beneficiario->created_by = Auth::user()->uuid;
+
+                if (!$beneficiario->save()) {
+                    throw new \RuntimeException('No se pudo guardar el beneficiario');
+                }
+
+                $this->saveDomicilio($request, $beneficiario);
+
+                return $beneficiario;
+            });
+        } catch (\Throwable $e) {
+            Log::error('Error al registrar beneficiario', [
+                'message' => $e->getMessage(),
+                'user_id' => Auth::user()?->uuid,
+            ]);
+
+            return back()
+                ->withInput()
+                ->with('error', 'No se pudo registrar el beneficiario, intenta nuevamente.');
         }
-        $beneficiario->id = (string) Str::uuid();
-        $beneficiario->created_by = Auth::user()->uuid;
-        $beneficiario->save();
 
-        $this->saveDomicilio($request, $beneficiario);
-
-        return redirect()->route('beneficiarios.index')
-            ->with('status', 'Beneficiario creado correctamente')
-            ->with('last_beneficiario_id', $beneficiario->id);
+        return redirect()->route('beneficiarios.create')
+            ->with('status', 'Registrado')
+            ->with('last_beneficiario_id', $beneficiario->id)
+            ->with('beneficiario_registered', true);
     }
 
     public function edit(Beneficiario $beneficiario)

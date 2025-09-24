@@ -214,6 +214,15 @@ document.addEventListener('DOMContentLoaded', function() {
     updateStep();
 
     const secc = document.getElementById('dom-seccional');
+    if (window.beneficiarioWizardShouldReset && form) {
+        form.reset();
+        currentStep = 0;
+        updateStep();
+        const focusTarget = form.querySelector('input:not([type="hidden"]), select, textarea');
+        try { focusTarget?.focus({ preventScroll: true }); } catch (_) { focusTarget?.focus(); }
+        window.beneficiarioWizardShouldReset = false;
+    }
+
     const munSel = document.getElementById('dom-municipio-id');
     if (secc) {
         const applyData = (data) => {
@@ -241,3 +250,4 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 @endpush
+

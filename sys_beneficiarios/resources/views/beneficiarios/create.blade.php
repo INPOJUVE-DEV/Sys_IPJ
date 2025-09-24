@@ -15,6 +15,11 @@
             </form>
         </div>
     </div>
+    @if(session('beneficiario_registered'))
+        @push('scripts')
+        <script>window.beneficiarioWizardShouldReset = true;</script>
+        @endpush
+    @endif
     @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', () => {
