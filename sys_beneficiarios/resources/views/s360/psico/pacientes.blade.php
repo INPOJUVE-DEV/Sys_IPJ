@@ -20,60 +20,59 @@
     <div class="card-body">
       <div class="row g-2 mb-3">
         <div class="col-12 col-md-6">
-          <input type="text" id="search" class="form-control" placeholder="Buscar beneficiario…">
+          <input type="text" id="search" class="form-control" placeholder="Buscar paciente…">
         </div>
       </div>
-      <div class="table-responsive">
-        <table class="table table-sm align-middle" id="tabla">
-          <thead class="table-light">
-            <tr>
-              <th>Nombre</th>
-              <th>Teléfono</th>
-              <th>Seccional</th>
-              <th>Acciones</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </div>
+      <div id="patientsEmpty" class="text-muted small" style="display:none;">Sin pacientes asignados.</div>
+      <div id="patientsGrid" class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-3"></div>
     </div>
   </div>
 </div>
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-  const tbody = document.querySelector('#tabla tbody');
+  const grid = document.getElementById('patientsGrid');
+  const emptyState = document.getElementById('patientsEmpty');
   const searchInput = document.getElementById('search');
   const calendarGrid = document.getElementById('calendarGrid');
   const calendarEmpty = document.getElementById('calendarEmpty');
   const refreshAgendaBtn = document.getElementById('refreshAgenda');
   let patients = [];
 
-  const renderTable = () => {
-    if (!tbody) return;
+  const renderPatients = () => {
+    if (!grid) return;
     const query = (searchInput?.value || '').toLowerCase();
     const filtered = patients.filter(r => {
       const name = `${r.nombre || ''} ${r.apellido_paterno || ''} ${r.apellido_materno || ''}`.toLowerCase();
       return !query || name.includes(query);
     });
     if (!filtered.length) {
-      tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">Sin pacientes asignados.</td></tr>';
+      grid.innerHTML = '';
+      if (emptyState) emptyState.style.display = 'block';
       return;
     }
-    tbody.innerHTML = filtered.map(r => {
+    const cards = filtered.map(r => {
       const nombre = `${r.nombre} ${r.apellido_paterno} ${r.apellido_materno}`;
       const telefono = r.telefono || '';
       const seccional = r.seccional || '';
-      return `<tr>
-        <td>${nombre}</td>
-        <td>${telefono}</td>
-        <td>${seccional}</td>
-        <td>
-          <a class="btn btn-sm btn-primary" href="/s360/psico/paciente/${r.id}/show">Abrir</a>
-          <a class="btn btn-sm btn-outline-secondary" href="/s360/psico/sesiones/${r.id}/show">Historial</a>
-        </td>
-      </tr>`;
+      const telefonoHtml = telefono ? `<div class="small text-muted"><i class="bi bi-telephone me-1"></i>${telefono}</div>` : '';
+      const seccionalHtml = seccional ? `<div class="small text-muted"><i class="bi bi-geo-alt me-1"></i>Seccional ${seccional}</div>` : '';
+      return `<div class="col"><div class="card shadow-sm h-100">
+        <div class="card-body d-flex flex-column gap-3">
+          <div>
+            <h3 class="h6 fw-semibold mb-1 text-primary">${nombre}</h3>
+            ${telefonoHtml}
+            ${seccionalHtml}
+          </div>
+          <div class="mt-auto d-flex flex-column gap-2">
+            <a class="btn btn-primary w-100" href="/s360/psico/paciente/${r.id}/show"><i class="bi bi-journal-plus me-1"></i>Registrar sesión</a>
+            <a class="btn btn-outline-secondary" href="/s360/psico/sesiones/${r.id}/show">Ver historial</a>
+          </div>
+        </div>
+      </div></div>`;
     }).join('');
+    grid.innerHTML = cards;
+    if (emptyState) emptyState.style.display = 'none';
   };
 
   const startOfWeek = () => {
@@ -133,10 +132,10 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!res.ok) throw new Error('Error');
       const data = await res.json();
       patients = data.items || [];
-      renderTable();
+      renderPatients();
     } catch (error) {
       patients = [];
-      renderTable();
+      renderPatients();
     }
   };
 
@@ -165,7 +164,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   refreshAgendaBtn?.addEventListener('click', () => loadAgenda());
-  searchInput?.addEventListener('input', renderTable);
+  searchInput?.addEventListener('input', renderPatients);
 
   loadPatients();
   loadAgenda();

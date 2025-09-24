@@ -23,7 +23,7 @@ class BeneficiarioController extends Controller
             'municipio_id','seccional','distrito_local','distrito_federal','sexo','discapacidad','edad_min','edad_max'
         ]);
 
-        $beneficiarios = Beneficiario::with(['municipio','creador'])
+        $baseQuery = Beneficiario::with(['municipio','creador'])
             ->when($q, function ($query) use ($q) {
                 $query->where(function ($sub) use ($q) {
                     $sub->where('folio_tarjeta', 'like', "%$q%")
@@ -43,7 +43,28 @@ class BeneficiarioController extends Controller
             ->when($filters['edad_max'] ?? null, fn($q2,$v)=>$q2->where('edad','<=',(int)$v))
             ->when(auth()->user()?->hasRole('capturista'), function ($q2) {
                 $q2->where('created_by', auth()->user()->uuid);
-            })
+            });
+
+        if ($request->wantsJson()) {
+            $limit = max(1, min($request->integer('limit', 20), 50));
+            $items = (clone $baseQuery)
+                ->with('municipio:id,nombre')
+                ->orderBy('created_at', 'desc')
+                ->limit($limit)
+                ->get();
+
+            $payload = $items->map(fn ($row) => [
+                'id' => $row->id,
+                'nombre' => trim(sprintf('%s %s %s', $row->nombre, $row->apellido_paterno, $row->apellido_materno)),
+                'curp' => $row->curp,
+                'folio_tarjeta' => $row->folio_tarjeta,
+                'municipio' => optional($row->municipio)->nombre,
+            ]);
+
+            return response()->json(['items' => $payload]);
+        }
+
+        $beneficiarios = (clone $baseQuery)
             ->orderBy('created_at','desc')
             ->paginate(15)
             ->withQueryString();
@@ -88,7 +109,9 @@ class BeneficiarioController extends Controller
 
         $this->saveDomicilio($request, $beneficiario);
 
-        return redirect()->route('beneficiarios.index')->with('status', 'Beneficiario creado correctamente');
+        return redirect()->route('beneficiarios.index')
+            ->with('status', 'Beneficiario creado correctamente')
+            ->with('last_beneficiario_id', $beneficiario->id);
     }
 
     public function edit(Beneficiario $beneficiario)

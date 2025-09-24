@@ -32,7 +32,29 @@
             }
         }
     }
-    $combinedActions = $flashActions->merge($defaultActions)->unique('url')->values();
+    $combinedActions = $flashActions->merge($defaultActions);
+
+    $lastBeneficiarioId = session('last_beneficiario_id');
+    if ($lastBeneficiarioId) {
+        $beneficiarioActions = collect([
+            ['label' => 'Crear otro beneficiario', 'url' => route('beneficiarios.create')],
+        ]);
+        $user = auth()->user();
+        if ($user && $user->hasRole('capturista') && \Illuminate\Support\Facades\Route::has('mis-registros.show')) {
+            $beneficiarioActions->push([
+                'label' => 'Ver mi registro',
+                'url' => route('mis-registros.show', $lastBeneficiarioId),
+            ]);
+        } elseif (\Illuminate\Support\Facades\Route::has('beneficiarios.edit')) {
+            $beneficiarioActions->push([
+                'label' => 'Ver mi registro',
+                'url' => route('beneficiarios.edit', $lastBeneficiarioId),
+            ]);
+        }
+        $combinedActions = $beneficiarioActions->merge($combinedActions);
+    }
+
+    $combinedActions = $combinedActions->unique('url')->values();
     if ($success) {
         $toasts[] = ['msg' => $success, 'class' => 'text-bg-success', 'actions' => $combinedActions->toArray()];
     }
