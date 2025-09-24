@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Volante;
 use App\Http\Controllers\Controller;
 use App\Models\VolEnrollment;
 use App\Models\VolGroup;
+use App\Models\VolPayment;
 use App\Models\VolSite;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -85,6 +86,7 @@ class ReportController extends Controller
         $monthly = $this->buildMonthlyData($monthStart, $siteId);
         $quarterly = $this->buildQuarterlyData($year, $quarter, $siteId);
         $availability = $this->buildAvailabilityData($siteId);
+        $payments = $this->buildPaymentStats($monthStart, $siteId);
 
         $sites = VolSite::query()->orderBy('name')->pluck('name', 'id');
 
@@ -92,6 +94,7 @@ class ReportController extends Controller
             'monthly' => $monthly,
             'quarterly' => $quarterly,
             'availability' => $availability,
+            'payments' => $payments,
             'sites' => $sites,
             'filters' => [
                 'month' => $monthStart->format('Y-m'),
@@ -245,6 +248,46 @@ class ReportController extends Controller
             'site_id' => $siteId,
             'groups' => $groups,
             'totals' => $totals,
+        ];
+    }
+
+    private function buildPaymentStats(Carbon $monthStart, ?int $siteId = null): array
+    {
+        $start = $monthStart->copy()->startOfMonth();
+        $end = $start->copy()->endOfMonth();
+
+        $beneficiarioIds = VolEnrollment::query()
+            ->active()
+            ->withinEnrollmentRange($start, $end)
+            ->join('vol_groups', 'vol_groups.id', '=', 'vol_enrollments.group_id')
+            ->when($siteId, fn ($query) => $query->where('vol_groups.site_id', $siteId))
+            ->pluck('vol_enrollments.beneficiario_id')
+            ->unique()
+            ->values();
+
+        if ($beneficiarioIds->isEmpty()) {
+            return [
+                'period' => $start->format('Y-m'),
+                'total' => 0,
+                'paid' => 0,
+                'pending' => 0,
+            ];
+        }
+
+        $paid = VolPayment::query()
+            ->whereIn('beneficiario_id', $beneficiarioIds)
+            ->whereNotNull('payment_date')
+            ->distinct('beneficiario_id')
+            ->count('beneficiario_id');
+
+        $total = $beneficiarioIds->count();
+        $pending = max(0, $total - $paid);
+
+        return [
+            'period' => $start->format('Y-m'),
+            'total' => $total,
+            'paid' => $paid,
+            'pending' => $pending,
         ];
     }
 

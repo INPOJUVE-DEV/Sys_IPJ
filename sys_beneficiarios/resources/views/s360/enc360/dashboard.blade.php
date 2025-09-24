@@ -8,43 +8,16 @@
     </a>
   </div>
 
-  <div class="row g-3 mb-4">
-    <div class="col-12 col-md-4">
-      <div class="card h-100">
-        <div class="card-body">
-          <div class="d-flex justify-content-between align-items-center">
-            <div>
-              <div class="text-muted small">Pacientes activos</div>
-              <div class="display-6" id="kpi-asignados">0</div>
-            </div>
-            <i class="bi bi-people fs-2 text-primary"></i>
-          </div>
-        </div>
-      </div>
+  <div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <span class="fw-semibold">Distribución de pacientes por psicólogo</span>
+      <span class="text-muted small" id="workloadSummary"></span>
     </div>
-    <div class="col-12 col-md-4">
-      <div class="card h-100">
-        <div class="card-body">
-          <div class="d-flex justify-content-between align-items-center">
-            <div>
-              <div class="text-muted small">Sesiones esta semana</div>
-              <div class="display-6" id="kpi-sesiones">0</div>
-            </div>
-            <i class="bi bi-calendar-week fs-2 text-success"></i>
-          </div>
-        </div>
-      </div>
-    </div>
-    <div class="col-12 col-md-4">
-      <div class="card h-100">
-        <div class="card-body">
-          <div class="d-flex justify-content-between align-items-center">
-            <div>
-              <div class="text-muted small">PrÃƒÂ³ximas citas Ã¢â€°Â¤ 7 dÃƒÂ­as</div>
-              <div class="display-6" id="kpi-proximas">0</div>
-            </div>
-            <i class="bi bi-alarm fs-2 text-warning"></i>
-          </div>
+    <div class="card-body">
+      <div class="position-relative" style="min-height:220px;">
+        <canvas id="workloadChart" height="220" aria-label="Pacientes por psicólogo" role="img"></canvas>
+        <div id="workloadFallback" class="text-muted small text-center position-absolute top-50 start-50 translate-middle d-none">
+          Sin datos suficientes para generar el gráfico.
         </div>
       </div>
     </div>
@@ -107,39 +80,121 @@
   </div>
 </div>
 
-<script>
-  document.addEventListener('DOMContentLoaded', async () => {
-    const r = await fetch('{{ route('s360.enc360.dash') }}');
-    if (!r.ok) return;
-    const data = await r.json();
-    document.getElementById('kpi-asignados').textContent = data.totalAsignados ?? 0;
-    document.getElementById('kpi-sesiones').textContent = data.sesionesSemana ?? 0;
-    document.getElementById('kpi-proximas').textContent = data.proximosAVencer ?? 0;
-    const top = data.topPsicologos || [];
-    const ul = document.getElementById('lista-top');
-    ul.innerHTML = top.map(i => `<li class="list-group-item d-flex justify-content-between"><span>${i.name}</span><span class="badge bg-secondary">${i.cargas}</span></li>`).join('');
-  });
-</script>
 </x-app-layout>
 
 @push('scripts')
-<script>
-  document.addEventListener('DOMContentLoaded', async () => {
+<script type="module">
+let workloadChartInstance = null;
+
+document.addEventListener('DOMContentLoaded', async () => {
+    const workloadCanvas = document.getElementById('workloadChart');
+    const workloadFallback = document.getElementById('workloadFallback');
+    const workloadSummary = document.getElementById('workloadSummary');
+    const listaTop = document.getElementById('lista-top');
+    const listaSesiones = document.getElementById('lista-sesiones');
+    const tablaCitas = document.getElementById('tabla-citas');
+
+    let ChartModule;
     try {
-      const ult = await fetch('{{ route('s360.enc360.sesiones.latest') }}');
-      if (ult.ok) {
-        const data = await ult.json();
-        document.getElementById('lista-sesiones').innerHTML = (data.items||[]).map(s => {
-          return `<li class="list-group-item"><div class="d-flex justify-content-between"><span>${s.beneficiario}</span><span class="text-muted">${s.session_date}</span></div><div class="small text-muted">${s.psicologo}${s.is_first?' Ã¢â‚¬Â¢ Primera':''}</div></li>`;
-        }).join('');
-      }
-      const prox = await fetch('{{ route('s360.enc360.citas.upcoming') }}');
-      if (prox.ok) {
-        const data = await prox.json();
-        document.getElementById('tabla-citas').innerHTML = (data.items||[]).map(r => `<tr><td>${r.beneficiario}</td><td>${r.psicologo}</td><td>${r.next_session_date}</td></tr>`).join('');
-      }
-    } catch (e) { /* noop */ }
-  });
+        ChartModule = await import('https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js');
+    } catch (error) {
+        console.warn('No se pudo cargar Chart.js', error);
+    }
+
+    try {
+        const dashRes = await fetch('{{ route('s360.enc360.dash') }}');
+        if (dashRes.ok) {
+            const dashData = await dashRes.json();
+            const top = dashData.topPsicologos || [];
+            if (listaTop) {
+                listaTop.innerHTML = top.length
+                    ? top.map(i => `<li class="list-group-item d-flex justify-content-between align-items-center"><span>${i.name}</span><span class="badge bg-secondary">${i.cargas}</span></li>`).join('')
+                    : '<li class="list-group-item text-muted">Sin datos registrados.</li>';
+            }
+            if (workloadSummary) {
+                const parts = [];
+                if (typeof dashData.totalAsignados !== 'undefined') parts.push(`Pacientes activos: ${dashData.totalAsignados}`);
+                if (typeof dashData.sesionesSemana !== 'undefined') parts.push(`Sesiones semana: ${dashData.sesionesSemana}`);
+                if (typeof dashData.proximosAVencer !== 'undefined') parts.push(`Próximas citas (≤7 días): ${dashData.proximosAVencer}`);
+                workloadSummary.textContent = parts.join(' • ');
+            }
+            if (ChartModule && workloadCanvas && top.length) {
+                const Chart = ChartModule.Chart || ChartModule.default;
+                workloadFallback?.classList.add('d-none');
+                workloadCanvas.classList.remove('d-none');
+                workloadChartInstance?.destroy?.();
+                workloadChartInstance = new Chart(workloadCanvas, {
+                    type: 'bar',
+                    data: {
+                        labels: top.map(item => item.name),
+                        datasets: [{
+                            label: 'Pacientes asignados',
+                            data: top.map(item => item.cargas),
+                            backgroundColor: '#0d6efd',
+                            borderRadius: 6,
+                        }],
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: { precision: 0 },
+                                grid: { color: 'rgba(255,255,255,0.05)' },
+                            },
+                            x: {
+                                grid: { display: false },
+                            },
+                        },
+                        plugins: {
+                            legend: { display: false },
+                        },
+                    },
+                });
+            } else {
+                if (workloadCanvas) workloadCanvas.classList.add('d-none');
+                if (workloadFallback) {
+                    workloadFallback.textContent = top.length ? 'No se pudo generar el gráfico.' : 'Sin datos suficientes para generar el gráfico.';
+                    workloadFallback.classList.remove('d-none');
+                }
+            }
+        }
+    } catch (error) {
+        if (workloadCanvas) workloadCanvas.classList.add('d-none');
+        if (workloadFallback) {
+            workloadFallback.textContent = 'No se pudo cargar la información de asignaciones.';
+            workloadFallback.classList.remove('d-none');
+        }
+        console.error('Error cargando dashboard', error);
+    }
+
+    try {
+        const ult = await fetch('{{ route('s360.enc360.sesiones.latest') }}');
+        if (ult.ok) {
+            const data = await ult.json();
+            if (listaSesiones) {
+                listaSesiones.innerHTML = (data.items || []).map(s => {
+                    return `<li class="list-group-item"><div class="d-flex justify-content-between"><span>${s.beneficiario}</span><span class="text-muted">${s.session_date}</span></div><div class="small text-muted">${s.psicologo}${s.is_first ? ' • Primera' : ''}</div></li>`;
+                }).join('');
+            }
+        }
+    } catch (error) {
+        console.error('Error cargando sesiones', error);
+    }
+
+    try {
+        const prox = await fetch('{{ route('s360.enc360.citas.upcoming') }}');
+        if (prox.ok) {
+            const data = await prox.json();
+            if (tablaCitas) {
+                tablaCitas.innerHTML = (data.items || []).map(r => `<tr><td>${r.beneficiario}</td><td>${r.psicologo}</td><td>${r.next_session_date}</td></tr>`).join('');
+            }
+        }
+    } catch (error) {
+        console.error('Error cargando citas', error);
+    }
+});
 </script>
 @endpush
 
