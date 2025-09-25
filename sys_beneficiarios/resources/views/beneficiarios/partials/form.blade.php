@@ -1,6 +1,34 @@
-@php($b = $beneficiario ?? null)
+@php
+    $b = $beneficiario ?? null;
+    $fieldLabels = [
+        'folio_tarjeta' => 'Folio tarjeta',
+        'nombre' => 'Nombre',
+        'apellido_paterno' => 'Apellido paterno',
+        'apellido_materno' => 'Apellido materno',
+        'curp' => 'CURP',
+        'fecha_nacimiento' => 'Fecha de nacimiento',
+        'sexo' => 'Sexo',
+        'discapacidad' => 'Discapacidad',
+        'id_ine' => 'ID INE',
+        'telefono' => 'Telefono',
+        'is_draft' => 'Estado del registro',
+        'domicilio.calle' => 'Calle',
+        'domicilio.numero_ext' => 'Numero exterior',
+        'domicilio.numero_int' => 'Numero interior',
+        'domicilio.colonia' => 'Colonia',
+        'domicilio.municipio_id' => 'Municipio',
+        'domicilio.codigo_postal' => 'Codigo postal',
+        'domicilio.seccional' => 'Seccional del domicilio',
+        'domicilio.distrito_local' => 'Distrito local',
+        'domicilio.distrito_federal' => 'Distrito federal',
+    ];
+    $firstErrorKey = $errors->keys()[0] ?? null;
+    $firstErrorLabel = $firstErrorKey
+        ? ($fieldLabels[$firstErrorKey] ?? ucfirst(str_replace(['.', '_'], [' ', ' '], $firstErrorKey)))
+        : null;
+@endphp
 @if ($errors->any())
-    <div class="alert alert-danger"><strong>Revisa el formulario</strong></div>
+    <div class="alert alert-danger"><strong>Revisa el formulario{{ $firstErrorLabel ? ' - Campo: ' . $firstErrorLabel : '' }}</strong></div>
 @endif
 
 @once
@@ -26,6 +54,7 @@
 
     <div class="wizard-step active" data-step="1">
         <div class="row g-3">
+            <input type="hidden" name="is_draft" value="{{ old('is_draft', 0) }}">
             <div class="col-md-4">
                 <label class="form-label">Folio tarjeta</label>
                 <input name="folio_tarjeta" value="{{ old('folio_tarjeta', $b->folio_tarjeta ?? '') }}" class="form-control @error('folio_tarjeta') is-invalid @enderror" required>
@@ -57,13 +86,13 @@
                 @error('fecha_nacimiento')<div class="invalid-feedback">{{ $message }}</div>@enderror
             </div>
             <div class="col-md-2">
-                <label class="form-label">Edad (auto)</label>
+                <label class="form-label">Edad</label>
                 <input type="number" name="edad" value="{{ old('edad', $b->edad ?? '') }}" class="form-control" readonly>
             </div>
             <div class="col-md-2">
                 <label class="form-label">Sexo</label>
                 <select name="sexo" class="form-select @error('sexo') is-invalid @enderror">
-                    <option value="">—</option>
+                    <option value="">-</option>
                     @foreach(['M'=>'M','F'=>'F','X'=>'X'] as $key=>$val)
                         <option value="{{ $key }}" @selected(old('sexo', $b->sexo ?? '')==$key)>{{ $val }}</option>
                     @endforeach
@@ -126,7 +155,7 @@
             <div class="col-md-3">
                 <label class="form-label">Municipio</label>
                 <select id="dom-municipio-id" name="domicilio[municipio_id]" class="form-select @error('domicilio.municipio_id') is-invalid @enderror">
-                    <option value="">—</option>
+                    <option value="">-</option>
                     @foreach($municipios as $id=>$nombre)
                         <option value="{{ $id }}" @selected(old('domicilio.municipio_id', $domicilio->municipio_id ?? ($b->municipio_id ?? ''))==$id)>{{ $nombre }}</option>
                     @endforeach
@@ -136,8 +165,7 @@
         </div>
     </div>
 
-    <div class="d-flex justify-content-between mt-4" id="wizardControls">
-        <button type="button" class="btn btn-outline-light" data-wizard-prev>Anterior</button>
+    <div class="d-flex justify-content-end mt-4" id="wizardControls">
         <button type="button" class="btn btn-primary" data-wizard-next>Siguiente</button>
     </div>
 </div>

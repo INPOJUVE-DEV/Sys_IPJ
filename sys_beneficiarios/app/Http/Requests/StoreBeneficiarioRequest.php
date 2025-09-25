@@ -26,7 +26,7 @@ class StoreBeneficiarioRequest extends FormRequest
                 str_pad(ltrim($raw, '0'), 4, '0', STR_PAD_LEFT),
             ]);
             if (! Seccion::whereIn('seccional', $candidates)->exists()) {
-                $fail('La seccion no corresponde al Estado de San Luis Potosí');
+                $fail('La seccional no existe en el catálogo de secciones');
             }
         };
 

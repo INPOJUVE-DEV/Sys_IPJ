@@ -188,29 +188,31 @@ class BeneficiarioController extends Controller
             $dom['distrito_federal'] = $dom['distrito_federal'] ?? $comp['distrito_federal'];
             $dom['municipio_id'] = $dom['municipio_id'] ?? $comp['municipio_id'];
         }
-
+        $municipioId = $dom['municipio_id'] ?? $beneficiario->municipio_id ?? null;
+        $municipioNombre = null;
+        if ($municipioId) {
+            $municipioNombre = Municipio::whereKey($municipioId)->value('nombre');
+        }
         $payload = array_filter([
             'calle' => $dom['calle'] ?? null,
             'numero_ext' => $dom['numero_ext'] ?? null,
             'numero_int' => $dom['numero_int'] ?? null,
             'colonia' => $dom['colonia'] ?? null,
+            'municipio' => $municipioNombre,
             'municipio_id' => $dom['municipio_id'] ?? null,
             'codigo_postal' => $dom['codigo_postal'] ?? null,
             'seccional' => $dom['seccional'] ?? null,
             'distrito_local' => $dom['distrito_local'] ?? null,
             'distrito_federal' => $dom['distrito_federal'] ?? null,
         ], fn ($v) => !is_null($v));
-
         if (empty($payload)) {
             return;
         }
-
         $domicilio = $beneficiario->domicilio ?: new Domicilio(['id' => (string) Str::uuid(), 'beneficiario_id' => $beneficiario->id]);
         $domicilio->fill($payload);
         $domicilio->beneficiario_id = $beneficiario->id;
         $domicilio->save();
     }
-
     private function computeFromSeccional(?string $raw): ?array
     {
         $raw = trim((string)($raw ?? ''));
@@ -229,3 +231,4 @@ class BeneficiarioController extends Controller
         ];
     }
 }
+

@@ -1,4 +1,4 @@
-<?php
+ï»¿<?php
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
@@ -23,7 +23,7 @@ return new class extends Migration
             [
                 'key' => 'hero',
                 'name' => 'Hero',
-                'description' => 'Sección hero con título, subtítulo y CTA opcional.',
+                'description' => 'Seccion hero con titulo, subtitulo y CTA opcional.',
                 'schema' => json_encode([
                     'type' => 'object',
                     'required' => ['title', 'subtitle'],
@@ -49,7 +49,7 @@ return new class extends Migration
             [
                 'key' => 'card_grid',
                 'name' => 'Card Grid',
-                'description' => 'Rejilla de tarjetas con título, descripción y enlaces.',
+                'description' => 'Rejilla de tarjetas con titulo, descripcion y enlaces.',
                 'schema' => json_encode([
                     'type' => 'object',
                     'required' => ['cards'],
@@ -82,3 +82,4 @@ return new class extends Migration
         Schema::dropIfExists('components_catalog');
     }
 };
+
