@@ -10,44 +10,65 @@ Este repositorio contiene la aplicación web “Sys IPJ 2025” para gestión y 
 
 Requisitos: Docker Desktop (o Docker Engine) y Docker Compose.
 
-1) Configura variables de entorno (dentro de `sys_beneficiarios/`):
+### 1. Preparar variables de entorno
 
-```
+```bash
 cp sys_beneficiarios/.env.example sys_beneficiarios/.env
 ```
 
-Revisa en `sys_beneficiarios/.env`:
-- `APP_URL=http://localhost`
-- `DB_CONNECTION=mysql`
-- `DB_HOST=mysql`
-- `DB_PORT=3306`
-- `DB_DATABASE=sys_beneficiarios`
-- `DB_USERNAME=root`
-- `DB_PASSWORD=secret`
+Valores clave en `sys_beneficiarios/.env` (ajústalos si necesitas conectar a otro motor de BD):
 
-2) Levanta los servicios:
+| Variable | Descripción | Valor por defecto |
+| --- | --- | --- |
+| `APP_NAME` | Nombre mostrado en la aplicación | `Sys IPJ 2025` |
+| `APP_URL` | URL base de la app | `http://localhost` |
+| `DB_CONNECTION` | Driver de base de datos | `mysql` |
+| `DB_HOST` | Host de la BD | `mysql` (nombre del servicio en `docker-compose.yml`) |
+| `DB_PORT` | Puerto del contenedor MySQL | `3306` |
+| `DB_DATABASE` | Nombre de la base | `sys_beneficiarios` |
+| `DB_USERNAME` | Usuario de MySQL | `root` |
+| `DB_PASSWORD` | Contraseña de MySQL | `secret` |
 
-```
+> **Nota:** si ya cuentas con un servidor MySQL externo puedes cambiar `DB_HOST`, `DB_PORT`, `DB_USERNAME` y `DB_PASSWORD` para apuntar a él. En ese caso recuerda actualizar también la sección `mysql` en `docker-compose.yml` o eliminarla si no la usarás.
+
+### 2. Configurar almacenamiento persistente (opcional)
+
+El archivo `docker-compose.yml` define volúmenes para MySQL (`mysql_data`) y para `storage/` de Laravel (`app_storage`). Si deseas almacenar los datos en rutas locales específicas, edita las entradas `volumes:` de cada servicio antes de levantar los contenedores.
+
+### 3. Construir y levantar los servicios
+
+```bash
 docker compose up -d --build
 ```
 
-3) Inicializa la app (clave, migraciones, seeders, assets):
+Servicios que quedarás ejecutando:
 
-```
+- **app:** PHP-FPM con Laravel (usa `sys_beneficiarios/` como código fuente).
+- **web:** Nginx sirviendo `sys_beneficiarios/public` y enlazado al puerto 80 del host.
+- **mysql:** Base de datos MySQL 8 configurada con el usuario/contraseña del `.env`.
+- **node:** Contenedor Node 20 para compilar assets con Vite.
+
+### 4. Inicializar la aplicación
+
+```bash
 docker compose exec app php artisan key:generate
 # Migraciones + seeders base (roles, admin y catálogos si existen CSVs)
 docker compose exec app php artisan migrate --seed
-# Construcción de assets
+# Dependencias y build de assets
 docker compose exec node npm install
 docker compose exec node npm run build
 ```
 
-4) Abre el sistema en el navegador:
+Si necesitas datos de prueba adicionales puedes ejecutar `docker compose exec app php artisan db:seed --class=NombreSeeder` o importar catálogos (ver sección más abajo).
 
-- URL: `http://localhost`
+### 5. Acceder a la aplicación
 
-Credenciales iniciales (por seeders):
-- Admin: `admin@example.com` / `Password123`
+- URL principal: `http://localhost`
+- API pública: `http://localhost/api/...`
+
+Credenciales iniciales (creadas por los seeders):
+
+- Usuario Admin: `admin@example.com` / `Password123`
 - Roles disponibles: `admin`, `capturista`, `encargado_360`, `encargado_bienestar`, `psicologo`
 
 ## Guías de despliegue
