@@ -41,7 +41,6 @@ class StoreBeneficiarioRequest extends FormRequest
             'discapacidad' => ['required','boolean'],
             'id_ine' => ['required','string','max:255'],
             'telefono' => ['required','regex:/^\d{10}$/'],
-            'is_draft' => ['required','boolean'],
 
             // Domicilio: requeridos todos menos numero_int
             'domicilio.calle' => ['required','string','max:255'],
@@ -51,9 +50,6 @@ class StoreBeneficiarioRequest extends FormRequest
             'domicilio.municipio_id' => ['required','exists:municipios,id'],
             'domicilio.codigo_postal' => ['required','string','max:20'],
             'domicilio.seccional' => ['required','string','max:255', $seccionalExists],
-            // distritos se calcularán en backend a partir del seccional
-            'domicilio.distrito_local' => ['nullable','string','max:255'],
-            'domicilio.distrito_federal' => ['nullable','string','max:255'],
         ];
     }
 }

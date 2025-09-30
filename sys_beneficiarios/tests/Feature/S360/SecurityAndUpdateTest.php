@@ -35,7 +35,6 @@ class SecurityAndUpdateTest extends TestCase
             'distrito_local' => '01',
             'distrito_federal' => '01',
             'created_by' => $creator->uuid,
-            'is_draft' => false,
         ]);
     }
 

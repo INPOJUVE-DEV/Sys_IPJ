@@ -23,8 +23,7 @@ class EdadTest extends TestCase
             'curp' => 'PEPJ000101HDFLRNA1',
             'fecha_nacimiento' => '2000-01-01', 'sexo'=>'M', 'discapacidad'=>false,
             'id_ine' => 'INE', 'telefono'=>'5512345678', 'municipio_id'=>$mun->id,
-            'seccional'=>'001','distrito_local'=>'DL','distrito_federal'=>'DF','created_by'=> $u->uuid,
-            'is_draft'=>true
+            'seccional'=>'001','distrito_local'=>'DL','distrito_federal'=>'DF','created_by'=> $u->uuid
         ]);
         $this->assertSame(\Carbon\Carbon::parse('2000-01-01')->age, $b->edad);
     }

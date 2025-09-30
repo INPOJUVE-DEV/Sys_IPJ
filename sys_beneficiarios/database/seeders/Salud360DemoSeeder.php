@@ -107,7 +107,6 @@ class Salud360DemoSeeder extends Seeder
                     'distrito_local' => str_pad((string)rand(1, 20), 2, '0', STR_PAD_LEFT),
                     'distrito_federal' => str_pad((string)rand(1, 20), 2, '0', STR_PAD_LEFT),
                     'created_by' => $creator->uuid,
-                    'is_draft' => false,
                 ]
             );
             $beneficiarios[] = $b;

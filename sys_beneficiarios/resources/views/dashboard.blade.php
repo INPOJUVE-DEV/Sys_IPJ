@@ -47,20 +47,12 @@
             $monthStart = $now->copy()->startOfMonth();
             $monthEnd = $monthStart->copy()->endOfMonth();
 
-            $beneficiariosAggregate = \App\Models\Beneficiario::selectRaw('
-                COUNT(*) as total,
-                SUM(CASE WHEN is_draft = 0 THEN 1 ELSE 0 END) as registrados,
-                SUM(CASE WHEN is_draft = 1 THEN 1 ELSE 0 END) as borradores
-            ')->first();
             $beneficiariosMetrics = [
-                'total' => (int) ($beneficiariosAggregate->total ?? 0),
-                'registrados' => (int) ($beneficiariosAggregate->registrados ?? 0),
-                'borradores' => (int) ($beneficiariosAggregate->borradores ?? 0),
+                'total' => (int) \App\Models\Beneficiario::count(),
                 'hoy' => (int) \App\Models\Beneficiario::whereBetween('created_at', [$todayStart, $now])->count(),
+                'ultimaSemana' => (int) \App\Models\Beneficiario::whereBetween('created_at', [$weekStart, $now])->count(),
+                'conDiscapacidad' => (int) \App\Models\Beneficiario::where('discapacidad', true)->count(),
             ];
-            $beneficiariosProgress = $beneficiariosMetrics['total'] > 0
-                ? round(($beneficiariosMetrics['registrados'] / max($beneficiariosMetrics['total'], 1)) * 100)
-                : 0;
 
             $salud360Metrics = [
                 'activos' => (int) \App\Models\Salud360Assignment::where('active', true)->count(),
@@ -95,20 +87,30 @@
                                 <div class="display-5 fw-bold text-primary mb-0">{{ number_format($beneficiariosMetrics['total']) }}</div>
                                 <span class="text-muted small">{{ __('Total activos') }}</span>
                             </div>
-                            <div class="progress bg-body-tertiary mt-3" style="height: 6px;">
-                                <div class="progress-bar bg-primary" role="progressbar" style="width: {{ $beneficiariosProgress }}%;" aria-valuenow="{{ $beneficiariosProgress }}" aria-valuemin="0" aria-valuemax="100"></div>
-                            </div>
-                            <div class="d-flex justify-content-between small text-muted mt-2">
-                                <span>{{ __('Registrados') }}</span>
-                                <span class="fw-semibold text-success">{{ number_format($beneficiariosMetrics['registrados']) }}</span>
-                            </div>
-                            <div class="d-flex justify-content-between small text-muted">
-                                <span>{{ __('En revisión') }}</span>
-                                <span class="fw-semibold text-warning">{{ number_format($beneficiariosMetrics['borradores']) }}</span>
-                            </div>
-                            <div class="d-flex justify-content-between small text-muted">
-                                <span>{{ __('Capturados hoy') }}</span>
-                                <span class="fw-semibold">{{ number_format($beneficiariosMetrics['hoy']) }}</span>
+                            <div class="row g-2 mt-3">
+                                <div class="col-6">
+                                    <div class="border rounded-3 p-3 h-100">
+                                        <div class="small text-muted">{{ __('Capturados hoy') }}</div>
+                                        <div class="h5 fw-semibold text-primary mb-0">{{ number_format($beneficiariosMetrics['hoy']) }}</div>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="border rounded-3 p-3 h-100">
+                                        <div class="small text-muted">{{ __('Últimos 7 días') }}</div>
+                                        <div class="h5 fw-semibold text-primary mb-0">{{ number_format($beneficiariosMetrics['ultimaSemana']) }}</div>
+                                    </div>
+                                </div>
+                                <div class="col-12">
+                                    <div class="bg-primary bg-opacity-10 rounded-3 p-3">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <div>
+                                                <div class="small text-muted">{{ __('Personas con discapacidad') }}</div>
+                                                <div class="h5 fw-semibold text-primary mb-0">{{ number_format($beneficiariosMetrics['conDiscapacidad']) }}</div>
+                                            </div>
+                                            <i class="bi bi-universal-access-circle fs-3 text-primary"></i>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                         <div class="mt-auto">

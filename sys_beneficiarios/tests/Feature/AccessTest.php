@@ -43,7 +43,6 @@ class AccessTest extends TestCase
             'fecha_nacimiento' => '2000-01-01', 'sexo'=>'M', 'discapacidad'=>false,
             'id_ine' => 'INE', 'telefono'=>'5512345678', 'municipio_id'=>$mun->id,
             'seccional'=>'001','distrito_local'=>'DL','distrito_federal'=>'DF','created_by'=>$a->uuid,
-            'is_draft'=>true
         ]);
         $this->actingAs($b)->get(route('mis-registros.show', $benef))->assertForbidden();
     }

@@ -23,7 +23,11 @@ class KpisHttpTest extends TestCase
         $admin = User::factory()->create(); $admin->assignRole('admin');
         $this->actingAs($admin)->get('/admin/kpis')
             ->assertOk()
-            ->assertJsonStructure(['totals'=>['total','borrador','registrado']]);
+            ->assertJsonStructure([
+                'totals'=>['total'],
+                'week' => ['labels','data','total'],
+                'last30Days' => ['labels','data','total'],
+            ]);
     }
 
     public function test_capturista_kpis_structure(): void
@@ -38,10 +42,9 @@ class KpisHttpTest extends TestCase
             'fecha_nacimiento' => '2000-01-01', 'sexo'=>'M', 'discapacidad'=>false,
             'id_ine' => 'INE', 'telefono'=>'5512345678', 'municipio_id'=>$mun->id,
             'seccional'=>'001','distrito_local'=>'DL','distrito_federal'=>'DF','created_by'=> $cap->uuid,
-            'is_draft'=>true
         ]);
         $this->actingAs($cap)->get('/capturista/kpis')
             ->assertOk()
-            ->assertJsonStructure(['today','week','last30Days','estado'=>['labels','data'],'ultimos','series'=>['labels','data']]);
+            ->assertJsonStructure(['today','week','last30Days','ultimos','series'=>['labels','data']]);
     }
 }

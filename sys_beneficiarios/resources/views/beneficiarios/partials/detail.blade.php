@@ -10,6 +10,5 @@
     <dt class="col-sm-4">Municipio</dt><dd class="col-sm-8">{{ optional($beneficiario->municipio)->nombre }}</dd>
     <dt class="col-sm-4">Seccional</dt><dd class="col-sm-8">{{ $beneficiario->seccional }}</dd>
     <dt class="col-sm-4">Dirección</dt><dd class="col-sm-8">{{ $d?->calle }} {{ $d?->numero_ext }} {{ $d?->numero_int ? 'Int '.$d->numero_int : '' }}, {{ $d?->colonia }}, CP {{ $d?->codigo_postal }}</dd>
-    <dt class="col-sm-4">Estado</dt><dd class="col-sm-8">{!! $beneficiario->is_draft ? '<span class="badge bg-warning">Borrador</span>' : '<span class="badge bg-success">Registrado</span>' !!}</dd>
 </dl>
 

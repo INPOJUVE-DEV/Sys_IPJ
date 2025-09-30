@@ -34,13 +34,11 @@ class Beneficiario extends Model
         'distrito_local',
         'distrito_federal',
         'created_by',
-        'is_draft',
     ];
 
     protected $casts = [
         'fecha_nacimiento' => 'date',
         'discapacidad' => 'boolean',
-        'is_draft' => 'boolean',
         'edad' => 'integer',
     ];
 

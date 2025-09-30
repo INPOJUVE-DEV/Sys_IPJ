@@ -56,14 +56,6 @@
                     </select>
                 </div>
                 <div class="col-6 col-md-2">
-                    <label class="form-label">Borrador</label>
-                    <select name="is_draft" class="form-select">
-                        <option value="">—</option>
-                        <option value="1" @selected(($filters['is_draft'] ?? '')==='1')>Sí</option>
-                        <option value="0" @selected(($filters['is_draft'] ?? '')==='0')>No</option>
-                    </select>
-                </div>
-                <div class="col-6 col-md-2">
                     <label class="form-label">Edad mín</label>
                     <input type="number" name="edad_min" value="{{ $filters['edad_min'] ?? '' }}" class="form-control">
                 </div>

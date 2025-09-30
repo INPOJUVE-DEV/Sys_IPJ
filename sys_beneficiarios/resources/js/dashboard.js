@@ -35,28 +35,26 @@ async function renderKpis(url) {
     // Admin / Encargado structure
     if (data.totals) {
       setText('kpiTotal', data.totals.total);
-      setText('kpiBorrador', data.totals.borrador);
-      setText('kpiRegistrado', data.totals.registrado);
-
+      if (data.today) {
+        setText('kpiTodayTotal', data.today.total ?? '0');
+      }
+      if (data.week && Object.prototype.hasOwnProperty.call(data.week, 'total')) {
+        setText('kpiWeekTotal', data.week.total ?? '0');
+      }
+      if (data.last30Days && Object.prototype.hasOwnProperty.call(data.last30Days, 'total')) {
+        setText('kpiLast30Total', data.last30Days.total ?? '0');
+      }
       if (data.byMunicipio) renderChart('chartByMunicipio', 'bar', data.byMunicipio.labels, data.byMunicipio.data, { label: 'Por municipio' });
       if (data.bySeccional) renderChart('chartBySeccional', 'bar', data.bySeccional.labels, data.bySeccional.data, { label: 'Por seccional' });
       if (data.byCapturista) renderChart('chartByCapturista', 'bar', data.byCapturista.labels, data.byCapturista.data, { label: 'Por capturista' });
       if (data.week) renderChart('chartWeek', 'line', data.week.labels, data.week.data, { label: 'Semana' });
       if (data.last30Days) renderChart('chart30', 'line', data.last30Days.labels, data.last30Days.data, { label: '30 días' });
-      const donut = document.getElementById('chartEstado');
-      if (donut && data.totals) {
-        new Chart(donut, { type: 'doughnut', data: { labels: ['Borrador','Registrado'], datasets: [{ data: [data.totals.borrador, data.totals.registrado], backgroundColor: ['#ffc107', '#2ECC71'] }] } });
-      }
     } else {
       // Capturista personal
       setText('kpiToday', data.today);
       setText('kpiWeek', data.week);
       setText('kpi30', data.last30Days);
 
-      if (data.estado) {
-        const ctx = document.getElementById('chartEstado');
-        if (ctx) new Chart(ctx, { type: 'doughnut', data: { labels: data.estado.labels, datasets: [{ data: data.estado.data, backgroundColor: ['#ffc107', '#2ECC71'] }] } });
-      }
       if (Array.isArray(data.ultimos)) {
         const list = document.getElementById('ultimosList');
         if (list) {
@@ -65,7 +63,7 @@ async function renderKpis(url) {
             const li = document.createElement('li');
             li.className = 'list-group-item d-flex justify-content-between';
             const created = (it.created_at || '').toString().replace('T',' ').substring(0,16);
-            li.innerHTML = `<span>${it.folio_tarjeta || it.id}</span><small class="text-muted">${created} ${it.is_draft ? '<span class=\'badge bg-warning ms-2\'>Borrador</span>' : '<span class=\'badge bg-success ms-2\'>Registrado</span>'}</small>`;
+            li.innerHTML = `<span>${it.folio_tarjeta || it.id}</span><small class="text-muted">${created}</small>`;
             list.appendChild(li);
           });
         }
