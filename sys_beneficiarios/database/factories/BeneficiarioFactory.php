@@ -37,7 +37,6 @@ class BeneficiarioFactory extends Factory
             'distrito_local' => fake()->numerify('##'),
             'distrito_federal' => fake()->numerify('##'),
             'created_by' => null,
-            'is_draft' => false,
         ];
     }
 }

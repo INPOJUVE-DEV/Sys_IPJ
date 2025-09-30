@@ -136,7 +136,6 @@ Artisan::command('verify:quick', function () {
     $b->distrito_local = 'DL-01';
     $b->distrito_federal = 'DF-01';
     $b->created_by = $admin->uuid;
-    $b->is_draft = true;
     $b->save();
 
     $this->line('Edad calculada (esperado ~'.\Carbon\Carbon::parse('2000-01-01')->age.'): '.$b->edad);

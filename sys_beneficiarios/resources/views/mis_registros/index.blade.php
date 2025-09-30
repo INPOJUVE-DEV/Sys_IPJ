@@ -18,7 +18,7 @@
                                             <span class="text-white-50 small text-uppercase">Folio</span>
                                             <div class="h6 text-white mb-0">{{ $b->folio_tarjeta }}</div>
                                         </div>
-                                        {!! $b->is_draft ? '<span class="badge bg-warning text-dark">Borrador</span>' : '<span class="badge bg-success">Final</span>' !!}
+                                        <span class="badge bg-secondary text-white">Registrado</span>
                                     </div>
                                     <div class="fw-semibold">{{ $b->nombre }} {{ $b->apellido_paterno }} {{ $b->apellido_materno }}</div>
                                 </div>

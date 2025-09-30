@@ -51,20 +51,13 @@ class DashboardController extends Controller
         $totalWeek = (clone $filtered)->whereBetween('created_at', [$startWeek, $now])->count();
         $total30 = (clone $filtered)->whereBetween('created_at', [$start30, $now])->count();
 
-        $drafts = (clone $filtered)->where('is_draft', true)->count();
-        $regs = (clone $filtered)->where('is_draft', false)->count();
-
-        $lastTen = (clone $filtered)->latest()->limit(10)->get(['id','folio_tarjeta','created_at','is_draft']);
+        $lastTen = (clone $filtered)->latest()->limit(10)->get(['id','folio_tarjeta','created_at']);
         $series = $this->dailySeries((clone $filtered)->whereBetween('created_at', [$start30, $now]), $start30, $now);
 
         return response()->json([
             'today' => $totalToday,
             'week' => $totalWeek,
             'last30Days' => $total30,
-            'estado' => [
-                'labels' => ['Borrador', 'Registrado'],
-                'data' => [$drafts, $regs],
-            ],
             'ultimos' => $lastTen,
             'series' => $series,
         ]);
@@ -76,9 +69,6 @@ class DashboardController extends Controller
             ->when($request->filled('municipio_id'), fn($q)=>$q->where('municipio_id', $request->input('municipio_id')))
             ->when($request->filled('seccional'), fn($q)=>$q->where('seccional','like','%'.$request->input('seccional').'%'))
             ->when($request->filled('capturista'), fn($q)=>$q->where('created_by', $request->input('capturista')))
-            ->when($request->filled('estado'), function ($q) use ($request) {
-                return $request->input('estado') === 'borrador' ? $q->where('is_draft', true) : ($request->input('estado')==='registrado' ? $q->where('is_draft', false) : $q);
-            })
             ->when($request->filled('from'), fn($q)=>$q->whereDate('created_at','>=', $request->date('from')))
             ->when($request->filled('to'), fn($q)=>$q->whereDate('created_at','<=', $request->date('to')));
     }
@@ -91,8 +81,6 @@ class DashboardController extends Controller
         $startToday = (clone $now)->startOfDay();
 
         $total = (clone $baseQuery)->count();
-        $borrador = (clone $baseQuery)->where('is_draft', true)->count();
-        $registrado = (clone $baseQuery)->where('is_draft', false)->count();
 
         // By Municipio
         $byMun = (clone $baseQuery)
@@ -134,8 +122,6 @@ class DashboardController extends Controller
         $todayTotal = (clone $baseQuery)->whereBetween('created_at', [$startToday, $now])->count();
         $today = [
             'total' => $todayTotal,
-            'borrador' => (clone $baseQuery)->where('is_draft', true)->whereBetween('created_at', [$startToday, $now])->count(),
-            'registrado' => (clone $baseQuery)->where('is_draft', false)->whereBetween('created_at', [$startToday, $now])->count(),
         ];
 
         // Week daily series
@@ -144,7 +130,7 @@ class DashboardController extends Controller
         $last30Series = $this->dailySeries((clone $baseQuery)->whereBetween('created_at', [$start30, $now]), $start30, $now);
 
         return response()->json([
-            'totals' => ['total' => $total, 'borrador' => $borrador, 'registrado' => $registrado],
+            'totals' => ['total' => $total],
             'byMunicipio' => $byMunicipio,
             'bySeccional' => $bySeccional,
             'byCapturista' => $byCapturista,

@@ -34,14 +34,6 @@
                     <label class="form-label">Hasta</label>
                     <input type="date" name="to" value="{{ $filters['to'] ?? '' }}" class="form-control">
                 </div>
-                <div class="col-6 col-md-2">
-                    <label class="form-label">Estado</label>
-                    <select name="estado" class="form-select">
-                        <option value="">â€”</option>
-                        <option value="borrador" @selected(($filters['estado'] ?? '')==='borrador')>Borrador</option>
-                        <option value="registrado" @selected(($filters['estado'] ?? '')==='registrado')>Registrado</option>
-                    </select>
-                </div>
                 <div class="col-12 col-md-4 ms-auto text-end">
                     <a href="{{ route('admin.beneficiarios.index') }}" class="btn btn-outline-secondary me-2">Limpiar</a>
                     <a class="btn btn-outline-success me-2" href="{{ route('admin.beneficiarios.export', request()->query()) }}">Exportar CSV</a>
@@ -64,11 +56,7 @@
                                             <span class="text-white-50 small text-uppercase">Folio</span>
                                             <div class="h6 text-white mb-0">{{ $b->folio_tarjeta }}</div>
                                         </div>
-                                        @if($b->is_draft)
-                                            <span class="badge bg-warning text-dark">Borrador</span>
-                                        @else
-                                            <span class="badge bg-success">Registrado</span>
-                                        @endif
+                                        <span class="badge bg-secondary text-white">Registrado</span>
                                     </div>
                                     <div class="fw-semibold">{{ $b->nombre }} {{ $b->apellido_paterno }} {{ $b->apellido_materno }}</div>
                                 </div>

@@ -31,13 +31,13 @@ class ValidationTest extends TestCase
             'discapacidad' => '0',
             'id_ine' => 'INE123',
             'telefono' => '5512345678',
-            'municipio_id' => $mun->id,
-            'seccional' => '001',
-            'distrito_local' => 'DL',
-            'distrito_federal' => 'DF',
-            'is_draft' => '1',
             'domicilio' => [
-                'calle' => 'Calle', 'numero_ext'=>'1', 'colonia'=>'Centro', 'municipio'=>'X', 'codigo_postal'=>'01234', 'seccional'=>'001'
+                'calle' => 'Calle',
+                'numero_ext' => '1',
+                'colonia' => 'Centro',
+                'municipio_id' => $mun->id,
+                'codigo_postal' => '01234',
+                'seccional' => '001',
             ],
         ], $overrides);
     }
@@ -63,5 +63,33 @@ class ValidationTest extends TestCase
         $p2 = $this->validPayload(['folio_tarjeta' => 'FT-1']);
         $this->actingAs($u)->post(route('beneficiarios.store'), $p1);
         $this->actingAs($u)->post(route('beneficiarios.store'), $p2)->assertSessionHasErrors('folio_tarjeta');
+    }
+
+    public function test_beneficiario_can_be_created_without_is_draft(): void
+    {
+        $u = User::factory()->create();
+        $u->assignRole('capturista');
+        $payload = $this->validPayload(['folio_tarjeta' => 'FT-CREATE']);
+
+        $response = $this->actingAs($u)->post(route('beneficiarios.store'), $payload);
+
+        $response->assertRedirect(route('beneficiarios.create'));
+
+        $this->assertDatabaseHas('beneficiarios', [
+            'folio_tarjeta' => 'FT-CREATE',
+            'nombre' => 'Juan',
+            'apellido_paterno' => 'Perez',
+        ]);
+
+        $benef = \App\Models\Beneficiario::where('folio_tarjeta', 'FT-CREATE')->first();
+        $this->assertNotNull($benef);
+        $this->assertSame('001', $benef->seccional);
+        $this->assertNotNull($benef->municipio_id);
+
+        $this->assertDatabaseHas('domicilios', [
+            'beneficiario_id' => $benef->id,
+            'calle' => 'Calle',
+            'codigo_postal' => '01234',
+        ]);
     }
 }

@@ -10,8 +10,7 @@
         'sexo' => 'Sexo',
         'discapacidad' => 'Discapacidad',
         'id_ine' => 'ID INE',
-        'telefono' => 'Telefono',
-        'is_draft' => 'Estado del registro',
+        'telefono' => 'Teléfono',
         'domicilio.calle' => 'Calle',
         'domicilio.numero_ext' => 'Numero exterior',
         'domicilio.numero_int' => 'Numero interior',
@@ -19,8 +18,6 @@
         'domicilio.municipio_id' => 'Municipio',
         'domicilio.codigo_postal' => 'Codigo postal',
         'domicilio.seccional' => 'Seccional del domicilio',
-        'domicilio.distrito_local' => 'Distrito local',
-        'domicilio.distrito_federal' => 'Distrito federal',
     ];
     $firstErrorKey = $errors->keys()[0] ?? null;
     $firstErrorLabel = $firstErrorKey
@@ -54,7 +51,6 @@
 
     <div class="wizard-step active" data-step="1">
         <div class="row g-3">
-            <input type="hidden" name="is_draft" value="{{ old('is_draft', 0) }}">
             <div class="col-md-4">
                 <label class="form-label">Folio tarjeta</label>
                 <input name="folio_tarjeta" value="{{ old('folio_tarjeta', $b->folio_tarjeta ?? '') }}" class="form-control @error('folio_tarjeta') is-invalid @enderror" required>

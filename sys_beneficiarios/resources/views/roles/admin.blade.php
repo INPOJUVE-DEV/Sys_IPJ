@@ -35,14 +35,6 @@
                         <label class="form-label">Hasta</label>
                         <input type="date" name="to" class="form-control">
                     </div>
-                    <div class="col-6 col-md-2">
-                        <label class="form-label">Estado</label>
-                        <select name="estado" class="form-select">
-                            <option value="">—</option>
-                            <option value="borrador">Borrador</option>
-                            <option value="registrado">Registrado</option>
-                        </select>
-                    </div>
                     <div class="col-12 col-md-4 ms-auto text-end">
                         <a id="exportCsvBtn" href="#" class="btn btn-outline-success me-2">Exportar CSV</a>
                         <button class="btn btn-primary" type="submit">Aplicar</button>
@@ -51,16 +43,16 @@
             </div>
         </div>
         <div class="row g-3 mb-3">
-            <div class="col-md-4"><div class="card"><div class="card-body"><div class="text-muted">Total</div><div class="h3" id="kpiTotal">—</div></div></div></div>
-            <div class="col-md-4"><div class="card"><div class="card-body"><div class="text-muted">Borrador</div><div class="h3" id="kpiBorrador">—</div></div></div></div>
-            <div class="col-md-4"><div class="card"><div class="card-body"><div class="text-muted">Registrado</div><div class="h3" id="kpiRegistrado">—</div></div></div></div>
+            <div class="col-sm-6 col-lg-3"><div class="card"><div class="card-body"><div class="text-muted">Total</div><div class="h3" id="kpiTotal">—</div></div></div></div>
+            <div class="col-sm-6 col-lg-3"><div class="card"><div class="card-body"><div class="text-muted">Hoy</div><div class="h3" id="kpiTodayTotal">—</div></div></div></div>
+            <div class="col-sm-6 col-lg-3"><div class="card"><div class="card-body"><div class="text-muted">Últimos 7 días</div><div class="h3" id="kpiWeekTotal">—</div></div></div></div>
+            <div class="col-sm-6 col-lg-3"><div class="card"><div class="card-body"><div class="text-muted">Últimos 30 días</div><div class="h3" id="kpiLast30Total">—</div></div></div></div>
         </div>
 
         <div class="row g-3">
             <div class="col-lg-6"><div class="card"><div class="card-header">Por municipio</div><div class="card-body"><canvas id="chartByMunicipio" height="180"></canvas></div></div></div>
             <div class="col-lg-6"><div class="card"><div class="card-header">Por seccional (Top 10)</div><div class="card-body"><canvas id="chartBySeccional" height="180"></canvas></div></div></div>
             <div class="col-lg-6"><div class="card"><div class="card-header">Por capturista (Top 10)</div><div class="card-body"><canvas id="chartByCapturista" height="180"></canvas></div></div></div>
-            <div class="col-lg-6"><div class="card"><div class="card-header">Estado</div><div class="card-body"><canvas id="chartEstado" height="180"></canvas></div></div></div>
             <div class="col-lg-6"><div class="card"><div class="card-header">Esta semana</div><div class="card-body"><canvas id="chartWeek" height="180"></canvas></div></div></div>
             <div class="col-lg-12"><div class="card"><div class="card-header">Últimos 30 días</div><div class="card-body"><canvas id="chart30" height="200"></canvas></div></div></div>
         </div>

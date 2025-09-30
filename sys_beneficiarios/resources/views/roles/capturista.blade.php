@@ -9,9 +9,8 @@
         </div>
 
         <div class="row g-3">
-            <div class="col-lg-6"><div class="card"><div class="card-header">Estado</div><div class="card-body"><canvas id="chartEstado" height="200"></canvas></div></div></div>
             <div class="col-lg-6"><div class="card"><div class="card-header">Mis altas (30 días)</div><div class="card-body"><canvas id="chartMine" height="200"></canvas></div></div></div>
-            <div class="col-lg-12"><div class="card"><div class="card-header">Últimos registros</div><div class="card-body"><ul class="list-group" id="ultimosList"></ul></div></div></div>
+            <div class="col-lg-6"><div class="card"><div class="card-header">Últimos registros</div><div class="card-body"><ul class="list-group" id="ultimosList"></ul></div></div></div>
         </div>
     </div>
 

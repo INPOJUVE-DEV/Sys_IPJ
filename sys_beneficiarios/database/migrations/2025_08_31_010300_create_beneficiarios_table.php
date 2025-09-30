@@ -26,7 +26,6 @@ return new class extends Migration
             $table->string('distrito_local');
             $table->string('distrito_federal');
             $table->char('created_by', 36);
-            $table->boolean('is_draft')->default(true);
             $table->timestamps();
             $table->softDeletes();
 
