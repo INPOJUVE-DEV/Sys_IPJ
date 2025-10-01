@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 
 use App\Models\ComponentCatalog;
 use App\Models\Page;
@@ -11,8 +11,9 @@ use function Pest\Laravel\actingAs;
 use function Pest\Laravel\getJson;
 use function Pest\Laravel\postJson;
 use function Pest\Laravel\putJson;
+use Tests\TestCase;
 
-uses(RefreshDatabase::class);
+uses(TestCase::class, RefreshDatabase::class);
 
 beforeEach(function () {
     app(PermissionRegistrar::class)->forgetCachedPermissions();

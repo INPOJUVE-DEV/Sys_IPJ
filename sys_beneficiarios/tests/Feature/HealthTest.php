@@ -1,6 +1,9 @@
 <?php
 
+use Tests\TestCase;
 use function Pest\Laravel\get;
+
+uses(TestCase::class);
 
 it('returns health ok', function () {
     $response = get('/api/v1/health');

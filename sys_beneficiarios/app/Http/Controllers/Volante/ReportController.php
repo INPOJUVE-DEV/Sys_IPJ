@@ -192,8 +192,12 @@ class ReportController extends Controller
 
         $total = (clone $base)->count();
 
+        $dateFormat = DB::connection()->getDriverName() === 'sqlite'
+            ? "strftime('%Y-%m', enrolled_at)"
+            : "DATE_FORMAT(enrolled_at, '%Y-%m')";
+
         $perMonth = (clone $base)
-            ->select(DB::raw("DATE_FORMAT(enrolled_at, '%Y-%m') as period"), DB::raw('COUNT(*) as total'))
+            ->select(DB::raw("$dateFormat as period"), DB::raw('COUNT(*) as total'))
             ->groupBy('period')
             ->orderBy('period')
             ->get()
@@ -295,6 +299,17 @@ class ReportController extends Controller
     {
         $referenceDate = $end->toDateString();
 
+        $minorsTotalExpression = "SUM(CASE WHEN beneficiarios.fecha_nacimiento IS NOT NULL AND TIMESTAMPDIFF(YEAR, beneficiarios.fecha_nacimiento, ?) < 18 THEN 1 ELSE 0 END)";
+        $adultsTotalExpression = "SUM(CASE WHEN beneficiarios.fecha_nacimiento IS NOT NULL AND TIMESTAMPDIFF(YEAR, beneficiarios.fecha_nacimiento, ?) >= 18 THEN 1 ELSE 0 END)";
+        $bindings = [$referenceDate, $referenceDate];
+
+        if (DB::connection()->getDriverName() === 'sqlite') {
+            $minorsTotalExpression = "SUM(CASE WHEN beneficiarios.fecha_nacimiento IS NOT NULL AND (strftime('%Y', ?) - strftime('%Y', beneficiarios.fecha_nacimiento)) < 18 THEN 1 ELSE 0 END)";
+            $adultsTotalExpression = "SUM(CASE WHEN beneficiarios.fecha_nacimiento IS NOT NULL AND (strftime('%Y', ?) - strftime('%Y', beneficiarios.fecha_nacimiento)) >= 18 THEN 1 ELSE 0 END)";
+            $bindings = [$referenceDate, $referenceDate];
+        }
+
+
         return DB::table('vol_enrollments')
             ->join('vol_groups', 'vol_groups.id', '=', 'vol_enrollments.group_id')
             ->join('vol_sites', 'vol_sites.id', '=', 'vol_groups.site_id')
@@ -308,9 +323,9 @@ class ReportController extends Controller
                 "COUNT(*) as total, " .
                 "SUM(CASE WHEN UPPER(beneficiarios.sexo) = 'M' THEN 1 ELSE 0 END) as male_total, " .
                 "SUM(CASE WHEN UPPER(beneficiarios.sexo) = 'F' THEN 1 ELSE 0 END) as female_total, " .
-                "SUM(CASE WHEN beneficiarios.fecha_nacimiento IS NOT NULL AND TIMESTAMPDIFF(YEAR, beneficiarios.fecha_nacimiento, ?) < 18 THEN 1 ELSE 0 END) as minors_total, " .
-                "SUM(CASE WHEN beneficiarios.fecha_nacimiento IS NOT NULL AND TIMESTAMPDIFF(YEAR, beneficiarios.fecha_nacimiento, ?) >= 18 THEN 1 ELSE 0 END) as adults_total",
-                [$referenceDate, $referenceDate]
+                "$minorsTotalExpression as minors_total, " .
+                "$adultsTotalExpression as adults_total",
+                $bindings
             )
             ->groupBy('vol_sites.id', 'vol_sites.name')
             ->orderByDesc('total')
