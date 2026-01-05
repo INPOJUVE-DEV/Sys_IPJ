@@ -23,9 +23,7 @@ class Domicilio extends Model
         'colonia',
         'municipio_id',
         'codigo_postal',
-        'seccional',
-        'distrito_local',
-        'distrito_federal',
+        'seccion_id',
     ];
 
     protected static $logName = 'domicilios';
@@ -43,5 +41,15 @@ class Domicilio extends Model
     public function beneficiario()
     {
         return $this->belongsTo(Beneficiario::class, 'beneficiario_id');
+    }
+
+    public function municipio()
+    {
+        return $this->belongsTo(Municipio::class);
+    }
+
+    public function seccion()
+    {
+        return $this->belongsTo(Seccion::class);
     }
 }

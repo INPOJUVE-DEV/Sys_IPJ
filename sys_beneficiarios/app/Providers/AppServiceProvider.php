@@ -4,13 +4,9 @@ namespace App\Providers;
 
 use App\Models\ComponentCatalog;
 use App\Models\Page;
-use App\Models\Salud360Assignment;
-use App\Models\Salud360Session;
 use App\Models\Theme;
 use App\Policies\ComponentCatalogPolicy;
 use App\Policies\PagePolicy;
-use App\Policies\Salud360AssignmentPolicy;
-use App\Policies\Salud360SessionPolicy;
 use App\Policies\ThemePolicy;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
@@ -38,8 +34,6 @@ class AppServiceProvider extends ServiceProvider
                 ->by($request->ip());
         });
 
-        Gate::policy(Salud360Assignment::class, Salud360AssignmentPolicy::class);
-        Gate::policy(Salud360Session::class, Salud360SessionPolicy::class);
         Gate::policy(Page::class, PagePolicy::class);
         Gate::policy(ComponentCatalog::class, ComponentCatalogPolicy::class);
         Gate::policy(Theme::class, ThemePolicy::class);

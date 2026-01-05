@@ -22,7 +22,7 @@
                 </div>
             </div>
             <div class="d-flex flex-wrap gap-2 mt-3" id="roleChips">
-                @php($roles = ['all' => 'Todos', 'admin' => 'Admin', 'encargado_360' => 'Encargado', 'psicologo' => 'Psicólogo', 'capturista' => 'Capturista'])
+                @php($roles = ['all' => 'Todos', 'admin' => 'Admin', 'capturista' => 'Capturista'])
                 @foreach($roles as $roleKey => $roleLabel)
                     <button type="button" class="btn btn-sm btn-outline-light @if($loop->first) active @endif" data-role="{{ $roleKey }}">{{ $roleLabel }}</button>
                 @endforeach
@@ -118,4 +118,3 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 </script>
 @endpush
-

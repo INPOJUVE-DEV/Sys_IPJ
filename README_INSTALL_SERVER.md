@@ -10,7 +10,7 @@ Este documento describe los requisitos y pasos para desplegar **Sys IPJ 2025** u
 - Acceso a Internet para descargar dependencias e imágenes de Docker.
 - Puertos abiertos en el firewall para:
   - `80/tcp` (HTTP) y `443/tcp` (HTTPS) si vas a publicar el sitio.
-  - Opcionalmente `3306/tcp` si expondrás MySQL fuera del host (no recomendado en producción).
+  - Acceso saliente a `3306/tcp` hacia tu servidor MySQL externo.
 
 ## 2. Instalar dependencias base
 
@@ -86,11 +86,11 @@ cd Sys_ipj_2025-web
     LOG_LEVEL=info
 
     DB_CONNECTION=mysql
-    DB_HOST=mysql
+    DB_HOST=0.0.0.0
     DB_PORT=3306
     DB_DATABASE=sys_beneficiarios
-    DB_USERNAME=root
-    DB_PASSWORD=secret
+    DB_USERNAME=app
+    DB_PASSWORD=TuClaveSegura123!
 
     # Configuración de correo y storage según tu infraestructura
     MAIL_MAILER=smtp
@@ -103,26 +103,26 @@ cd Sys_ipj_2025-web
     MAIL_FROM_NAME="Sys IPJ 2025"
     ```
 
-3. Si vas a conectar con un motor MySQL administrado (RDS, Cloud SQL, etc.), cambia `DB_HOST`, `DB_PORT`, `DB_USERNAME` y `DB_PASSWORD` y elimina/ignora el servicio `mysql` del `docker-compose.yml`.
+3. Aseg�rate de que el servidor MySQL externo permita conexiones desde este host (abre 3306/TCP saliente y autoriza la IP en tu firewall/VPC).
 
 ## 6. Ajustar docker-compose para producción (opcional)
 
 - Modifica el mapeo de puertos del servicio `web` si necesitas escuchar en otro puerto (por ejemplo `8080:80`).
-- Configura volúmenes persistentes en rutas locales personalizadas si deseas un control más estricto que los volúmenes nombrados.
+- Modifica el mapeo de puertos del servicio `nginx` si necesitas escuchar en otro puerto (por ejemplo `8080:80`).
 - Revisa `.docker/nginx/default.conf` para añadir cabeceras de seguridad o configuraciones de proxy necesarias.
 
 ## 7. Construir e iniciar los contenedores
 
 ```bash
 docker compose pull           # descarga imágenes actualizadas
-docker compose up -d --build  # levanta app, web, mysql y node
+docker compose up -d --build  # levanta app, nginx y node
 ```
 
 Comprueba el estado:
 
 ```bash
 docker compose ps
-docker compose logs -f web
+docker compose logs -f nginx
 ```
 
 ## 8. Inicializar la aplicación Laravel
@@ -154,10 +154,9 @@ Si importas catálogos desde CSV colócalos en `sys_beneficiarios/database/seede
     ```
 
 2. Para certificados SSL en producción se recomienda usar un proxy reverso externo (por ejemplo Nginx o Traefik) en el host o frente a los contenedores. Ajusta el `server_name` y certificados en `.docker/nginx/default.conf` si decides manejar SSL dentro del mismo stack.
-
 ## 10. Tareas de mantenimiento
 
-- **Respaldos de base de datos:** usa `docker compose exec mysql mysqldump ...` o configura tareas automáticas externas.
+- **Respaldos de base de datos:** coordina respaldos directamente en el servidor MySQL externo (mysqldump, snapshots o herramientas administradas).
 - **Actualizaciones:**
   - `git pull` para traer cambios del repositorio.
   - `docker compose pull` y `docker compose up -d --build` para reconstruir imágenes.

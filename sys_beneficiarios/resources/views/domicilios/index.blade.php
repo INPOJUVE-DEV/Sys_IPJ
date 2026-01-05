@@ -28,13 +28,13 @@
                             <div class="card-body d-flex flex-column gap-3">
                                 <div>
                                     <h3 class="h6 text-white mb-1">{{ optional($d->beneficiario)->nombre }} {{ optional($d->beneficiario)->apellido_paterno }}</h3>
-                                    <div class="small text-white-50"><i class="bi bi-geo-alt me-1"></i>{{ $d->municipio }}</div>
+                                    <div class="small text-white-50"><i class="bi bi-geo-alt me-1"></i>{{ optional($d->municipio)->nombre }}</div>
                                 </div>
                                 <div class="small text-white-50 d-flex flex-column gap-1">
                                     <div><i class="bi bi-signpost-2 me-1"></i>{{ $d->calle }} {{ $d->numero_ext }}{{ $d->numero_int? ' Int '.$d->numero_int:'' }}</div>
                                     <div><i class="bi bi-buildings me-1"></i>{{ $d->colonia }}</div>
                                     <div><i class="bi bi-mailbox me-1"></i>CP {{ $d->codigo_postal }}</div>
-                                    <div><i class="bi bi-diagram-3 me-1"></i>Seccional {{ $d->seccional }}</div>
+                                    <div><i class="bi bi-diagram-3 me-1"></i>Seccional {{ optional($d->seccion)->seccional }}</div>
                                 </div>
                                 <div class="mt-auto d-flex flex-column gap-2">
                                     <a href="{{ route('domicilios.edit', $d) }}" class="btn btn-outline-light btn-sm w-100">
@@ -63,4 +63,3 @@
         @endif
     </div>
 </x-app-layout>
-

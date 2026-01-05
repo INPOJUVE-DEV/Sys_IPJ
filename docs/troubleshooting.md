@@ -2,7 +2,7 @@
 
 ## Contenedores no inician
 
-- Revisa `docker compose ps` y logs: `docker compose logs -f app nginx mysql`
+- Revisa `docker compose ps` y logs: `docker compose logs -f app nginx`
 - Libera el puerto 80 si está en uso o cambia el mapeo en `docker-compose.yml`
 
 ## 502 Bad Gateway
@@ -17,9 +17,9 @@
 
 ## Conexión a MySQL rechazada
 
-- Confirma `DB_HOST=mysql` en `.env`
-- Espera a que `mysql` termine de inicializar (primer arranque tarda)
-- El usuario/contraseña por defecto son `root/secret` (ajústalos si cambiaste el compose)
+- Confirma `DB_HOST`, `DB_PORT`, `DB_USERNAME` y `DB_PASSWORD` en `.env` apuntando al servidor MySQL externo.
+- Valida que el servidor permita conexiones desde la m�quina que ejecuta Docker (firewall/VPC).
+- Limpia configuraci�n cacheada si cambias credenciales: `docker compose exec app php artisan config:clear`.
 
 ## Assets sin compilar
 

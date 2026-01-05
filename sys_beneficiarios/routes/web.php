@@ -9,12 +9,6 @@ use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\BeneficiarioController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DomicilioController;
-use App\Http\Controllers\Volante\ReportController as VolanteReportController;
-use App\Http\Controllers\Vol\AjaxController as VolAjaxController;
-use App\Http\Controllers\Vol\EnrollmentWebController;
-use App\Http\Controllers\Vol\GroupWebController;
-use App\Http\Controllers\Vol\PaymentWebController;
-use App\Http\Controllers\Vol\SiteWebController;
 use App\Http\Controllers\MisRegistrosController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Auth;
@@ -27,9 +21,6 @@ Route::get('/', function () {
     $user = Auth::user();
     if ($user->hasRole('admin')) {
         return redirect('/admin');
-    }
-    if ($user->hasRole('encargado_360')) {
-        return redirect()->route('s360.enc360.view');
     }
     if ($user->hasRole('capturista')) {
         return redirect('/capturista');
@@ -45,7 +36,7 @@ Route::get('/dashboard', function () {
 Route::get('/mi-progreso/kpis', [DashboardController::class, 'miProgresoKpis'])->middleware(['auth','role:capturista']);
 
 // Alias de registro de captura usado en tests
-Route::post('/captura/registrar', [BeneficiarioController::class, 'store'])->name('captura.registrar')->middleware(['auth','role:admin|capturista|encargado_360']);
+Route::post('/captura/registrar', [BeneficiarioController::class, 'store'])->name('captura.registrar')->middleware(['auth','role:admin|capturista']);
 
 // Secciones por rol
 Route::middleware(['auth','role:admin'])->group(function () {
@@ -68,8 +59,8 @@ Route::middleware(['auth','role:capturista'])->group(function () {
     });
 });
 
-// Beneficiarios y Domicilios (admin, capturista, encargado_360)
-Route::middleware(['auth','role:admin|capturista|encargado_360'])->group(function () {
+// Beneficiarios y Domicilios (admin, capturista)
+Route::middleware(['auth','role:admin|capturista'])->group(function () {
     Route::resource('beneficiarios', BeneficiarioController::class)->except(['show']);
     Route::resource('domicilios', DomicilioController::class)->except(['show']);
 });
@@ -107,115 +98,4 @@ Route::middleware(['auth','role:admin'])->prefix('admin')->name('admin.')->group
     Route::get('beneficiarios/{beneficiario}', [AdminBeneficiariosController::class, 'show'])->name('beneficiarios.show');
 });
 
-Route::middleware('auth')->prefix('vol')->name('vol.')->group(function () {
-    Route::get('dashboard', [VolanteReportController::class, 'dashboard'])
-        ->middleware('permission:vol.reports.view')
-        ->name('dashboard');
-
-    Route::middleware('permission:vol.groups.manage')->group(function () {
-        Route::get('groups/create', [GroupWebController::class, 'create'])->name('groups.create');
-        Route::post('groups', [GroupWebController::class, 'store'])->name('groups.store');
-        Route::get('groups/{group}/edit', [GroupWebController::class, 'edit'])->name('groups.edit');
-        Route::put('groups/{group}', [GroupWebController::class, 'update'])->name('groups.update');
-        Route::post('groups/{group}/publish', [GroupWebController::class, 'publish'])->name('groups.publish');
-        Route::post('groups/{group}/close', [GroupWebController::class, 'close'])->name('groups.close');
-        Route::delete('groups/{group}', [GroupWebController::class, 'destroy'])->name('groups.destroy');
-    });
-
-    Route::middleware('permission:vol.groups.view|vol.groups.manage')->group(function () {
-        Route::get('groups', [GroupWebController::class, 'index'])->name('groups.index');
-        Route::get('groups/{group}', [GroupWebController::class, 'show'])->name('groups.show');
-    });
-
-    Route::middleware('permission:vol.enrollments.manage')->group(function () {
-        Route::get('groups/{group}/enrollments/create', [EnrollmentWebController::class, 'create'])->name('enrollments.create');
-        Route::post('groups/{group}/enrollments', [EnrollmentWebController::class, 'store'])->name('enrollments.store');
-        Route::delete('enrollments/{enrollment}', [EnrollmentWebController::class, 'destroy'])->name('enrollments.destroy');
-    });
-
-    Route::middleware('permission:vol.sites.manage')->group(function () {
-        Route::get('sites', [SiteWebController::class, 'index'])->name('sites.index');
-        Route::post('sites', [SiteWebController::class, 'store'])->name('sites.store');
-        Route::put('sites/{site}', [SiteWebController::class, 'update'])->name('sites.update');
-        Route::delete('sites/{site}', [SiteWebController::class, 'destroy'])->name('sites.destroy');
-    });
-
-    Route::middleware('permission:vol.groups.manage')->group(function () {
-        Route::get('payments/create', [PaymentWebController::class, 'create'])->name('payments.create');
-        Route::post('payments', [PaymentWebController::class, 'store'])->name('payments.store');
-    });
-
-    Route::middleware('permission:vol.groups.manage|vol.enrollments.manage')->prefix('ajax')->name('ajax.')->group(function () {
-        Route::get('beneficiarios', [VolAjaxController::class, 'lookupBeneficiario'])->name('beneficiarios.lookup');
-        Route::get('groups/{group}/validate', [VolAjaxController::class, 'validateGroup'])->name('groups.validate');
-    });
-});
-require __DIR__.'/auth.php';
-
-// Compatibilidad adicional: asegurar que /mi-progreso/kpis responda 200 OK
-Route::get('/mi-progreso/kpis', [DashboardController::class, 'miProgresoKpis'])->middleware(['auth','role:capturista']);
-
-// -------------------- SALUD 360 --------------------
-use App\Http\Controllers\S360\S360AdminController;
-use App\Http\Controllers\S360\S360BienestarController;
-use App\Http\Controllers\S360\S360Enc360Controller;
-use App\Http\Controllers\S360\S360PsicoController;
-
-// Admin
-Route::middleware(['auth','role:admin','access.log'])->prefix('s360/admin')->name('s360.admin.')->group(function () {
-    Route::get('dash', [S360AdminController::class, 'dash'])->name('dash')->middleware('permission:s360.manage');
-    Route::post('users', [S360AdminController::class, 'storeUsers'])->name('users.store')->middleware(['permission:s360.manage','throttle:10,1']);
-});
-
-// Encargado Bienestar
-Route::middleware(['auth','role:encargado_bienestar','access.log'])->prefix('s360/bienestar')->name('s360.bienestar.')->group(function () {
-    Route::get('/', [S360BienestarController::class, 'view'])->name('view');
-    Route::get('dash', [S360BienestarController::class, 'dash'])->name('dash')->middleware('permission:s360.enc_bienestar.view_dash');
-    Route::get('sesiones/ultimas', [S360BienestarController::class, 'latestSessions'])->name('sesiones.latest')->middleware('permission:s360.enc_bienestar.view_dash');
-    Route::get('citas/proximas', [S360BienestarController::class, 'upcoming'])->name('citas.upcoming')->middleware('permission:s360.enc_bienestar.view_dash');
-    Route::post('enc360', [S360BienestarController::class, 'storeEncargado360'])->name('enc360.store')->middleware(['permission:s360.enc_bienestar.manage','throttle:10,1']);
-});
-
-// Encargado 360
-Route::middleware(['auth','role:encargado_360','access.log'])->prefix('s360/enc360')->name('s360.enc360.')->group(function () {
-    Route::get('/', [S360Enc360Controller::class, 'view'])->name('view');
-    Route::get('dash', [S360Enc360Controller::class, 'dash'])->name('dash')->middleware('permission:s360.enc360.view_dash');
-    Route::get('sesiones/ultimas', [S360Enc360Controller::class, 'latestSessions'])->name('sesiones.latest')->middleware('permission:s360.enc360.view_dash');
-    Route::get('citas/proximas', [S360Enc360Controller::class, 'upcoming'])->name('citas.upcoming')->middleware('permission:s360.enc360.view_dash');
-    Route::get('asignaciones', [S360Enc360Controller::class, 'asignacionesView'])->name('asignaciones')->middleware('permission:s360.enc360.view_dash');
-    Route::get('psicologos', [S360Enc360Controller::class, 'psicologosView'])->name('psicologos.view')->middleware('permission:s360.enc360.view_dash');
-    Route::post('psicologos', [S360Enc360Controller::class, 'storePsicologo'])->name('psicologos.store')->middleware(['permission:s360.enc360.assign','throttle:10,1']);
-    Route::post('assign', [S360Enc360Controller::class, 'assign'])->name('assign')->middleware('permission:s360.enc360.assign');
-    Route::put('assign/{beneficiario}', [S360Enc360Controller::class, 'reassign'])->name('assign.update')->middleware('permission:s360.enc360.assign');
-    Route::get('pacientes', [S360Enc360Controller::class, 'patients'])->name('patients')->middleware('permission:s360.enc360.view_dash');
-    Route::get('psicologos/list', [S360Enc360Controller::class, 'psicologos'])->name('psicologos.list')->middleware('permission:s360.enc360.view_dash');
-    Route::get('sesiones/{session}/manage', [S360Enc360Controller::class, 'manageSessionView'])->name('sesiones.manage');
-    Route::put('sesiones/{session}', [S360Enc360Controller::class, 'updateSession'])->name('sesiones.update')->middleware('permission:s360.data.update_by_enc360');
-});
-
-// PsicÃ³logo
-Route::middleware(['auth','role:psicologo','access.log'])->prefix('s360/psico')->name('s360.psico.')->group(function () {
-    Route::get('/', [S360PsicoController::class, 'pacientesView'])->name('view');
-    Route::get('pacientes', [S360PsicoController::class, 'pacientes'])->name('pacientes')->middleware('permission:s360.psico.read_patients');
-    Route::get('paciente/{id}', [S360PsicoController::class, 'showPaciente'])->name('paciente')->middleware('permission:s360.psico.read_patients');
-    Route::get('paciente/{id}/show', [S360PsicoController::class, 'pacienteView'])->name('paciente.view');
-    Route::get('agenda-semana', [S360PsicoController::class, 'agendaSemana'])->name('agenda.semana');
-    Route::post('sesiones', [S360PsicoController::class, 'storeSesion'])->name('sesiones.store')->middleware('permission:s360.psico.create_session');
-    Route::get('sesiones/{beneficiario}', [S360PsicoController::class, 'historial'])->name('sesiones.historial')->middleware('permission:s360.psico.view_history');
-    Route::get('sesiones/{beneficiario}/show', [S360PsicoController::class, 'historialView'])->name('sesiones.historial.view');
-});
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+require __DIR__.'/auth.php';

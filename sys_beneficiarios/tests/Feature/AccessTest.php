@@ -35,6 +35,12 @@ class AccessTest extends TestCase
         $mun = Municipio::create(['clave'=>1,'nombre'=>'Test']);
         $a = User::factory()->create(); $a->assignRole('capturista');
         $b = User::factory()->create(); $b->assignRole('capturista');
+        $seccion = \App\Models\Seccion::create([
+            'seccional' => '0001',
+            'municipio_id' => $mun->id,
+            'distrito_local' => 'DL',
+            'distrito_federal' => 'DF',
+        ]);
         $benef = Beneficiario::create([
             'id' => (string) \Illuminate\Support\Str::uuid(),
             'folio_tarjeta' => 'F1',
@@ -42,9 +48,8 @@ class AccessTest extends TestCase
             'curp' => 'XEXX010101HNEXXXA4',
             'fecha_nacimiento' => '2000-01-01', 'sexo'=>'M', 'discapacidad'=>false,
             'id_ine' => 'INE', 'telefono'=>'5512345678', 'municipio_id'=>$mun->id,
-            'seccional'=>'001','distrito_local'=>'DL','distrito_federal'=>'DF','created_by'=>$a->uuid,
+            'seccion_id'=>$seccion->id,'created_by'=>$a->uuid,
         ]);
         $this->actingAs($b)->get(route('mis-registros.show', $benef))->assertForbidden();
     }
 }
-

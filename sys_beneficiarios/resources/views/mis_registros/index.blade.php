@@ -24,7 +24,7 @@
                                 </div>
                                 <div class="small text-white-50 d-flex flex-column gap-1">
                                     <div><i class="bi bi-geo-alt me-1"></i>{{ optional($b->municipio)->nombre ?? 'Sin municipio' }}</div>
-                                    <div><i class="bi bi-diagram-3 me-1"></i>Seccional {{ $b->seccional ?? 'N/D' }}</div>
+                                    <div><i class="bi bi-diagram-3 me-1"></i>Seccional {{ optional($b->seccion)->seccional ?? 'N/D' }}</div>
                                 </div>
                                 <div class="mt-auto d-flex flex-column gap-2">
                                     <a class="btn btn-outline-light btn-sm w-100" href="{{ route('mis-registros.show', $b) }}">
@@ -49,4 +49,3 @@
         @endif
     </div>
 </x-app-layout>
-

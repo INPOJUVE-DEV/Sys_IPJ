@@ -3,25 +3,22 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\Seccion;
+use App\Support\SeccionResolver;
 
 class SeccionesController extends Controller
 {
     public function show(string $seccional)
     {
-        $raw = trim($seccional);
-        $candidates = array_unique([
-            $raw,
-            ltrim($raw, '0'),
-            str_pad(ltrim($raw, '0'), 4, '0', STR_PAD_LEFT),
-        ]);
-        $seccion = Seccion::whereIn('seccional', $candidates)->first();
+        $seccion = SeccionResolver::resolve($seccional)?->loadMissing('municipio');
         if (! $seccion) {
             abort(404);
         }
 
         return [
+            'id' => $seccion->id,
+            'seccional' => $seccion->seccional,
             'municipio_id' => $seccion->municipio_id,
+            'municipio' => optional($seccion->municipio)->nombre,
             'distrito_local' => $seccion->distrito_local,
             'distrito_federal' => $seccion->distrito_federal,
         ];

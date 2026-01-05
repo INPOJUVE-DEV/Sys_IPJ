@@ -30,9 +30,9 @@
                     <dl class="row mb-0">
                         <dt class="col-sm-4">Calle</dt><dd class="col-sm-8">{{ $d?->calle }} {{ $d?->numero_ext }} {{ $d?->numero_int ? 'Int '.$d->numero_int : '' }}</dd>
                         <dt class="col-sm-4">Colonia</dt><dd class="col-sm-8">{{ $d?->colonia }}</dd>
-                        <dt class="col-sm-4">Municipio</dt><dd class="col-sm-8">{{ $d?->municipio }}</dd>
+                        <dt class="col-sm-4">Municipio</dt><dd class="col-sm-8">{{ optional($d?->municipio)->nombre }}</dd>
                         <dt class="col-sm-4">CP</dt><dd class="col-sm-8">{{ $d?->codigo_postal }}</dd>
-                        <dt class="col-sm-4">Seccional</dt><dd class="col-sm-8">{{ $d?->seccional }}</dd>
+                        <dt class="col-sm-4">Seccional</dt><dd class="col-sm-8">{{ optional($d?->seccion)->seccional }}</dd>
                     </dl>
                 </div>
             </div>
@@ -59,4 +59,3 @@
         </div>
     </div>
 </x-app-layout>
-

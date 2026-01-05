@@ -9,7 +9,7 @@ class BeneficiarioPolicy
 {
     public function viewAny(User $user): bool
     {
-        return $user->hasAnyRole(['admin','capturista','encargado_360']);
+        return $user->hasAnyRole(['admin','capturista']);
     }
 
     public function view(User $user, Beneficiario $beneficiario): bool
@@ -17,7 +17,7 @@ class BeneficiarioPolicy
         if ($user->hasRole('admin')) {
             return true;
         }
-        if ($user->hasRole('capturista') || $user->hasRole('encargado_360')) {
+        if ($user->hasRole('capturista')) {
             return $beneficiario->created_by === $user->uuid;
         }
         return false;
@@ -25,7 +25,7 @@ class BeneficiarioPolicy
 
     public function create(User $user): bool
     {
-        return $user->hasAnyRole(['admin','capturista','encargado_360']);
+        return $user->hasAnyRole(['admin','capturista']);
     }
 
     public function update(User $user, Beneficiario $beneficiario): bool
@@ -33,7 +33,7 @@ class BeneficiarioPolicy
         if ($user->hasRole('admin')) {
             return true;
         }
-        if ($user->hasRole('capturista') || $user->hasRole('encargado_360')) {
+        if ($user->hasRole('capturista')) {
             return $beneficiario->created_by === $user->uuid;
         }
         return false;

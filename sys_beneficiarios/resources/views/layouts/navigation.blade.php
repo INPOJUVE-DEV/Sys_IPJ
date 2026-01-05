@@ -1,27 +1,93 @@
 @php
-    $authUser = Auth::user();
-    $isAdmin = $authUser?->hasRole('admin') ?? false;
-    $isCapturista = $authUser?->hasRole('capturista') ?? false;
-    $isPsicologo = $authUser?->hasRole('psicologo') ?? false;
-    $isEncargado360 = $authUser?->hasRole('encargado_360') ?? false;
-    $homeRoute = route('dashboard');
+    $user = Auth::user();
+    $isAdmin = $user?->hasRole('admin');
+    $isCapturista = $user?->hasRole('capturista');
+    $homeRoute = $isAdmin
+        ? route('admin.home')
+        : ($isCapturista ? route('capturista.home') : route('dashboard'));
 
-    if ($isAdmin) {
-        $homeRoute = route('admin.home');
-    } elseif ($isEncargado360) {
-        $homeRoute = route('s360.enc360.view');
-    } elseif ($isCapturista) {
-        $homeRoute = route('capturista.home');
+    $primaryLinks = [
+        [
+            'label' => 'Dashboard',
+            'route' => $homeRoute,
+            'icon' => 'bi-speedometer2',
+            'active' => $isAdmin
+                ? request()->routeIs('admin.*')
+                : ($isCapturista ? request()->routeIs('capturista.*') : request()->routeIs('dashboard')),
+        ],
+    ];
+
+    if ($isAdmin || $isCapturista) {
+        $primaryLinks[] = [
+            'label' => 'Beneficiarios',
+            'route' => $isAdmin ? route('admin.beneficiarios.index') : route('beneficiarios.index'),
+            'icon' => 'bi-people',
+            'active' => request()->routeIs('beneficiarios.*') || request()->routeIs('admin.beneficiarios.*'),
+        ];
+        $primaryLinks[] = [
+            'label' => 'Captura',
+            'route' => route('beneficiarios.create'),
+            'icon' => 'bi-plus-circle',
+            'active' => request()->routeIs('beneficiarios.create'),
+        ];
+        $primaryLinks[] = [
+            'label' => 'Domicilios',
+            'route' => route('domicilios.index'),
+            'icon' => 'bi-geo-alt',
+            'active' => request()->routeIs('domicilios.*'),
+        ];
     }
 
-    $beneficiariosActive = $isAdmin ? request()->routeIs('admin.beneficiarios.*') : request()->routeIs('beneficiarios.*');
-    $beneficiariosRoute = $isAdmin ? route('admin.beneficiarios.index') : route('beneficiarios.index');
+    if ($isCapturista) {
+        $primaryLinks[] = [
+            'label' => 'Mis registros',
+            'route' => route('mis-registros.index'),
+            'icon' => 'bi-clipboard-check',
+            'active' => request()->routeIs('mis-registros.*'),
+        ];
+    }
+
+    $adminTools = [];
+    if ($isAdmin) {
+        $adminTools = [
+            [
+                'label' => 'Usuarios',
+                'route' => route('admin.usuarios.index'),
+                'pattern' => 'admin.usuarios.*',
+            ],
+            [
+                'label' => 'Catálogos',
+                'route' => route('admin.catalogos.index'),
+                'pattern' => 'admin.catalogos.*',
+            ],
+            [
+                'label' => 'Componentes',
+                'route' => route('admin.components.index'),
+                'pattern' => 'admin.components.*',
+            ],
+            [
+                'label' => 'Themes',
+                'route' => route('admin.themes.current.show'),
+                'pattern' => 'admin.themes.*',
+            ],
+        ];
+    }
+
+    $quickLinks = [];
+    if ($isAdmin || $isCapturista) {
+        $quickLinks = [
+            ['label' => 'Nuevo registro', 'route' => route('beneficiarios.create')],
+            ['label' => 'Importar catálogos', 'route' => $isAdmin ? route('admin.catalogos.index') : '#', 'disabled' => ! $isAdmin],
+            ['label' => 'Mis registros', 'route' => $isCapturista ? route('mis-registros.index') : route('beneficiarios.index')],
+        ];
+    }
 @endphp
 
-<nav class="navbar navbar-expand-lg navbar-dark bg-primary border-bottom sticky-top py-0">
-    <div class="container-fluid px-0">
-        <a class="navbar-brand d-flex align-items-center" href="{{ $homeRoute }}">
-            <span class="fw-semibold text-white">Sys_IPJ</span>
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary border-bottom sticky-top shadow-sm">
+    <div class="container-fluid">
+        <a class="navbar-brand d-flex align-items-center gap-2" href="{{ $homeRoute }}">
+            <span class="badge bg-light text-primary fw-bold">IPJ</span>
+            <span class="fw-semibold">Sys Beneficiarios</span>
         </a>
 
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNavbar" aria-controls="mainNavbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -30,161 +96,53 @@
 
         <div class="collapse navbar-collapse" id="mainNavbar">
             <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-                @if($isEncargado360)
+                @foreach($primaryLinks as $link)
                     <li class="nav-item">
-                        <a class="nav-link {{ request()->routeIs('s360.enc360.view') ? 'active' : '' }}" href="{{ route('s360.enc360.view') }}">{{ __('Dashboard') }}</a>
+                        <a class="nav-link d-flex align-items-center {{ $link['active'] ? 'active' : '' }}" href="{{ $link['route'] }}">
+                            <i class="bi {{ $link['icon'] }} me-1"></i>
+                            <span>{{ __($link['label']) }}</span>
+                        </a>
                     </li>
-                    <li class="nav-item">
-                        <a class="nav-link {{ request()->routeIs('s360.enc360.asignaciones') ? 'active' : '' }}" href="{{ route('s360.enc360.asignaciones') }}">{{ __('Pacientes Asignados') }}</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link {{ request()->routeIs('s360.enc360.psicologos.*') ? 'active' : '' }}" href="{{ route('s360.enc360.psicologos.view') }}">{{ __('Gestion de Psicologos') }}</a>
-                    </li>
-                @else
-                <li class="nav-item">
-                    @if($isAdmin)
-                        <a class="nav-link {{ request()->routeIs('admin.home') ? 'active' : '' }}" href="{{ route('admin.home') }}">{{ __('Dashboard') }}</a>
-                    
-                    @elseif($isCapturista)
-                        <a class="nav-link {{ request()->routeIs('capturista.home') ? 'active' : '' }}" href="{{ route('capturista.home') }}">{{ __('Dashboard') }}</a>
-                    @elseif($isPsicologo)
-                        <a class="nav-link {{ request()->routeIs('dashboard') ? 'active' : '' }}" href="{{ route('dashboard') }}">{{ __('Mis Pacientes') }}</a>
-                    @else
-                        <a class="nav-link {{ request()->routeIs('dashboard') ? 'active' : '' }}" href="{{ route('dashboard') }}">{{ __('Dashboard') }}</a>
-                    @endif
-                </li>
-                @role('admin|capturista')
-                <li class="nav-item">
-                    <a class="nav-link {{ $beneficiariosActive ? 'active' : '' }}" href="{{ $beneficiariosRoute }}">{{ __('Beneficiarios') }}</a>
-                </li>
-                @endrole
-                @if(!$isPsicologo)
-                <li class="nav-item">
-                    <a class="nav-link {{ request()->routeIs('beneficiarios.create') ? 'active' : '' }}" href="{{ route('beneficiarios.create') }}">{{ __('Captura') }}</a>
-                </li>
-                @endif
-                @role('admin|capturista')
-                <li class="nav-item">
-                    <a class="nav-link {{ request()->routeIs('domicilios.*') ? 'active' : '' }}" href="{{ route('domicilios.index') }}">{{ __('Domicilios') }}</a>
-                </li>
-                @endrole
-                @role('admin')
-                <li class="nav-item dropdown">
+                @endforeach
+
+                @if(!empty($adminTools))
                     @php
-                        $adminMenuActive = request()->routeIs('admin.usuarios.*') || request()->routeIs('admin.catalogos.*');
+                        $adminActive = collect($adminTools)->contains(fn($tool) => request()->routeIs($tool['pattern']));
                     @endphp
-                    <a class="nav-link dropdown-toggle {{ $adminMenuActive ? 'active' : '' }}" href="#" id="adminToolsDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                        {{ __('Administracion') }}
-                    </a>
-                    <ul class="dropdown-menu" aria-labelledby="adminToolsDropdown">
-                        <li>
-                            <a class="dropdown-item {{ request()->routeIs('admin.usuarios.*') ? 'active' : '' }}" href="{{ route('admin.usuarios.index') }}">{{ __('Gestion de usuarios') }}</a>
-                        </li>
-                        <li>
-                            <a class="dropdown-item {{ request()->routeIs('admin.catalogos.*') ? 'active' : '' }}" href="{{ route('admin.catalogos.index') }}">{{ __('Catalogos') }}</a>
-                        </li>
-                    </ul>
-                </li>
-                <li class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle {{ request()->is('vol/*') ? 'active' : '' }}" href="#" id="volDropdownAdmin" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                        Jovenes al Volante
-                    </a>
-                    <ul class="dropdown-menu" aria-labelledby="volDropdownAdmin">
-                        @if(auth()->user()->can('vol.reports.view'))
-                            <li><a class="dropdown-item" href="{{ route('vol.dashboard') }}">Dashboard</a></li>
-                        @endif
-                        @can('viewAny', App\Models\VolGroup::class)
-                            <li><a class="dropdown-item" href="{{ route('vol.groups.index') }}">Grupos</a></li>
-                        @endcan
-                        @can('create', App\Models\VolPayment::class)
-                            <li><a class="dropdown-item" href="{{ route('vol.payments.create') }}">Registrar pago</a></li>
-                        @endcan
-                        @can('viewAny', App\Models\VolSite::class)
-                            <li><a class="dropdown-item" href="{{ route('vol.sites.index') }}">Sedes</a></li>
-                        @endcan
-                    </ul>
-                </li>
-                <!-- Salud360 (Admin) -->
-                <li class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle {{ request()->is('s360/*') ? 'active' : '' }}" href="#" id="s360Dropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                        Salud360
-                    </a>
-                    <ul class="dropdown-menu" aria-labelledby="s360Dropdown">
-                        <li><a class="dropdown-item" href="{{ route('s360.admin.dash') }}">Admin Dash</a></li>
-                        <li><a class="dropdown-item" href="{{ route('s360.bienestar.view') }}">Bienestar Dash</a></li>
-                        <li><a class="dropdown-item" href="{{ route('s360.enc360.view') }}">Enc360 Dash</a></li>
-                    </ul>
-                </li>
-                @endrole
-
-@role('encargado_bienestar')
-                <li class="nav-item">
-                    <a class="nav-link {{ request()->routeIs('s360.bienestar.*') ? 'active' : '' }}" href="{{ route('s360.bienestar.view') }}">Bienestar Dash</a>
-                </li>
-                <li class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle {{ request()->is('vol/*') ? 'active' : '' }}" href="#" id="volDropdownBienestar" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                        Jovenes al Volante
-                    </a>
-                    <ul class="dropdown-menu" aria-labelledby="volDropdownBienestar">
-                        @if(auth()->user()->can('vol.reports.view'))
-                            <li><a class="dropdown-item" href="{{ route('vol.dashboard') }}">Dashboard</a></li>
-                        @endif
-                        @can('viewAny', App\Models\VolGroup::class)
-                            <li><a class="dropdown-item" href="{{ route('vol.groups.index') }}">Grupos</a></li>
-                        @endcan
-                        @can('create', App\Models\VolPayment::class)
-                            <li><a class="dropdown-item" href="{{ route('vol.payments.create') }}">Registrar pago</a></li>
-                        @endcan
-                        @can('viewAny', App\Models\VolSite::class)
-                            <li><a class="dropdown-item" href="{{ route('vol.sites.index') }}">Sedes</a></li>
-                        @endcan
-                    </ul>
-                </li>
-@endrole
-
-
-@hasanyrole('encargado_JAV|encargado_jav')
-                <li class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle {{ request()->is('vol/*') ? 'active' : '' }}" href="#" id="volDropdownJav" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                        Jovenes al Volante
-                    </a>
-                    <ul class="dropdown-menu" aria-labelledby="volDropdownJav">
-                        @if(auth()->user()->can('vol.reports.view'))
-                            <li><a class="dropdown-item" href="{{ route('vol.dashboard') }}">Dashboard</a></li>
-                        @endif
-                        @can('viewAny', App\Models\VolGroup::class)
-                            <li><a class="dropdown-item" href="{{ route('vol.groups.index') }}">Grupos</a></li>
-                        @endcan
-                        @can('create', App\Models\VolPayment::class)
-                            <li><a class="dropdown-item" href="{{ route('vol.payments.create') }}">Registrar pago</a></li>
-                        @endcan
-                    </ul>
-                </li>
-@endhasanyrole
-
-                @role('psicologo')
-                <li class="nav-item">
-                    <a class="nav-link {{ request()->routeIs('s360.psico.view') ? 'active' : '' }}" href="{{ route('s360.psico.view') }}">Mis Pacientes</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link {{ request()->routeIs('s360.psico.sesiones.*') ? 'active' : '' }}" href="{{ route('s360.psico.view') }}">Historial</a>
-                </li>
-                @endrole
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle {{ $adminActive ? 'active' : '' }}" href="#" id="adminToolsDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bi bi-shield-lock me-1"></i> Administración
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-dark shadow-lg" aria-labelledby="adminToolsDropdown">
+                            @foreach($adminTools as $tool)
+                                <li>
+                                    <a class="dropdown-item d-flex justify-content-between align-items-center {{ request()->routeIs($tool['pattern']) ? 'active' : '' }}" href="{{ $tool['route'] }}">
+                                        <span>{{ __($tool['label']) }}</span>
+                                        @if(request()->routeIs($tool['pattern']))
+                                            <i class="bi bi-check-circle-fill text-success"></i>
+                                        @endif
+                                    </a>
+                                </li>
+                            @endforeach
+                        </ul>
+                    </li>
                 @endif
             </ul>
 
             <ul class="navbar-nav ms-auto">
                 <li class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                        {{ $authUser?->name }}
+                    <a class="nav-link dropdown-toggle d-flex align-items-center gap-2" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="bi bi-person-circle"></i>
+                        <span>{{ $user?->name }}</span>
                     </a>
-                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
-                        <li><a class="dropdown-item" href="{{ route('profile.edit') }}">{{ __('Profile') }}</a></li>
+                    <ul class="dropdown-menu dropdown-menu-end dropdown-menu-dark" aria-labelledby="userDropdown">
+                        <li class="dropdown-header text-uppercase small">Sesión</li>
+                        <li><a class="dropdown-item" href="{{ route('profile.edit') }}"><i class="bi bi-gear me-2"></i>Perfil</a></li>
                         <li><hr class="dropdown-divider"></li>
                         <li>
                             <form method="POST" action="{{ route('logout') }}">
                                 @csrf
-                                <button type="submit" class="dropdown-item">{{ __('Log Out') }}</button>
+                                <button type="submit" class="dropdown-item text-danger"><i class="bi bi-box-arrow-right me-2"></i>Cerrar sesión</button>
                             </form>
                         </li>
                     </ul>
@@ -193,3 +151,20 @@
         </div>
     </div>
 </nav>
+
+@if(!empty($quickLinks))
+    <div class="bg-dark border-bottom border-1 border-white border-opacity-10">
+        <div class="container py-2">
+            <div class="d-flex flex-wrap gap-2 align-items-center">
+                <span class="text-white-50 text-uppercase small">Atajos</span>
+                @foreach($quickLinks as $link)
+                    <a
+                        class="btn btn-sm {{ ($link['disabled'] ?? false) ? 'btn-outline-secondary disabled' : 'btn-outline-light' }}"
+                        href="{{ $link['disabled'] ?? false ? '#' : $link['route'] }}">
+                        {{ __($link['label']) }}
+                    </a>
+                @endforeach
+            </div>
+        </div>
+    </div>
+@endif

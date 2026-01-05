@@ -6,6 +6,7 @@ namespace Database\Factories;
 
 use App\Models\Beneficiario;
 use App\Models\Municipio;
+use App\Models\Seccion;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
 
@@ -18,7 +19,8 @@ class BeneficiarioFactory extends Factory
 
     public function definition(): array
     {
-        $municipioId = Municipio::inRandomOrder()->value('id');
+        $seccion = Seccion::inRandomOrder()->select(['id', 'municipio_id'])->first();
+        $municipioId = $seccion->municipio_id ?? Municipio::inRandomOrder()->value('id');
 
         return [
             'id' => (string) Str::uuid(),
@@ -33,9 +35,7 @@ class BeneficiarioFactory extends Factory
             'discapacidad' => false,
             'telefono' => fake()->numerify('##########'),
             'municipio_id' => $municipioId,
-            'seccional' => fake()->numerify('####'),
-            'distrito_local' => fake()->numerify('##'),
-            'distrito_federal' => fake()->numerify('##'),
+            'seccion_id' => $seccion->id ?? null,
             'created_by' => null,
         ];
     }

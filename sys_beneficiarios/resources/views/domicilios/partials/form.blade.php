@@ -38,9 +38,15 @@
         @error('colonia')<div class="invalid-feedback">{{ $message }}</div>@enderror
     </div>
     <div class="col-md-6">
-        <label class="form-label">Municipio (texto)</label>
-        <input name="municipio" value="{{ old('municipio', $d->municipio ?? '') }}" class="form-control @error('municipio') is-invalid @enderror" placeholder="Nombre del municipio" required>
-        @error('municipio')<div class="invalid-feedback">{{ $message }}</div>@enderror
+        <label class="form-label">Municipio (autocompletado)</label>
+        <select name="municipio_id" id="domicilio-form-municipio" class="form-select @error('municipio_id') is-invalid @enderror">
+            <option value="">Selecciona o deja que se asigne automaticamente</option>
+            @foreach($municipios as $id => $nombre)
+                <option value="{{ $id }}" @selected(old('municipio_id', $d->municipio_id ?? '')==$id)>{{ $nombre }}</option>
+            @endforeach
+        </select>
+        <div class="form-text">Se rellena al validar la seccional.</div>
+        @error('municipio_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
     </div>
     <div class="col-md-3">
         <label class="form-label">CP</label>
@@ -49,8 +55,84 @@
     </div>
     <div class="col-md-3">
         <label class="form-label">Seccional</label>
-        <input name="seccional" value="{{ old('seccional', $d->seccional ?? '') }}" class="form-control @error('seccional') is-invalid @enderror" placeholder="Ej. 0001" required>
+        <input id="domicilio-form-seccional" name="seccional" value="{{ old('seccional', optional($d?->seccion)->seccional ?? '') }}" class="form-control @error('seccional') is-invalid @enderror" placeholder="Ej. 0001" required>
         @error('seccional')<div class="invalid-feedback">{{ $message }}</div>@enderror
+    </div>
+    <div class="col-md-3">
+        <label class="form-label">Distritos detectados</label>
+        <div class="bg-dark border border-white border-opacity-25 rounded-3 p-3" id="domicilio-form-seccion-summary">
+            <div class="small text-white-50">Municipio</div>
+            <div class="fw-semibold" id="domicilio-form-seccional-muni">-</div>
+            <div class="small text-white-50 mt-2">DL / DF</div>
+            <div class="fw-semibold" id="domicilio-form-seccional-distritos">-</div>
+        </div>
     </div>
 </div>
 
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const seccionInput = document.getElementById('domicilio-form-seccional');
+    const municipioSelect = document.getElementById('domicilio-form-municipio');
+    const summaryCard = document.getElementById('domicilio-form-seccion-summary');
+    const summaryMun = document.getElementById('domicilio-form-seccional-muni');
+    const summaryDist = document.getElementById('domicilio-form-seccional-distritos');
+
+    const renderSummary = (municipio = '-', dl = '-', df = '-') => {
+        if (summaryMun) summaryMun.textContent = municipio || '-';
+        if (summaryDist) summaryDist.textContent = `DL: ${dl || '--'} · DF: ${df || '--'}`;
+    };
+
+    const toggleSummary = (active) => {
+        summaryCard?.classList.toggle('border-success', !!active);
+        summaryCard?.classList.toggle('border-white', !active);
+    };
+
+    const applyData = (data) => {
+        if (!data) return;
+        if (municipioSelect) municipioSelect.value = data.municipio_id ? String(data.municipio_id) : '';
+        renderSummary(data.municipio || '-', data.distrito_local || '-', data.distrito_federal || '-');
+        toggleSummary(true);
+    };
+
+    const clearData = () => {
+        if (municipioSelect) municipioSelect.value = '';
+        renderSummary('-', '-', '-');
+        toggleSummary(false);
+    };
+
+    const hydrate = async (value) => {
+        const query = (value || '').trim();
+        if (!query) {
+            clearData();
+            return;
+        }
+        try {
+            const res = await fetch(`/api/secciones/${encodeURIComponent(query)}`, { headers: { 'Accept': 'application/json' } });
+            if (!res.ok) {
+                clearData();
+                return;
+            }
+            const payload = await res.json();
+            applyData(payload);
+        } catch (_) {
+            clearData();
+        }
+    };
+
+    if (seccionInput) {
+        seccionInput.addEventListener('input', (e) => {
+            clearTimeout(seccionInput.__timer);
+            seccionInput.__timer = setTimeout(() => hydrate(e.target.value), 300);
+        });
+        seccionInput.addEventListener('change', (e) => hydrate(e.target.value));
+        seccionInput.addEventListener('blur', (e) => hydrate(e.target.value));
+        if (seccionInput.value) {
+            hydrate(seccionInput.value);
+        } else {
+            clearData();
+        }
+    }
+});
+</script>
+@endpush

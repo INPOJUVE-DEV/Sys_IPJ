@@ -9,8 +9,6 @@ services:
       # Isolar dirs de escritura a volúmenes nombrados
       - storage_data:/var/www/html/storage
       - cache_data:/var/www/html/bootstrap/cache
-    depends_on:
-      - mysql
     restart: unless-stopped
     networks:
       - backend
@@ -29,38 +27,24 @@ services:
     networks:
       - backend
 
-  mysql:
-    image: mysql:8.0
-    container_name: sys_beneficiarios_mysql
-    environment:
-      MYSQL_ROOT_PASSWORD: secret
-      MYSQL_DATABASE: sys_beneficiarios
-    volumes:
-      - db_data:/var/lib/mysql
-    # Do not expose MySQL port in production by default
-    # ports:
-    #   - "3306:3306"
-    restart: unless-stopped
-    networks:
-      - backend
-
   node:
     image: node:20-alpine
     container_name: sys_beneficiarios_node
     working_dir: /var/www/html
     command: sh -c "tail -f /dev/null"
     ports:
-      - "5173:5173"
+      - "5175:5173"
     volumes:
       - ./sys_beneficiarios:/var/www/html
+      - node_modules:/var/www/html/node_modules
     restart: unless-stopped
     networks:
       - backend
 
 volumes:
-  db_data:
   storage_data:
   cache_data:
+  node_modules:
 
 networks:
   backend:

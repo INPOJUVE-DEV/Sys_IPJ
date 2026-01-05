@@ -1,6 +1,6 @@
 # Sys IPJ 2025 — Documentación del Proyecto
 
-Este repositorio contiene la aplicación web “Sys IPJ 2025” para gestión y registro de beneficiarios. El sistema está construido con Laravel 11, Blade y Vite, y corre con Docker (PHP-FPM + Nginx + MySQL + Node).
+Este repositorio contiene la aplicación web “Sys IPJ 2025” para gestión y registro de beneficiarios. El sistema está construido con Laravel 11, Blade y Vite, y corre con Docker (PHP-FPM + Nginx + Node).
 
 - Código de la app: `sys_beneficiarios/`
 - Orquestación: `docker-compose.yml`
@@ -23,17 +23,17 @@ Valores clave en `sys_beneficiarios/.env` (ajústalos si necesitas conectar a ot
 | `APP_NAME` | Nombre mostrado en la aplicación | `Sys IPJ 2025` |
 | `APP_URL` | URL base de la app | `http://localhost` |
 | `DB_CONNECTION` | Driver de base de datos | `mysql` |
-| `DB_HOST` | Host de la BD | `mysql` (nombre del servicio en `docker-compose.yml`) |
-| `DB_PORT` | Puerto del contenedor MySQL | `3306` |
+| `DB_HOST` | Host de la BD | `0.0.0.0` (servidor externo) |
+| `DB_PORT` | Puerto del servidor MySQL externo | `3306` |
 | `DB_DATABASE` | Nombre de la base | `sys_beneficiarios` |
-| `DB_USERNAME` | Usuario de MySQL | `root` |
-| `DB_PASSWORD` | Contraseña de MySQL | `secret` |
+| `DB_USERNAME` | Usuario de MySQL | `app` |
+| `DB_PASSWORD` | ContraseA?a de MySQL | `TuClaveSegura123!` |
 
-> **Nota:** si ya cuentas con un servidor MySQL externo puedes cambiar `DB_HOST`, `DB_PORT`, `DB_USERNAME` y `DB_PASSWORD` para apuntar a él. En ese caso recuerda actualizar también la sección `mysql` en `docker-compose.yml` o eliminarla si no la usarás.
+> **Nota:** El proyecto ya no levanta un contenedor MySQL; asigna `DB_HOST`, `DB_PORT`, `DB_USERNAME` y `DB_PASSWORD` al servidor externo que corresponda.
 
 ### 2. Configurar almacenamiento persistente (opcional)
 
-El archivo `docker-compose.yml` define volúmenes para MySQL (`mysql_data`) y para `storage/` de Laravel (`app_storage`). Si deseas almacenar los datos en rutas locales específicas, edita las entradas `volumes:` de cada servicio antes de levantar los contenedores.
+El archivo `docker-compose.yml` define vol�menes nombrados para mantener persistente `storage/` y `bootstrap/cache` dentro del contenedor (`storage_data`, `cache_data`). Si deseas mapearlos a rutas locales espec�ficas, edita las entradas `volumes:` antes de levantar los servicios.
 
 ### 3. Construir y levantar los servicios
 
@@ -44,8 +44,8 @@ docker compose up -d --build
 Servicios que quedarás ejecutando:
 
 - **app:** PHP-FPM con Laravel (usa `sys_beneficiarios/` como código fuente).
-- **web:** Nginx sirviendo `sys_beneficiarios/public` y enlazado al puerto 80 del host.
-- **mysql:** Base de datos MySQL 8 configurada con el usuario/contraseña del `.env`.
+- **nginx:** Servidor web Nginx que expone `sys_beneficiarios/public` en el puerto 80 del host.
+- **base de datos externa:** La aplicaci�n se conecta al MySQL indicado en el `.env`.
 - **node:** Contenedor Node 20 para compilar assets con Vite.
 
 ### 4. Inicializar la aplicación
@@ -221,7 +221,7 @@ Guía extendida en `docs/despliegue.md`.
 ## Problemas comunes
 
 - Pantalla en blanco o 500: revisa logs en `sys_beneficiarios/storage/logs/`
-- Error de conexión a MySQL: valida `DB_HOST=mysql` y que el servicio `mysql` esté arriba
+- Error de conexi�n a MySQL: confirma `DB_HOST`, `DB_USERNAME` y `DB_PASSWORD` contra el servidor externo y que sea accesible desde el contenedor `app`.
 - Assets no cargan: ejecuta `npm run build` y verifica `@vite` en layouts
 - 502/Bad Gateway: confirma que `app:9000` está accesible desde Nginx y que `APP_KEY` está configurada
 

@@ -1,5 +1,6 @@
 @php
     $b = $beneficiario ?? null;
+    $domicilio = $domicilio ?? $b?->domicilio;
     $fieldLabels = [
         'folio_tarjeta' => 'Folio tarjeta',
         'nombre' => 'Nombre',
@@ -143,20 +144,31 @@
                 <input id="domicilio_codigo_postal" name="domicilio[codigo_postal]" value="{{ old('domicilio.codigo_postal', $domicilio->codigo_postal ?? '') }}" class="form-control @error('domicilio.codigo_postal') is-invalid @enderror">
                 @error('domicilio.codigo_postal')<div class="invalid-feedback">{{ $message }}</div>@enderror
             </div>
-            <div class="col-md-3">
+            <div class="col-md-4">
                 <label for="dom-seccional" class="form-label">Seccional</label>
-                <input id="dom-seccional" name="domicilio[seccional]" value="{{ old('domicilio.seccional', $domicilio->seccional ?? '') }}" class="form-control @error('domicilio.seccional') is-invalid @enderror">
+                <input id="dom-seccional" name="domicilio[seccional]" value="{{ old('domicilio.seccional', optional($domicilio->seccion)->seccional ?? '') }}" class="form-control @error('domicilio.seccional') is-invalid @enderror" placeholder="Ej. 0001">
+                <div class="form-text">Al validar la seccional completamos municipio y distritos.</div>
                 @error('domicilio.seccional')<div class="invalid-feedback">{{ $message }}</div>@enderror
             </div>
-            <div class="col-md-3">
-                <label for="dom-municipio-id" class="form-label">Municipio</label>
+            <div class="col-md-4">
+                <label for="dom-municipio-id" class="form-label">Municipio (autocompletado)</label>
                 <select id="dom-municipio-id" name="domicilio[municipio_id]" class="form-select @error('domicilio.municipio_id') is-invalid @enderror">
-                    <option value="">-</option>
+                    <option value="">Selecciona o deja que el sistema lo asigne</option>
                     @foreach($municipios as $id=>$nombre)
                         <option value="{{ $id }}" @selected(old('domicilio.municipio_id', $domicilio->municipio_id ?? ($b->municipio_id ?? ''))==$id)>{{ $nombre }}</option>
                     @endforeach
                 </select>
+                <div class="form-text">Se rellena de acuerdo a la seccional detectada.</div>
                 @error('domicilio.municipio_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Distritos detectados</label>
+                <div class="bg-dark border border-white border-opacity-25 rounded-3 p-3 h-100" id="dom-seccional-summary">
+                    <div class="small text-white-50">Municipio</div>
+                    <div class="fw-semibold" id="dom-seccional-muni">-</div>
+                    <div class="small text-white-50 mt-2">DL / DF</div>
+                    <div class="fw-semibold" id="dom-seccional-distritos">-</div>
+                </div>
             </div>
         </div>
     </div>
@@ -248,12 +260,29 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     const munSel = document.getElementById('dom-municipio-id');
+    const seccCard = document.getElementById('dom-seccional-summary');
+    const seccMunicipio = document.getElementById('dom-seccional-muni');
+    const seccDistritos = document.getElementById('dom-seccional-distritos');
     if (secc) {
+        const renderSummary = (municipio = '-', dl = '-', df = '-') => {
+            if (seccMunicipio) seccMunicipio.textContent = municipio || '-';
+            if (seccDistritos) seccDistritos.textContent = `DL: ${dl || '--'} · DF: ${df || '--'}`;
+        };
+        const toggleSummaryState = (hasData) => {
+            seccCard?.classList.toggle('border-success', !!hasData);
+            seccCard?.classList.toggle('border-white', !hasData);
+        };
         const applyData = (data) => {
             if (!data) return;
-            if (munSel && data.municipio_id) munSel.value = String(data.municipio_id);
+            if (munSel) munSel.value = data.municipio_id ? String(data.municipio_id) : '';
+            renderSummary(data.municipio || '-', data.distrito_local || '-', data.distrito_federal || '-');
+            toggleSummaryState(true);
         };
-        const clearData = () => applyData({ municipio_id: '' });
+        const clearData = () => {
+            if (munSel) munSel.value = '';
+            renderSummary('-', '-', '-');
+            toggleSummaryState(false);
+        };
         let timer = null;
         const debounced = (fn, wait = 400) => (...args) => { clearTimeout(timer); timer = setTimeout(() => fn(...args), wait); };
         const fetchDistritos = async (val) => {
@@ -270,8 +299,12 @@ document.addEventListener('DOMContentLoaded', function() {
         secc.addEventListener('input', (e) => debouncedFetch(e.target.value));
         secc.addEventListener('change', (e) => fetchDistritos(e.target.value));
         secc.addEventListener('blur', (e) => fetchDistritos(e.target.value));
+        if (secc.value) {
+            fetchDistritos(secc.value);
+        } else {
+            clearData();
+        }
     }
 });
 </script>
 @endpush
-

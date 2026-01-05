@@ -45,44 +45,38 @@
 
     <div class="card shadow-sm">
         <div class="card-body">
-            <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-3">
+            @if($beneficiarios->count())
+                <div class="d-flex flex-column flex-md-row justify-content-between gap-2 text-white-50 small mb-3">
+                    <div>Mostrando {{ $beneficiarios->firstItem() }} - {{ $beneficiarios->lastItem() }} de {{ $beneficiarios->total() }} registros</div>
+                    <div class="text-uppercase">Bloques de 50 registros</div>
+                </div>
+            @endif
+            <div class="beneficiarios-list">
                 @forelse($beneficiarios as $b)
-                    <div class="col">
-                        <div class="card bg-dark border border-white text-white h-100 shadow-sm">
-                            <div class="card-body d-flex flex-column gap-3">
-                                <div>
-                                    <div class="d-flex justify-content-between align-items-start gap-2">
-                                        <div>
-                                            <span class="text-white-50 small text-uppercase">Folio</span>
-                                            <div class="h6 text-white mb-0">{{ $b->folio_tarjeta }}</div>
-                                        </div>
-                                        <span class="badge bg-secondary text-white">Registrado</span>
-                                    </div>
-                                    <div class="fw-semibold">{{ $b->nombre }} {{ $b->apellido_paterno }} {{ $b->apellido_materno }}</div>
-                                </div>
-                                <div class="small text-white-50 d-flex flex-column gap-1">
-                                    <div><i class="bi bi-geo-alt me-1"></i>{{ optional($b->municipio)->nombre ?? 'Sin municipio' }}</div>
-                                    <div><i class="bi bi-diagram-3 me-1"></i>Seccional {{ $b->seccional ?? 'N/D' }}</div>
-                                    <div><i class="bi bi-person-badge me-1"></i>{{ optional($b->creador)->name ?? 'Sin capturista' }}</div>
-                                </div>
-                                <div class="mt-auto">
-                                    <a class="btn btn-outline-light btn-sm w-100" href="{{ route('admin.beneficiarios.show', $b) }}">
-                                        <i class="bi bi-eye me-1"></i>Ver detalles
-                                    </a>
-                                </div>
+                    <a class="beneficiarios-list-item d-flex flex-column flex-md-row align-items-md-center gap-3 text-decoration-none" href="{{ route('admin.beneficiarios.show', $b) }}">
+                        <div class="flex-grow-1">
+                            <div class="fw-semibold text-white">{{ trim($b->nombre.' '.$b->apellido_paterno.' '.$b->apellido_materno) }}</div>
+                            <div class="text-white-50 small d-flex align-items-center gap-1">
+                                <i class="bi bi-geo-alt"></i>
+                                <span>{{ optional($b->municipio)->nombre ?? 'Sin municipio' }}</span>
                             </div>
                         </div>
-                    </div>
+                        <div class="text-white text-md-end text-nowrap">
+                            <div class="text-white-50 text-uppercase small">Folio</div>
+                            <div class="fs-5 fw-semibold font-monospace">{{ $b->folio_tarjeta ?? 'N/D' }}</div>
+                        </div>
+                    </a>
                 @empty
-                    <div class="col-12">
-                        <div class="text-center text-muted py-4">Sin registros</div>
-                    </div>
+                    <div class="text-center text-muted py-4">Sin registros</div>
                 @endforelse
             </div>
         </div>
         @if($beneficiarios->hasPages())
-            <div class="card-footer">{{ $beneficiarios->links() }}</div>
+            <div class="card-footer">
+                <div class="pagination-wrapper">
+                    {{ $beneficiarios->links() }}
+                </div>
+            </div>
         @endif
     </div>
 </x-app-layout>
-

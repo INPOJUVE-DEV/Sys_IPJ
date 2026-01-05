@@ -13,13 +13,6 @@
                 ['label' => 'Crear un nuevo registro', 'route' => 'beneficiarios.create'],
                 ['label' => 'Ver listado', 'route' => 'beneficiarios.index'],
             ],
-            'vol.groups.' => [
-                ['label' => 'Crear nuevo grupo', 'route' => 'vol.groups.create'],
-                ['label' => 'Ver grupos', 'route' => 'vol.groups.index'],
-            ],
-            'vol.payments.' => [
-                ['label' => 'Registrar otro pago', 'route' => 'vol.payments.create'],
-            ],
         ];
         foreach ($maps as $prefix => $actions) {
             if (\Illuminate\Support\Str::startsWith($routeName, $prefix)) {

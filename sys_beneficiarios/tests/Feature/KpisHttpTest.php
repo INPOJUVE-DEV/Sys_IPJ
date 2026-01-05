@@ -34,6 +34,12 @@ class KpisHttpTest extends TestCase
     {
         $mun = Municipio::create(['clave'=>1,'nombre'=>'Test']);
         $cap = User::factory()->create(); $cap->assignRole('capturista');
+        $seccion = \App\Models\Seccion::create([
+            'seccional' => '0001',
+            'municipio_id' => $mun->id,
+            'distrito_local' => 'DL',
+            'distrito_federal' => 'DF',
+        ]);
         Beneficiario::create([
             'id' => (string) \Illuminate\Support\Str::uuid(),
             'folio_tarjeta' => 'FT-HTTP',
@@ -41,7 +47,7 @@ class KpisHttpTest extends TestCase
             'curp' => 'PEPJ000101HDFLRNA1',
             'fecha_nacimiento' => '2000-01-01', 'sexo'=>'M', 'discapacidad'=>false,
             'id_ine' => 'INE', 'telefono'=>'5512345678', 'municipio_id'=>$mun->id,
-            'seccional'=>'001','distrito_local'=>'DL','distrito_federal'=>'DF','created_by'=> $cap->uuid,
+            'seccion_id'=>$seccion->id,'created_by'=> $cap->uuid,
         ]);
         $this->actingAs($cap)->get('/capturista/kpis')
             ->assertOk()

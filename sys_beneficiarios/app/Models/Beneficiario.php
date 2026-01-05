@@ -30,9 +30,7 @@ class Beneficiario extends Model
         'id_ine',
         'telefono',
         'municipio_id',
-        'seccional',
-        'distrito_local',
-        'distrito_federal',
+        'seccion_id',
         'created_by',
     ];
 
@@ -76,18 +74,14 @@ class Beneficiario extends Model
         return $this->belongsTo(Municipio::class);
     }
 
+    public function seccion()
+    {
+        return $this->belongsTo(Seccion::class);
+    }
+
     public function domicilio()
     {
         return $this->hasOne(Domicilio::class, 'beneficiario_id');
     }
 
-    public function salud360Assignment()
-    {
-        return $this->hasOne(Salud360Assignment::class, 'beneficiario_id');
-    }
-
-    public function salud360Sessions()
-    {
-        return $this->hasMany(Salud360Session::class, 'beneficiario_id');
-    }
 }
