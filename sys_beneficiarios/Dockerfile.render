@@ -34,6 +34,13 @@ WORKDIR /var/www/html
 COPY . /var/www/html
 COPY --from=node_builder /app/public/build /var/www/html/public/build
 
+RUN mkdir -p storage/framework/cache \
+             storage/framework/sessions \
+             storage/framework/views \
+             storage/app/public \
+             bootstrap/cache \
+    && chown -R www-data:www-data storage bootstrap/cache
+
 RUN composer install --no-dev --optimize-autoloader --no-interaction --no-ansi
 
 COPY docker/render/nginx.conf.template /etc/nginx/conf.d/default.conf.template
