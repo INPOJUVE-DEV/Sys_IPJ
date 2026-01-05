@@ -1,0 +1,9 @@
+.env
+.env.*
+.git
+.gitignore
+bootstrap/cache
+node_modules
+storage
+tests
+vendor

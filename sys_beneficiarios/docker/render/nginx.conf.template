@@ -1,0 +1,31 @@
+server {
+    listen ${PORT};
+    server_name _;
+
+    root /var/www/html/public;
+    index index.php index.html;
+
+    access_log /var/log/nginx/access.log;
+    error_log  /var/log/nginx/error.log;
+
+    location / {
+        try_files $uri $uri/ /index.php?$query_string;
+    }
+
+    location ~ \.php$ {
+        include        fastcgi_params;
+        fastcgi_pass   127.0.0.1:9000;
+        fastcgi_index  index.php;
+        fastcgi_param  SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
+        fastcgi_param  PATH_INFO $fastcgi_path_info;
+        fastcgi_read_timeout 300;
+    }
+
+    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg)$ {
+        try_files $uri =404;
+        expires max;
+        log_not_found off;
+    }
+
+    client_max_body_size 64m;
+}
