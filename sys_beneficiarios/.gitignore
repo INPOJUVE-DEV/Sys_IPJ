@@ -6,8 +6,11 @@
 /storage/*.key
 /storage/pail
 /vendor
-.env
-.env.backup
+/.env
+/.env.*
+!/.env.example
+/.env.backup
+/prodenv
 
 .phpactor.json
 .phpunit.result.cache
