@@ -1,0 +1,7 @@
+services:
+  - type: web
+    name: sys-ipj-2025-web
+    env: docker
+    autoDeploy: true
+    dockerContext: sys_beneficiarios
+    dockerfilePath: sys_beneficiarios/Dockerfile.render
