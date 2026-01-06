@@ -25,6 +25,11 @@ if [ -f artisan ]; then
   php artisan config:clear || true
   php artisan cache:clear || true
   php artisan view:clear || true
+
+  if [ "$RUN_MIGRATIONS" = "1" ]; then
+    echo "== RUN_MIGRATIONS=1: running migrations =="
+    php artisan migrate --force
+  fi
 fi
 
 exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf
