@@ -14,7 +14,8 @@ if [ -n "$MYSQL_ATTR_SSL_CA_PEM" ] && [ -z "$MYSQL_ATTR_SSL_CA" ]; then
   SSL_DIR="/var/www/html/storage/ssl"
   SSL_CA_PATH="$SSL_DIR/tidb-ca.pem"
   mkdir -p "$SSL_DIR"
-  printf "%s\n" "$MYSQL_ATTR_SSL_CA_PEM" > "$SSL_CA_PATH"
+  # Support PEM pasted with real newlines or with \n escapes.
+  printf "%b\n" "$MYSQL_ATTR_SSL_CA_PEM" | tr -d '\r' > "$SSL_CA_PATH"
   chmod 600 "$SSL_CA_PATH" || true
   export MYSQL_ATTR_SSL_CA="$SSL_CA_PATH"
 fi
