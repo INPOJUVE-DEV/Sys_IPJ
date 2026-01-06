@@ -2,6 +2,16 @@
 
 use Illuminate\Support\Str;
 
+$mysqlSslCa = env('MYSQL_ATTR_SSL_CA');
+$mysqlSslVerify = env('MYSQL_ATTR_SSL_VERIFY_SERVER_CERT');
+$mysqlSslOptions = extension_loaded('pdo_mysql')
+    ? array_filter([
+        PDO::MYSQL_ATTR_SSL_CA => $mysqlSslCa,
+        // Only apply SSL verify when explicitly configured.
+        PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT => $mysqlSslVerify,
+    ], static fn ($value) => $value !== null && $value !== '')
+    : [];
+
 return [
 
     /*
@@ -57,11 +67,7 @@ return [
             'prefix_indexes' => true,
             'strict' => true,
             'engine' => null,
-            'options' => extension_loaded('pdo_mysql') ? array_filter([
-                PDO::MYSQL_ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
-                // Permite forzar verify true/false por env (util en debug)
-                PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT => env('MYSQL_ATTR_SSL_VERIFY_SERVER_CERT', true),
-            ]) : [],
+            'options' => $mysqlSslOptions,
         ],
 
         'mariadb' => [
