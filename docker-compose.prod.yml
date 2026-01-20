@@ -1,0 +1,10 @@
+services:
+  app:
+    env_file:
+      - ./sys_beneficiarios/.env
+
+  # Keep node out of production by default.
+  # Use `--profile dev` when you need to build assets.
+  node:
+    profiles:
+      - dev
