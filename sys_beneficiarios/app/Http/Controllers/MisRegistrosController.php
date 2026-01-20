@@ -6,6 +6,7 @@ use App\Http\Requests\UpdateBeneficiarioRequest;
 use App\Models\Beneficiario;
 use App\Models\Domicilio;
 use App\Models\Municipio;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Spatie\Activitylog\Models\Activity;
 use Illuminate\Support\Str;
@@ -17,11 +18,61 @@ class MisRegistrosController extends Controller
     public function index(Request $request)
     {
         $this->authorize('viewAny', Beneficiario::class);
-        $items = Beneficiario::with(['municipio','seccion'])
-            ->where('created_by', $request->user()->uuid)
+        $baseQuery = Beneficiario::with(['municipio','seccion'])
+            ->where('created_by', $request->user()->uuid);
+
+        $items = (clone $baseQuery)
             ->orderByDesc('created_at')
-            ->paginate(15);
-        return view('mis_registros.index', compact('items'));
+            ->paginate(15)
+            ->withQueryString();
+
+        $month = $this->resolveMonth($request->input('month'));
+        $monthStart = (clone $month)->startOfMonth();
+        $monthEnd = (clone $month)->endOfMonth();
+        $monthQuery = (clone $baseQuery)->whereBetween('created_at', [$monthStart, $monthEnd]);
+
+        $totalMonth = (clone $monthQuery)->count();
+        $genderCounts = (clone $monthQuery)
+            ->whereIn('sexo', ['M', 'F'])
+            ->selectRaw('sexo, COUNT(*) as c')
+            ->groupBy('sexo')
+            ->pluck('c', 'sexo');
+        $maleCount = (int) ($genderCounts['M'] ?? 0);
+        $femaleCount = (int) ($genderCounts['F'] ?? 0);
+
+        $ageRangeCount = (clone $monthQuery)
+            ->whereBetween('edad', [17, 25])
+            ->count();
+
+        $year = (int) $month->format('Y');
+        $monthLabels = [
+            1 => 'Ene', 2 => 'Feb', 3 => 'Mar', 4 => 'Abr',
+            5 => 'May', 6 => 'Jun', 7 => 'Jul', 8 => 'Ago',
+            9 => 'Sep', 10 => 'Oct', 11 => 'Nov', 12 => 'Dic',
+        ];
+        $monthlyRows = (clone $baseQuery)
+            ->whereYear('created_at', $year)
+            ->selectRaw('MONTH(created_at) as m, COUNT(*) as c')
+            ->groupBy('m')
+            ->pluck('c', 'm');
+        $monthlyCounts = [];
+        foreach ($monthLabels as $m => $label) {
+            $monthlyCounts[] = [
+                'label' => $label,
+                'count' => (int) ($monthlyRows[$m] ?? 0),
+            ];
+        }
+
+        return view('mis_registros.index', compact(
+            'items',
+            'month',
+            'totalMonth',
+            'maleCount',
+            'femaleCount',
+            'ageRangeCount',
+            'monthlyCounts',
+            'year'
+        ));
     }
 
     public function show(Beneficiario $beneficiario)
@@ -72,5 +123,18 @@ class MisRegistrosController extends Controller
         ])->save();
 
         return redirect()->route('mis-registros.show', $beneficiario)->with('status', 'Actualizado correctamente');
+    }
+
+    private function resolveMonth(?string $value): Carbon
+    {
+        if ($value) {
+            try {
+                return Carbon::createFromFormat('Y-m', $value)->startOfMonth();
+            } catch (\Throwable $e) {
+                // Fall through to now.
+            }
+        }
+
+        return Carbon::now()->startOfMonth();
     }
 }

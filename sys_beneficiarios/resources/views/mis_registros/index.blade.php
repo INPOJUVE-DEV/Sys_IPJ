@@ -5,6 +5,84 @@
         <div class="alert alert-success">{{ session('status') }}</div>
     @endif
 
+    <div class="card mb-3">
+        <div class="card-body">
+            <form class="row g-2 align-items-end" method="GET">
+                <div class="col-auto">
+                    <label class="form-label">Mes</label>
+                    <input type="month" name="month" value="{{ $month->format('Y-m') }}" class="form-control">
+                </div>
+                <div class="col-auto">
+                    <button class="btn btn-outline-secondary" type="submit">Aplicar</button>
+                </div>
+                <div class="col-12 col-md-auto ms-md-auto text-muted small">
+                    Mes seleccionado: {{ $month->format('Y-m') }}
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-3">
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="text-muted">Total del mes</div>
+                    <div class="h3 m-0">{{ $totalMonth }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="text-muted">Hombres</div>
+                    <div class="h3 m-0">{{ $maleCount }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="text-muted">Mujeres</div>
+                    <div class="h3 m-0">{{ $femaleCount }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="text-muted">Edad 17-25</div>
+                    <div class="h3 m-0">{{ $ageRangeCount }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-3">
+        <div class="col-lg-12">
+            <div class="card h-100">
+                <div class="card-header">Beneficiarios por mes ({{ $year }})</div>
+                <div class="card-body p-0">
+                    <table class="table table-sm mb-0">
+                        <thead>
+                            <tr>
+                                <th>Mes</th>
+                                <th class="text-end">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($monthlyCounts as $row)
+                                <tr>
+                                    <td>{{ $row['label'] }}</td>
+                                    <td class="text-end">{{ $row['count'] }}</td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="card shadow-sm">
         <div class="card-body">
             <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-3">

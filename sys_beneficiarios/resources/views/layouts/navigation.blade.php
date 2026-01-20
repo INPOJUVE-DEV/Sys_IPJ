@@ -6,24 +6,31 @@
         ? route('admin.home')
         : ($isCapturista ? route('capturista.home') : route('dashboard'));
 
+    $dashboardActive = $isAdmin
+        ? (request()->routeIs('admin.home') || request()->routeIs('admin.kpis'))
+        : ($isCapturista
+            ? (request()->routeIs('capturista.home') || request()->routeIs('capturista.kpis'))
+            : request()->routeIs('dashboard'));
+
     $primaryLinks = [
         [
             'label' => 'Dashboard',
             'route' => $homeRoute,
             'icon' => 'bi-speedometer2',
-            'active' => $isAdmin
-                ? request()->routeIs('admin.*')
-                : ($isCapturista ? request()->routeIs('capturista.*') : request()->routeIs('dashboard')),
+            'active' => $dashboardActive,
         ],
     ];
 
-    if ($isAdmin || $isCapturista) {
+    if ($isAdmin) {
         $primaryLinks[] = [
             'label' => 'Beneficiarios',
-            'route' => $isAdmin ? route('admin.beneficiarios.index') : route('beneficiarios.index'),
+            'route' => route('admin.beneficiarios.index'),
             'icon' => 'bi-people',
             'active' => request()->routeIs('beneficiarios.*') || request()->routeIs('admin.beneficiarios.*'),
         ];
+    }
+
+    if ($isAdmin || $isCapturista) {
         $primaryLinks[] = [
             'label' => 'Captura',
             'route' => route('beneficiarios.create'),
@@ -74,12 +81,8 @@
     }
 
     $quickLinks = [];
-    if ($isAdmin || $isCapturista) {
-        $quickLinks = [
-            ['label' => 'Nuevo registro', 'route' => route('beneficiarios.create')],
-            ['label' => 'Importar catálogos', 'route' => $isAdmin ? route('admin.catalogos.index') : '#', 'disabled' => ! $isAdmin],
-            ['label' => 'Mis registros', 'route' => $isCapturista ? route('mis-registros.index') : route('beneficiarios.index')],
-        ];
+    if ($isAdmin) {
+        $quickLinks[] = ['label' => 'Importar catalogos', 'route' => route('admin.catalogos.index')];
     }
 @endphp
 

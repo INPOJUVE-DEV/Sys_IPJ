@@ -146,7 +146,7 @@
             </div>
             <div class="col-md-4">
                 <label for="dom-seccional" class="form-label">Seccional</label>
-                <input id="dom-seccional" name="domicilio[seccional]" value="{{ old('domicilio.seccional', optional($domicilio->seccion)->seccional ?? '') }}" class="form-control @error('domicilio.seccional') is-invalid @enderror" placeholder="Ej. 0001">
+                <input id="dom-seccional" name="domicilio[seccional]" value="{{ old('domicilio.seccional', $domicilio?->seccion?->seccional ?? '') }}" class="form-control @error('domicilio.seccional') is-invalid @enderror" placeholder="Ej. 0001">
                 <div class="form-text">Al validar la seccional completamos municipio y distritos.</div>
                 @error('domicilio.seccional')<div class="invalid-feedback">{{ $message }}</div>@enderror
             </div>
