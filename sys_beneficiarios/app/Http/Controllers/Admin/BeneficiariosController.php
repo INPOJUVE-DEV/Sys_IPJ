@@ -60,51 +60,37 @@ class BeneficiariosController extends Controller
             ->get();
 
         $headers = [
-            'Folio',
-            'Nombre',
+            'Nombres',
+            'Apellido Paterno',
+            'Apellido Materno',
             'CURP',
-            'Edad',
-            'Telefono',
-            'Municipio',
-            'Seccional',
-            'Capturista',
-            'Fecha',
-            'Calle',
-            'Numero exterior',
-            'Numero interior',
-            'Colonia',
-            'Municipio domicilio',
-            'Municipio domicilio ID',
-            'Codigo postal',
-            'Seccional domicilio',
-            'Distrito local domicilio',
-            'Distrito federal domicilio',
+            'CELULAR',
+            'CALLE NUMERO INTERIOR Y EXT JUNTOS SI APLICA',
+            'COLONIA',
+            'SECCIONAL',
+            'municipio',
         ];
         $callback = function () use ($q, $headers) {
             $out = fopen('php://output', 'w');
             fputcsv($out, $headers);
             foreach ($q as $b) {
                 $dom = $b->domicilio;
+                $addressParts = [
+                    optional($dom)->calle,
+                    optional($dom)->numero_ext,
+                    ($dom && $dom->numero_int) ? 'Int '.$dom->numero_int : null,
+                ];
+                $direccion = trim(implode(' ', array_filter($addressParts)));
                 fputcsv($out, [
-                    $b->folio_tarjeta,
-                    trim($b->nombre.' '.$b->apellido_paterno.' '.$b->apellido_materno),
+                    $b->nombre,
+                    $b->apellido_paterno,
+                    $b->apellido_materno,
                     $b->curp,
-                    $b->edad,
                     $b->telefono,
-                    optional($b->municipio)->nombre,
-                    optional($b->seccion)->seccional,
-                    optional($b->creador)->name,
-                    optional($b->created_at)->format('Y-m-d H:i'),
-                    $dom->calle ?? '',
-                    $dom->numero_ext ?? '',
-                    $dom->numero_int ?? '',
-                    $dom->colonia ?? '',
-                    optional($dom->municipio)->nombre ?? '',
-                    $dom->municipio_id ?? '',
-                    $dom->codigo_postal ?? '',
-                    optional($dom->seccion)->seccional ?? '',
-                    optional($dom->seccion)->distrito_local ?? '',
-                    optional($dom->seccion)->distrito_federal ?? '',
+                    $direccion,
+                    optional($dom)->colonia ?? '',
+                    optional($b->seccion)->seccional ?? optional(optional($dom)->seccion)->seccional ?? '',
+                    optional($b->municipio)->nombre ?? optional(optional($dom)->municipio)->nombre ?? '',
                 ]);
             }
             fclose($out);
