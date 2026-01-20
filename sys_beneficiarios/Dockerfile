@@ -13,7 +13,7 @@ RUN apt-get update \
         libxml2-dev \
         curl \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install -j$(nproc) gd pdo_mysql zip \
+    && docker-php-ext-install -j$(nproc) gd pdo_mysql zip mbstring \
     && docker-php-ext-enable opcache \
     && rm -rf /var/lib/apt/lists/*
 

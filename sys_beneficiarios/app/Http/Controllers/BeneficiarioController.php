@@ -99,8 +99,14 @@ class BeneficiarioController extends Controller
                 $beneficiario = new Beneficiario($data);
                 $dom = $request->input('domicilio', []);
                 $seccion = $this->resolveSeccionFromInput($dom);
+                $inputMunicipioId = $dom['municipio_id'] ?? null;
+                if ($inputMunicipioId && $seccion && (string) $inputMunicipioId !== (string) $seccion->municipio_id) {
+                    throw ValidationException::withMessages([
+                        'domicilio.municipio_id' => 'El municipio no coincide con la seccional seleccionada.',
+                    ]);
+                }
                 $beneficiario->seccion()->associate($seccion);
-                $beneficiario->municipio_id = $dom['municipio_id'] ?? $seccion?->municipio_id;
+                $beneficiario->municipio_id = $seccion?->municipio_id;
                 $beneficiario->id = (string) Str::uuid();
                 $beneficiario->created_by = Auth::user()->uuid;
 
@@ -112,6 +118,8 @@ class BeneficiarioController extends Controller
 
                 return $beneficiario;
             });
+        } catch (ValidationException $e) {
+            throw $e;
         } catch (\Throwable $e) {
             Log::error('Error al registrar beneficiario', [
                 'message' => $e->getMessage(),
@@ -144,8 +152,14 @@ class BeneficiarioController extends Controller
         $beneficiario->fill($data);
         $dom = $request->input('domicilio', []);
         $seccion = $this->resolveSeccionFromInput($dom, $beneficiario->seccion);
+        $inputMunicipioId = $dom['municipio_id'] ?? null;
+        if ($inputMunicipioId && $seccion && (string) $inputMunicipioId !== (string) $seccion->municipio_id) {
+            throw ValidationException::withMessages([
+                'domicilio.municipio_id' => 'El municipio no coincide con la seccional seleccionada.',
+            ]);
+        }
         $beneficiario->seccion()->associate($seccion);
-        $beneficiario->municipio_id = $dom['municipio_id'] ?? $seccion?->municipio_id ?? $beneficiario->municipio_id;
+        $beneficiario->municipio_id = $seccion?->municipio_id ?? $beneficiario->municipio_id;
         $beneficiario->save();
 
         $this->saveDomicilio($request, $beneficiario, $seccion);
@@ -166,7 +180,7 @@ class BeneficiarioController extends Controller
         if (!$dom) {
             return;
         }
-        $municipioId = $dom['municipio_id'] ?? $seccion?->municipio_id ?? $beneficiario->municipio_id;
+        $municipioId = $seccion?->municipio_id ?? $beneficiario->municipio_id;
         $payload = array_filter([
             'calle' => $dom['calle'] ?? null,
             'numero_ext' => $dom['numero_ext'] ?? null,

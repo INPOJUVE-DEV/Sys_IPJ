@@ -99,8 +99,14 @@ class DomicilioController extends Controller
             ]);
         }
 
+        if (! empty($data['municipio_id']) && (string) $data['municipio_id'] !== (string) $seccion->municipio_id) {
+            throw ValidationException::withMessages([
+                'municipio_id' => 'El municipio no coincide con la seccional seleccionada.',
+            ]);
+        }
+
         $data['seccion_id'] = $seccion->id;
-        $data['municipio_id'] = $data['municipio_id'] ?? $seccion->municipio_id;
+        $data['municipio_id'] = $seccion->municipio_id;
         unset($data['seccional']);
 
         return $data;

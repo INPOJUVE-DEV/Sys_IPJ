@@ -173,7 +173,8 @@
         </div>
     </div>
 
-    <div class="d-flex justify-content-end mt-4" id="wizardControls">
+    <div class="d-flex justify-content-between mt-4" id="wizardControls">
+        <button type="button" class="btn btn-outline-secondary" data-wizard-prev>Anterior</button>
         <button type="button" class="btn btn-primary" data-wizard-next>Siguiente</button>
     </div>
 </div>
