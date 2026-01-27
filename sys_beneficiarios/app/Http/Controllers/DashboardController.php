@@ -35,11 +35,16 @@ class DashboardController extends Controller
         $user = $request->user();
         $query = Beneficiario::where('created_by', $user->uuid);
         $filtered = clone $query;
-        if ($request->filled('from')) {
-            $filtered = $filtered->whereDate('created_at', '>=', $request->date('from'));
+        $from = $request->filled('from') ? $request->date('from') : null;
+        $to = $request->filled('to') ? $request->date('to') : null;
+        if ($from && $to && $from->gt($to)) {
+            [$from, $to] = [$to, $from];
         }
-        if ($request->filled('to')) {
-            $filtered = $filtered->whereDate('created_at', '<=', $request->date('to'));
+        if ($from) {
+            $filtered = $filtered->whereDate('created_at', '>=', $from);
+        }
+        if ($to) {
+            $filtered = $filtered->whereDate('created_at', '<=', $to);
         }
 
         $now = Carbon::now();
@@ -50,6 +55,7 @@ class DashboardController extends Controller
         $totalToday = (clone $filtered)->whereBetween('created_at', [$startToday, $now])->count();
         $totalWeek = (clone $filtered)->whereBetween('created_at', [$startWeek, $now])->count();
         $total30 = (clone $filtered)->whereBetween('created_at', [$start30, $now])->count();
+        $ageRangeTotal = Beneficiario::whereBetween('edad', [18, 28])->count();
 
         $lastTen = (clone $filtered)->latest()->limit(10)->get(['id','folio_tarjeta','created_at']);
         $series = $this->dailySeries((clone $filtered)->whereBetween('created_at', [$start30, $now]), $start30, $now);
@@ -58,6 +64,10 @@ class DashboardController extends Controller
             'today' => $totalToday,
             'week' => $totalWeek,
             'last30Days' => $total30,
+            'ageRange' => [
+                'total' => $ageRangeTotal,
+                'label' => '18-28',
+            ],
             'ultimos' => $lastTen,
             'series' => $series,
         ]);
@@ -65,12 +75,17 @@ class DashboardController extends Controller
 
     protected function applyFilters($query, Request $request)
     {
+        $from = $request->filled('from') ? $request->date('from') : null;
+        $to = $request->filled('to') ? $request->date('to') : null;
+        if ($from && $to && $from->gt($to)) {
+            [$from, $to] = [$to, $from];
+        }
         return $query
-            ->when($request->filled('municipio_id'), fn($q)=>$q->where('municipio_id', $request->input('municipio_id')))
+            ->when($request->filled('municipio_id'), fn($q)=>$q->where('beneficiarios.municipio_id', $request->input('municipio_id')))
             ->when($request->filled('seccional'), fn($q)=>$q->whereHas('seccion', fn($sq)=>$sq->where('seccional','like','%'.$request->input('seccional').'%')))
-            ->when($request->filled('capturista'), fn($q)=>$q->where('created_by', $request->input('capturista')))
-            ->when($request->filled('from'), fn($q)=>$q->whereDate('created_at','>=', $request->date('from')))
-            ->when($request->filled('to'), fn($q)=>$q->whereDate('created_at','<=', $request->date('to')));
+            ->when($request->filled('capturista'), fn($q)=>$q->where('beneficiarios.created_by', $request->input('capturista')))
+            ->when($from, fn($q)=>$q->whereDate('beneficiarios.created_at','>=', $from))
+            ->when($to, fn($q)=>$q->whereDate('beneficiarios.created_at','<=', $to));
     }
 
     protected function buildKpis($baseQuery)
@@ -81,6 +96,7 @@ class DashboardController extends Controller
         $startToday = (clone $now)->startOfDay();
 
         $total = (clone $baseQuery)->count();
+        $ageRangeTotal = Beneficiario::whereBetween('edad', [18, 28])->count();
 
         // By Municipio
         $byMun = (clone $baseQuery)
@@ -132,6 +148,10 @@ class DashboardController extends Controller
 
         return response()->json([
             'totals' => ['total' => $total],
+            'ageRange' => [
+                'total' => $ageRangeTotal,
+                'label' => '18-28',
+            ],
             'byMunicipio' => $byMunicipio,
             'bySeccional' => $bySeccional,
             'byCapturista' => $byCapturista,

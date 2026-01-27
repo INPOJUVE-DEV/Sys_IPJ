@@ -44,6 +44,9 @@ async function renderKpis(url) {
       if (data.last30Days && Object.prototype.hasOwnProperty.call(data.last30Days, 'total')) {
         setText('kpiLast30Total', data.last30Days.total ?? '0');
       }
+      if (data.ageRange) {
+        setText('kpiAgeRange', data.ageRange.total ?? '0');
+      }
       if (data.byMunicipio) renderChart('chartByMunicipio', 'bar', data.byMunicipio.labels, data.byMunicipio.data, { label: 'Por municipio' });
       if (data.bySeccional) renderChart('chartBySeccional', 'bar', data.bySeccional.labels, data.bySeccional.data, { label: 'Por seccional' });
       if (data.byCapturista) renderChart('chartByCapturista', 'bar', data.byCapturista.labels, data.byCapturista.data, { label: 'Por capturista' });
@@ -54,6 +57,9 @@ async function renderKpis(url) {
       setText('kpiToday', data.today);
       setText('kpiWeek', data.week);
       setText('kpi30', data.last30Days);
+      if (data.ageRange) {
+        setText('kpiAgeRange', data.ageRange.total ?? '0');
+      }
 
       if (Array.isArray(data.ultimos)) {
         const list = document.getElementById('ultimosList');

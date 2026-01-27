@@ -84,4 +84,9 @@ class Beneficiario extends Model
         return $this->hasOne(Domicilio::class, 'beneficiario_id');
     }
 
+    public function inscripciones()
+    {
+        return $this->hasMany(Inscripcion::class);
+    }
+
 }

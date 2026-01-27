@@ -8,12 +8,13 @@ RUN apt-get update \
         libpng-dev \
         libjpeg62-turbo-dev \
         libfreetype6-dev \
+        libsqlite3-dev \
         libzip-dev \
         libonig-dev \
         libxml2-dev \
         curl \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install -j$(nproc) gd pdo_mysql zip mbstring \
+    && docker-php-ext-install -j$(nproc) gd pdo_mysql pdo_sqlite zip mbstring \
     && docker-php-ext-enable opcache \
     && rm -rf /var/lib/apt/lists/*
 

@@ -2,15 +2,11 @@
     $user = Auth::user();
     $isAdmin = $user?->hasRole('admin');
     $isCapturista = $user?->hasRole('capturista');
-    $homeRoute = $isAdmin
-        ? route('admin.home')
-        : ($isCapturista ? route('capturista.home') : route('dashboard'));
+    $homeRoute = $isCapturista ? route('capturista.home') : route('dashboard');
 
-    $dashboardActive = $isAdmin
-        ? (request()->routeIs('admin.home') || request()->routeIs('admin.kpis'))
-        : ($isCapturista
-            ? (request()->routeIs('capturista.home') || request()->routeIs('capturista.kpis'))
-            : request()->routeIs('dashboard'));
+    $dashboardActive = $isCapturista
+        ? (request()->routeIs('capturista.home') || request()->routeIs('capturista.kpis'))
+        : (request()->routeIs('dashboard') || request()->routeIs('admin.home') || request()->routeIs('admin.kpis'));
 
     $primaryLinks = [
         [
@@ -28,6 +24,12 @@
             'icon' => 'bi-people',
             'active' => request()->routeIs('beneficiarios.*') || request()->routeIs('admin.beneficiarios.*'),
         ];
+        $primaryLinks[] = [
+            'label' => 'Programas',
+            'route' => route('programas.index'),
+            'icon' => 'bi-collection',
+            'active' => request()->routeIs('programas.*'),
+        ];
     }
 
     if ($isAdmin || $isCapturista) {
@@ -36,6 +38,12 @@
             'route' => route('beneficiarios.create'),
             'icon' => 'bi-plus-circle',
             'active' => request()->routeIs('beneficiarios.create'),
+        ];
+        $primaryLinks[] = [
+            'label' => 'Inscripciones',
+            'route' => route('inscripciones.index'),
+            'icon' => 'bi-calendar-check',
+            'active' => request()->routeIs('inscripciones.*'),
         ];
         $primaryLinks[] = [
             'label' => 'Domicilios',

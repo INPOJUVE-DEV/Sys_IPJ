@@ -1,7 +1,7 @@
 <x-app-layout>
     <x-slot name="header"><h2 class="h4 m-0">Panel de Administración</h2></x-slot>
 
-    <div data-kpis-url="{{ route('admin.kpis') }}" data-export-url="{{ route('admin.beneficiarios.export') }}">
+    <div data-kpis-url="{{ route('admin.kpis', absolute: false) }}" data-export-url="{{ route('admin.beneficiarios.export', absolute: false) }}">
         <div class="card mb-3">
             <div class="card-body">
                 <form id="kpiFilters" class="row gy-2 gx-3 align-items-end">
@@ -47,6 +47,7 @@
             <div class="col-sm-6 col-lg-3"><div class="card"><div class="card-body"><div class="text-muted">Hoy</div><div class="h3" id="kpiTodayTotal">—</div></div></div></div>
             <div class="col-sm-6 col-lg-3"><div class="card"><div class="card-body"><div class="text-muted">Últimos 7 días</div><div class="h3" id="kpiWeekTotal">—</div></div></div></div>
             <div class="col-sm-6 col-lg-3"><div class="card"><div class="card-body"><div class="text-muted">Últimos 30 días</div><div class="h3" id="kpiLast30Total">—</div></div></div></div>
+            <div class="col-sm-6 col-lg-3"><div class="card"><div class="card-body"><div class="text-muted">En rango de edad</div><div class="h3" id="kpiAgeRange">—</div><div class="small text-muted">18-28</div></div></div></div>
         </div>
 
         <div class="row g-3">
