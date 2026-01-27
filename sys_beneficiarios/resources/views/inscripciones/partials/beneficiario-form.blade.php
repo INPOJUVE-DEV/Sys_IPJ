@@ -1,0 +1,353 @@
+@php
+    $b = $beneficiario ?? null;
+    $domicilio = $domicilio ?? $b?->domicilio;
+    $fieldLabels = [
+        'nombre' => 'Nombre',
+        'apellido_paterno' => 'Apellido paterno',
+        'apellido_materno' => 'Apellido materno',
+        'curp' => 'CURP',
+        'fecha_nacimiento' => 'Fecha de nacimiento',
+        'sexo' => 'Sexo',
+        'discapacidad' => 'Discapacidad',
+        'id_ine' => 'ID INE',
+        'telefono' => 'Telefono',
+        'domicilio.calle' => 'Calle',
+        'domicilio.numero_ext' => 'Numero exterior',
+        'domicilio.numero_int' => 'Numero interior',
+        'domicilio.colonia' => 'Colonia',
+        'domicilio.municipio_id' => 'Municipio',
+        'domicilio.codigo_postal' => 'Codigo postal',
+        'domicilio.seccional' => 'Seccional del domicilio',
+    ];
+    $firstErrorKey = $errors->keys()[0] ?? null;
+    $firstErrorLabel = $firstErrorKey
+        ? ($fieldLabels[$firstErrorKey] ?? ucfirst(str_replace(['.', '_'], [' ', ' '], $firstErrorKey)))
+        : null;
+@endphp
+@if ($errors->any())
+    <div class="alert alert-danger"><strong>Revisa el formulario{{ $firstErrorLabel ? ' - Campo: ' . $firstErrorLabel : '' }}</strong></div>
+@endif
+
+@once
+    <style>
+        .wizard-step { display: none; }
+        .wizard-step.active { display: block; }
+        .wizard-progress { height: 6px; background-color: rgba(255, 255, 255, 0.15); border-radius: 999px; overflow: hidden; }
+        .wizard-progress-bar { height: 100%; background: #0d6efd; transition: width 0.3s ease; }
+        .wizard-step-label.active { color: #ffffff; font-weight: 600; }
+    </style>
+@endonce
+
+<div id="beneficiarioWizard" class="beneficiario-wizard">
+    <div class="mb-4">
+        <div class="wizard-progress">
+            <div class="wizard-progress-bar" id="wizardProgressBar" style="width:50%;"></div>
+        </div>
+        <div class="d-flex justify-content-between mt-2 small text-muted">
+            <span class="wizard-step-label active" data-step-label="1">Datos personales</span>
+            <span class="wizard-step-label" data-step-label="2">Domicilio</span>
+        </div>
+    </div>
+
+    <div class="wizard-step active" data-step="1">
+        <div class="row g-3">
+            <div class="col-md-4">
+                <label for="nombre" class="form-label">Nombre</label>
+                <input id="nombre" name="nombre" value="{{ old('nombre', $b->nombre ?? '') }}" class="form-control @error('nombre') is-invalid @enderror" required>
+                @error('nombre')<div class="invalid-feedback">{{ $message }}</div>@enderror
+            </div>
+            <div class="col-md-4">
+                <label for="apellido_paterno" class="form-label">Apellido paterno</label>
+                <input id="apellido_paterno" name="apellido_paterno" value="{{ old('apellido_paterno', $b->apellido_paterno ?? '') }}" class="form-control @error('apellido_paterno') is-invalid @enderror" required>
+                @error('apellido_paterno')<div class="invalid-feedback">{{ $message }}</div>@enderror
+            </div>
+            <div class="col-md-4">
+                <label for="apellido_materno" class="form-label">Apellido materno</label>
+                <input id="apellido_materno" name="apellido_materno" value="{{ old('apellido_materno', $b->apellido_materno ?? '') }}" class="form-control @error('apellido_materno') is-invalid @enderror" required>
+                @error('apellido_materno')<div class="invalid-feedback">{{ $message }}</div>@enderror
+            </div>
+            <div class="col-md-4">
+                <label for="curp" class="form-label">CURP</label>
+                <input id="curp" name="curp" value="{{ old('curp', $b->curp ?? '') }}" maxlength="18" minlength="18" class="form-control text-uppercase @error('curp') is-invalid @enderror" required>
+                @error('curp')<div class="invalid-feedback">{{ $message }}</div>@enderror
+            </div>
+            <div class="col-md-4">
+                <label for="fecha_nacimiento" class="form-label">Fecha nacimiento</label>
+                <input id="fecha_nacimiento" type="date" name="fecha_nacimiento" value="{{ old('fecha_nacimiento', isset($b)? optional($b->fecha_nacimiento)->format('Y-m-d') : '') }}" class="form-control @error('fecha_nacimiento') is-invalid @enderror" required>
+                @error('fecha_nacimiento')<div class="invalid-feedback">{{ $message }}</div>@enderror
+            </div>
+            <div class="col-md-2">
+                <label for="edad" class="form-label">Edad</label>
+                <input id="edad" type="number" name="edad" value="{{ old('edad', $b->edad ?? '') }}" class="form-control" readonly>
+            </div>
+            <div class="col-md-2">
+                <label for="sexo" class="form-label">Sexo</label>
+                <select id="sexo" name="sexo" class="form-select @error('sexo') is-invalid @enderror">
+                    <option value="">-</option>
+                    @foreach(['M'=>'M','F'=>'F','X'=>'X'] as $key=>$val)
+                        <option value="{{ $key }}" @selected(old('sexo', $b->sexo ?? '')==$key)>{{ $val }}</option>
+                    @endforeach
+                </select>
+                @error('sexo')<div class="invalid-feedback">{{ $message }}</div>@enderror
+            </div>
+            <div class="col-md-2 d-flex align-items-center">
+                <div class="form-check mt-4">
+                    <input type="hidden" name="discapacidad" value="0">
+                    <input id="discapacidad" class="form-check-input" type="checkbox" name="discapacidad" value="1" @checked(old('discapacidad', $b->discapacidad ?? false))>
+                    <label for="discapacidad" class="form-check-label">Discapacidad</label>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <label for="id_ine" class="form-label">ID INE</label>
+                <input id="id_ine" name="id_ine" value="{{ old('id_ine', $b->id_ine ?? '') }}" class="form-control @error('id_ine') is-invalid @enderror" required>
+                @error('id_ine')<div class="invalid-feedback">{{ $message }}</div>@enderror
+            </div>
+            <div class="col-md-3">
+                <label for="telefono" class="form-label">Telefono (10 digitos)</label>
+                <input id="telefono" name="telefono" value="{{ old('telefono', $b->telefono ?? '') }}" class="form-control @error('telefono') is-invalid @enderror" required>
+                @error('telefono')<div class="invalid-feedback">{{ $message }}</div>@enderror
+            </div>
+        </div>
+    </div>
+
+    <div class="wizard-step" data-step="2">
+        <h5>Domicilio</h5>
+        <div class="row g-3">
+            <div class="col-md-4">
+                <label for="domicilio_calle" class="form-label">Calle</label>
+                <input id="domicilio_calle" name="domicilio[calle]" value="{{ old('domicilio.calle', $domicilio->calle ?? '') }}" class="form-control @error('domicilio.calle') is-invalid @enderror">
+                @error('domicilio.calle')<div class="invalid-feedback">{{ $message }}</div>@enderror
+            </div>
+            <div class="col-md-2">
+                <label for="domicilio_numero_ext" class="form-label">Numero ext</label>
+                <input id="domicilio_numero_ext" name="domicilio[numero_ext]" value="{{ old('domicilio.numero_ext', $domicilio->numero_ext ?? '') }}" class="form-control @error('domicilio.numero_ext') is-invalid @enderror">
+                @error('domicilio.numero_ext')<div class="invalid-feedback">{{ $message }}</div>@enderror
+            </div>
+            <div class="col-md-2">
+                <label for="domicilio_numero_int" class="form-label">Numero int</label>
+                <input id="domicilio_numero_int" name="domicilio[numero_int]" value="{{ old('domicilio.numero_int', $domicilio->numero_int ?? '') }}" class="form-control @error('domicilio.numero_int') is-invalid @enderror">
+                @error('domicilio.numero_int')<div class="invalid-feedback">{{ $message }}</div>@enderror
+            </div>
+            <div class="col-md-4">
+                <label for="domicilio_colonia" class="form-label">Colonia</label>
+                <input id="domicilio_colonia" name="domicilio[colonia]" value="{{ old('domicilio.colonia', $domicilio->colonia ?? '') }}" class="form-control @error('domicilio.colonia') is-invalid @enderror">
+                @error('domicilio.colonia')<div class="invalid-feedback">{{ $message }}</div>@enderror
+            </div>
+            <div class="col-md-2">
+                <label for="domicilio_codigo_postal" class="form-label">CP</label>
+                <input id="domicilio_codigo_postal" name="domicilio[codigo_postal]" value="{{ old('domicilio.codigo_postal', $domicilio->codigo_postal ?? '') }}" class="form-control @error('domicilio.codigo_postal') is-invalid @enderror">
+                @error('domicilio.codigo_postal')<div class="invalid-feedback">{{ $message }}</div>@enderror
+            </div>
+            <div class="col-md-4">
+                <label for="dom-seccional" class="form-label">Seccional</label>
+                <input id="dom-seccional" name="domicilio[seccional]" value="{{ old('domicilio.seccional', $domicilio?->seccion?->seccional ?? '') }}" class="form-control @error('domicilio.seccional') is-invalid @enderror" placeholder="Ej. 0001">
+                <div class="form-text">Al validar la seccional completamos municipio y distritos.</div>
+                @error('domicilio.seccional')<div class="invalid-feedback">{{ $message }}</div>@enderror
+            </div>
+            <div class="col-md-4">
+                <label for="dom-municipio-id" class="form-label">Municipio (autocompletado)</label>
+                <select id="dom-municipio-id" name="domicilio[municipio_id]" class="form-select @error('domicilio.municipio_id') is-invalid @enderror">
+                    <option value="">Selecciona o deja que el sistema lo asigne</option>
+                    @foreach($municipios as $id=>$nombre)
+                        <option value="{{ $id }}" @selected(old('domicilio.municipio_id', $domicilio->municipio_id ?? ($b->municipio_id ?? ''))==$id)>{{ $nombre }}</option>
+                    @endforeach
+                </select>
+                <div class="form-text">Se rellena de acuerdo a la seccional detectada.</div>
+                @error('domicilio.municipio_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Distritos detectados</label>
+                <div class="bg-dark border border-white border-opacity-25 rounded-3 p-3 h-100" id="dom-seccional-summary">
+                    <div class="small text-white-50">Municipio</div>
+                    <div class="fw-semibold" id="dom-seccional-muni">-</div>
+                    <div class="small text-white-50 mt-2">DL / DF</div>
+                    <div class="fw-semibold" id="dom-seccional-distritos">-</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="d-flex justify-content-between mt-4" id="wizardControls">
+        <button type="button" class="btn btn-outline-secondary" data-wizard-prev>Anterior</button>
+        <button type="button" class="btn btn-primary" data-wizard-next>Siguiente</button>
+    </div>
+</div>
+
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const wizard = document.getElementById('beneficiarioWizard');
+    const progressBar = document.getElementById('wizardProgressBar');
+    const stepLabels = wizard?.querySelectorAll('[data-step-label]') || [];
+    const steps = wizard ? Array.from(wizard.querySelectorAll('.wizard-step')) : [];
+    const prevBtn = wizard?.querySelector('[data-wizard-prev]');
+    const nextBtn = wizard?.querySelector('[data-wizard-next]');
+    const form = wizard?.closest('form');
+    const submitBtn = form?.querySelector('button[type="submit"]');
+    let currentStep = 0;
+
+    const findStepWithErrors = () => steps.findIndex(step => step.querySelector('.is-invalid'));
+
+    const updateStep = () => {
+        steps.forEach((step, index) => step.classList.toggle('active', index === currentStep));
+        stepLabels.forEach((label, index) => label.classList.toggle('active', index === currentStep));
+        if (progressBar) {
+            const percent = ((currentStep + 1) / Math.max(steps.length, 1)) * 100;
+            progressBar.style.width = `${percent}%`;
+        }
+        if (prevBtn) {
+            prevBtn.disabled = currentStep === 0;
+        }
+        if (nextBtn) {
+            nextBtn.classList.toggle('d-none', currentStep === steps.length - 1);
+        }
+        if (submitBtn) {
+            submitBtn.classList.toggle('d-none', currentStep !== steps.length - 1);
+        }
+    };
+
+    const validateCurrentStep = () => {
+        const step = steps[currentStep];
+        if (!step) return true;
+        const fields = Array.from(step.querySelectorAll('input, select, textarea')).filter(field => field.type !== 'hidden' && !field.closest('.d-none'));
+        for (const field of fields) {
+            if (!field.checkValidity()) {
+                field.reportValidity();
+                return false;
+            }
+        }
+        return true;
+    };
+
+    if (submitBtn) {
+        submitBtn.classList.add('d-none');
+    }
+
+    if (nextBtn) {
+        nextBtn.addEventListener('click', () => {
+            if (!validateCurrentStep()) return;
+            currentStep = Math.min(currentStep + 1, steps.length - 1);
+            updateStep();
+        });
+    }
+
+    if (prevBtn) {
+        prevBtn.addEventListener('click', () => {
+            currentStep = Math.max(currentStep - 1, 0);
+            updateStep();
+        });
+    }
+
+    const errorStep = findStepWithErrors();
+    if (errorStep >= 0) {
+        currentStep = errorStep;
+    }
+    updateStep();
+
+    const curpInput = document.querySelector('input[name="curp"]');
+    const fechaInput = document.querySelector('input[name="fecha_nacimiento"]');
+    const sexoSelect = document.querySelector('select[name="sexo"]');
+    const edadInput = document.querySelector('input[name="edad"]');
+
+    function parseCurp(curp) {
+        if (!curp || curp.length < 11) return null;
+        const yymmdd = curp.substring(4, 10);
+        const sex = curp[10]?.toUpperCase();
+        const yy = parseInt(yymmdd.substring(0,2), 10);
+        const mm = yymmdd.substring(2,4);
+        const dd = yymmdd.substring(4,6);
+        if (isNaN(yy)) return null;
+        const currentYY = new Date().getFullYear() % 100;
+        const year = yy > currentYY ? 1900 + yy : 2000 + yy;
+        const iso = `${year}-${mm}-${dd}`;
+        return { date: iso, sex };
+    }
+
+    function updateAge(isoDate) {
+        if (!isoDate || !edadInput) return;
+        const birth = new Date(isoDate);
+        if (isNaN(birth.getTime())) return;
+        const today = new Date();
+        let age = today.getFullYear() - birth.getFullYear();
+        const m = today.getMonth() - birth.getMonth();
+        if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
+        edadInput.value = age;
+    }
+
+    function applyFromCurp() {
+        const curp = curpInput?.value?.trim().toUpperCase();
+        if (!curp) return;
+        if (curp.length !== 18) {
+            if (curpInput.reportValidity) {
+                curpInput.setCustomValidity('La CURP debe tener 18 caracteres.');
+                curpInput.reportValidity();
+            }
+            return;
+        } else {
+            curpInput.setCustomValidity('');
+        }
+        const parsed = parseCurp(curp);
+        if (!parsed) return;
+        if (fechaInput) {
+            fechaInput.value = parsed.date;
+            updateAge(parsed.date);
+        }
+        if (sexoSelect && (parsed.sex === 'H' || parsed.sex === 'M')) {
+            sexoSelect.value = parsed.sex === 'H' ? 'M' : 'F';
+        }
+    }
+
+    curpInput?.addEventListener('blur', applyFromCurp);
+    curpInput?.addEventListener('input', () => { if (curpInput.value.length === 18) applyFromCurp(); });
+    fechaInput?.addEventListener('change', (e) => updateAge(e.target.value));
+
+    const secc = document.getElementById('dom-seccional');
+    const munSel = document.getElementById('dom-municipio-id');
+    const seccCard = document.getElementById('dom-seccional-summary');
+    const seccMunicipio = document.getElementById('dom-seccional-muni');
+    const seccDistritos = document.getElementById('dom-seccional-distritos');
+    if (secc) {
+        const renderSummary = (municipio = '-', dl = '-', df = '-') => {
+            if (seccMunicipio) seccMunicipio.textContent = municipio || '-';
+            if (seccDistritos) seccDistritos.textContent = `DL: ${dl || '--'} - DF: ${df || '--'}`;
+        };
+        const toggleSummaryState = (hasData) => {
+            seccCard?.classList.toggle('border-success', !!hasData);
+            seccCard?.classList.toggle('border-white', !hasData);
+        };
+        const applyData = (data) => {
+            if (!data) return;
+            if (munSel) munSel.value = data.municipio_id ? String(data.municipio_id) : '';
+            renderSummary(data.municipio || '-', data.distrito_local || '-', data.distrito_federal || '-');
+            toggleSummaryState(true);
+        };
+        const clearData = () => {
+            if (munSel) munSel.value = '';
+            renderSummary('-', '-', '-');
+            toggleSummaryState(false);
+        };
+        let timer = null;
+        const debounced = (fn, wait = 400) => (...args) => { clearTimeout(timer); timer = setTimeout(() => fn(...args), wait); };
+        const fetchDistritos = async (val) => {
+            const query = (val || '').trim();
+            if (!query) { clearData(); return; }
+            try {
+                const res = await fetch(`/api/secciones/${encodeURIComponent(query)}`, { headers: { 'Accept': 'application/json' } });
+                if (!res.ok) { clearData(); return; }
+                const data = await res.json();
+                applyData(data);
+            } catch (_) { clearData(); }
+        };
+        const debouncedFetch = debounced(fetchDistritos, 400);
+        secc.addEventListener('input', (e) => debouncedFetch(e.target.value));
+        secc.addEventListener('change', (e) => fetchDistritos(e.target.value));
+        secc.addEventListener('blur', (e) => fetchDistritos(e.target.value));
+        if (secc.value) {
+            fetchDistritos(secc.value);
+        } else {
+            clearData();
+        }
+    }
+});
+</script>
+@endpush

@@ -9,7 +9,10 @@ use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\BeneficiarioController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DomicilioController;
+use App\Http\Controllers\InscripcionController;
+use App\Http\Controllers\InscripcionDashboardController;
 use App\Http\Controllers\MisRegistrosController;
+use App\Http\Controllers\ProgramaController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
@@ -63,6 +66,19 @@ Route::middleware(['auth','role:capturista'])->group(function () {
 Route::middleware(['auth','role:admin|capturista'])->group(function () {
     Route::resource('beneficiarios', BeneficiarioController::class)->except(['show']);
     Route::resource('domicilios', DomicilioController::class)->except(['show']);
+});
+
+Route::middleware(['auth','role:admin'])->group(function () {
+    Route::resource('programas', ProgramaController::class)->except(['show']);
+});
+
+Route::middleware(['auth','role:admin|capturista'])->group(function () {
+    Route::get('inscripciones', [InscripcionController::class, 'create'])->name('inscripciones.index');
+    Route::get('inscripciones/lista', [InscripcionController::class, 'index'])->name('inscripciones.list');
+    Route::get('inscripciones/create', fn () => redirect()->route('inscripciones.index'))->name('inscripciones.create');
+    Route::resource('inscripciones', InscripcionController::class)->except(['show', 'index', 'create']);
+    Route::get('inscripciones-dashboard', [InscripcionDashboardController::class, 'index'])->name('inscripciones.dashboard');
+    Route::get('inscripciones-dashboard/kpis', [InscripcionDashboardController::class, 'kpis'])->name('inscripciones.kpis');
 });
 
 Route::middleware('auth')->group(function () {

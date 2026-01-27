@@ -20,7 +20,6 @@ class BeneficiariosController extends Controller
             ->when($filters['municipio_id'] ?? null, fn($b,$v)=>$b->where('municipio_id',$v))
             ->when($filters['seccional'] ?? null, fn($b,$v)=>$b->whereHas('seccion', fn($sq)=>$sq->where('seccional','like',"%$v%")))
             ->when($filters['capturista'] ?? null, fn($b,$v)=>$b->where('created_by',$v))
-            
             ->when($filters['from'] ?? null, fn($b,$v)=>$b->whereDate('created_at','>=',$v))
             ->when($filters['to'] ?? null, fn($b,$v)=>$b->whereDate('created_at','<=',$v))
             ->orderByDesc('created_at');

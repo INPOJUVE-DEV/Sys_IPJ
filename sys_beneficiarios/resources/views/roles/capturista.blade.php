@@ -1,11 +1,12 @@
 <x-app-layout>
     <x-slot name="header"><h2 class="h4 m-0">Mi progreso</h2></x-slot>
 
-    <div data-kpis-url="{{ route('capturista.kpis') }}">
+    <div data-kpis-url="{{ route('capturista.kpis', absolute: false) }}">
         <div class="row g-3 mb-3">
-            <div class="col-md-4"><div class="card"><div class="card-body"><div class="text-muted">Hoy</div><div class="h3" id="kpiToday">—</div></div></div></div>
-            <div class="col-md-4"><div class="card"><div class="card-body"><div class="text-muted">Semana</div><div class="h3" id="kpiWeek">—</div></div></div></div>
-            <div class="col-md-4"><div class="card"><div class="card-body"><div class="text-muted">Últimos 30 días</div><div class="h3" id="kpi30">—</div></div></div></div>
+            <div class="col-sm-6 col-md-3"><div class="card"><div class="card-body"><div class="text-muted">Hoy</div><div class="h3" id="kpiToday">—</div></div></div></div>
+            <div class="col-sm-6 col-md-3"><div class="card"><div class="card-body"><div class="text-muted">Semana</div><div class="h3" id="kpiWeek">—</div></div></div></div>
+            <div class="col-sm-6 col-md-3"><div class="card"><div class="card-body"><div class="text-muted">Últimos 30 días</div><div class="h3" id="kpi30">—</div></div></div></div>
+            <div class="col-sm-6 col-md-3"><div class="card"><div class="card-body"><div class="text-muted">En rango de edad</div><div class="h3" id="kpiAgeRange">—</div><div class="small text-muted">18-28</div></div></div></div>
         </div>
 
         <div class="row g-3">

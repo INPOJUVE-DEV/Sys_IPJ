@@ -25,12 +25,30 @@
             $todayStart = $now->copy()->startOfDay();
             $weekStart = $now->copy()->startOfWeek();
 
+            $ageMin = 17;
+            $ageMax = 28;
+            $dobMax = $now->copy()->subYears($ageMin)->toDateString();
+            $dobMin = $now->copy()->subYears($ageMax + 1)->addDay()->toDateString();
+
             $beneficiariosMetrics = [
                 'total' => (int) \App\Models\Beneficiario::count(),
                 'hoy' => (int) \App\Models\Beneficiario::whereBetween('created_at', [$todayStart, $now])->count(),
                 'ultimaSemana' => (int) \App\Models\Beneficiario::whereBetween('created_at', [$weekStart, $now])->count(),
                 'conDiscapacidad' => (int) \App\Models\Beneficiario::where('discapacidad', true)->count(),
+                'poblacionObjetivo' => (int) \App\Models\Beneficiario::whereBetween('fecha_nacimiento', [$dobMin, $dobMax])->count(),
+                'hombres' => (int) \App\Models\Beneficiario::where('sexo', 'M')->count(),
+                'mujeres' => (int) \App\Models\Beneficiario::where('sexo', 'F')->count(),
             ];
+
+            $periodoActual = request('periodo') ?: $now->format('Y-m');
+            if (!preg_match('/^\d{4}-\d{2}$/', $periodoActual)) {
+                $periodoActual = $now->format('Y-m');
+            }
+            $programas = \App\Models\Programa::orderBy('nombre')->get(['id', 'nombre']);
+            $inscritosPorPrograma = \App\Models\Inscripcion::where('periodo', $periodoActual)
+                ->selectRaw('programa_id, COUNT(*) as c')
+                ->groupBy('programa_id')
+                ->pluck('c', 'programa_id');
         @endphp
 
         <div class="row g-4">
@@ -73,11 +91,95 @@
                                         </div>
                                     </div>
                                 </div>
+                                <div class="col-12">
+                                    <div class="border rounded-3 p-3">
+                                        <div class="row g-2 text-center">
+                                            <div class="col-6">
+                                                <div class="small text-muted">{{ __('Hombres') }}</div>
+                                                <div class="h5 fw-semibold text-primary mb-0">{{ number_format($beneficiariosMetrics['hombres']) }}</div>
+                                            </div>
+                                            <div class="col-6 border-start">
+                                                <div class="small text-muted">{{ __('Mujeres') }}</div>
+                                                <div class="h5 fw-semibold text-primary mb-0">{{ number_format($beneficiariosMetrics['mujeres']) }}</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                         <div class="mt-auto">
                             <a class="btn btn-primary w-100" href="{{ route('admin.beneficiarios.index') }}">
                                 <i class="bi bi-box-arrow-up-right me-1"></i>{{ __('Ir al modulo') }}
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12">
+                <div class="card shadow-sm h-100 text-dark border-0">
+                    <div class="card-body d-flex flex-column gap-3">
+                        <div>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h3 class="h5 fw-semibold text-primary mb-0">{{ __('Población objetivo') }}</h3>
+                                <span class="badge bg-primary text-white">{{ __('17 a 28 años') }}</span>
+                            </div>
+                            <p class="text-muted small mb-0">{{ __('Beneficiarios dentro del rango de edad 17 a 28 años.') }}</p>
+                        </div>
+                        <div class="d-flex align-items-baseline gap-3">
+                            <div class="display-5 fw-bold text-primary mb-0">{{ number_format($beneficiariosMetrics['poblacionObjetivo']) }}</div>
+                            <span class="text-muted small">{{ __('Total en rango') }}</span>
+                        </div>
+                        <div class="mt-auto">
+                            <a class="btn btn-outline-primary w-100" href="{{ route('admin.beneficiarios.index', ['edad_min' => 17, 'edad_max' => 28]) }}">
+                                <i class="bi bi-funnel-fill me-1"></i>{{ __('Ver beneficiarios') }}
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12">
+                <div class="card shadow-sm h-100 text-dark border-0">
+                    <div class="card-body d-flex flex-column gap-3">
+                        <div>
+                            <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-2">
+                                <div class="d-flex align-items-center gap-2">
+                                    <h3 class="h5 fw-semibold text-primary mb-0">{{ __('Inscritos por programa') }}</h3>
+                                    <span class="badge bg-primary text-white">{{ $periodoActual }}</span>
+                                </div>
+                                <form method="GET" action="{{ url()->current() }}" class="d-flex align-items-center gap-2">
+                                    <label for="periodo_inscripciones" class="visually-hidden">{{ __('Periodo') }}</label>
+                                    <input id="periodo_inscripciones" type="month" name="periodo" value="{{ $periodoActual }}" class="form-control form-control-sm">
+                                    <button class="btn btn-sm btn-primary" type="submit">{{ __('Ver') }}</button>
+                                </form>
+                            </div>
+                            <p class="text-muted small mb-0">{{ __('Cantidad de inscritos del mes por programa.') }}</p>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-borderless mb-0">
+                                <thead>
+                                    <tr class="text-muted small">
+                                        <th>{{ __('Programa') }}</th>
+                                        <th class="text-end">{{ __('Inscritos') }}</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @forelse($programas as $programa)
+                                        @php $total = (int) ($inscritosPorPrograma[$programa->id] ?? 0); @endphp
+                                        <tr>
+                                            <td class="fw-semibold">{{ $programa->nombre }}</td>
+                                            <td class="text-end">{{ number_format($total) }}</td>
+                                        </tr>
+                                    @empty
+                                        <tr>
+                                            <td colspan="2" class="text-center text-muted py-3">{{ __('Sin programas registrados') }}</td>
+                                        </tr>
+                                    @endforelse
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="mt-auto">
+                            <a class="btn btn-outline-primary w-100" href="{{ route('inscripciones.list', ['periodo' => $periodoActual]) }}">
+                                <i class="bi bi-box-arrow-up-right me-1"></i>{{ __('Ver inscripciones del mes') }}
                             </a>
                         </div>
                     </div>

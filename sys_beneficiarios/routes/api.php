@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\BeneficiariosImportController;
 use App\Http\Controllers\Api\SeccionesController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\LogoutController;
@@ -22,3 +23,4 @@ Route::prefix('auth')->group(function () {
 });
 
 Route::middleware('throttle:30,1')->get('/secciones/{seccional}', [SeccionesController::class, 'show']);
+Route::middleware(['auth:sanctum', 'throttle:30,1'])->post('/beneficiarios/cache', [BeneficiariosImportController::class, 'store']);
