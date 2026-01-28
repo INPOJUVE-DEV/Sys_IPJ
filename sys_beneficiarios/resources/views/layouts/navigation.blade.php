@@ -2,20 +2,24 @@
     $user = Auth::user();
     $isAdmin = $user?->hasRole('admin');
     $isCapturista = $user?->hasRole('capturista');
-    $homeRoute = $isCapturista ? route('capturista.home') : route('dashboard');
+    $isCapturistaProgramas = $user?->hasRole('capturista_programas');
+    $homeRoute = $isCapturistaProgramas
+        ? route('inscripciones.index')
+        : ($isCapturista ? route('capturista.home') : route('dashboard'));
 
     $dashboardActive = $isCapturista
         ? (request()->routeIs('capturista.home') || request()->routeIs('capturista.kpis'))
         : (request()->routeIs('dashboard') || request()->routeIs('admin.home') || request()->routeIs('admin.kpis'));
 
-    $primaryLinks = [
-        [
+    $primaryLinks = [];
+    if (! $isCapturistaProgramas) {
+        $primaryLinks[] = [
             'label' => 'Dashboard',
             'route' => $homeRoute,
             'icon' => 'bi-speedometer2',
             'active' => $dashboardActive,
-        ],
-    ];
+        ];
+    }
 
     if ($isAdmin) {
         $primaryLinks[] = [
@@ -40,16 +44,19 @@
             'active' => request()->routeIs('beneficiarios.create'),
         ];
         $primaryLinks[] = [
-            'label' => 'Inscripciones',
-            'route' => route('inscripciones.index'),
-            'icon' => 'bi-calendar-check',
-            'active' => request()->routeIs('inscripciones.*'),
-        ];
-        $primaryLinks[] = [
             'label' => 'Domicilios',
             'route' => route('domicilios.index'),
             'icon' => 'bi-geo-alt',
             'active' => request()->routeIs('domicilios.*'),
+        ];
+    }
+
+    if ($isAdmin || $isCapturista || $isCapturistaProgramas) {
+        $primaryLinks[] = [
+            'label' => 'Inscripciones',
+            'route' => route('inscripciones.index'),
+            'icon' => 'bi-calendar-check',
+            'active' => request()->routeIs('inscripciones.*'),
         ];
     }
 

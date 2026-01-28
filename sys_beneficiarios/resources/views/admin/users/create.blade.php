@@ -29,8 +29,8 @@
                         <label for="role" class="form-label">Rol</label>
                         <select id="role" name="role" class="form-select @error('role') is-invalid @enderror" required>
                             <option value="" disabled selected>Selecciona rol...</option>
-                            @foreach($roles as $role)
-                                <option value="{{ $role }}" @selected(old('role')===$role)>{{ ucfirst($role) }}</option>
+                            @foreach($roles as $value => $label)
+                                <option value="{{ $value }}" @selected(old('role')===$value)>{{ $label }}</option>
                             @endforeach
                         </select>
                         @error('role')<div class="invalid-feedback">{{ $message }}</div>@enderror

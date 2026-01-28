@@ -28,6 +28,9 @@ Route::get('/', function () {
     if ($user->hasRole('capturista')) {
         return redirect('/capturista');
     }
+    if ($user->hasRole('capturista_programas')) {
+        return redirect('/inscripciones');
+    }
     return redirect()->route('dashboard');
 });
 
@@ -72,11 +75,17 @@ Route::middleware(['auth','role:admin'])->group(function () {
     Route::resource('programas', ProgramaController::class)->except(['show']);
 });
 
-Route::middleware(['auth','role:admin|capturista'])->group(function () {
+Route::middleware(['auth','role:admin|capturista|capturista_programas'])->group(function () {
     Route::get('inscripciones', [InscripcionController::class, 'create'])->name('inscripciones.index');
-    Route::get('inscripciones/lista', [InscripcionController::class, 'index'])->name('inscripciones.list');
     Route::get('inscripciones/create', fn () => redirect()->route('inscripciones.index'))->name('inscripciones.create');
-    Route::resource('inscripciones', InscripcionController::class)->except(['show', 'index', 'create']);
+    Route::post('inscripciones', [InscripcionController::class, 'store'])->name('inscripciones.store');
+});
+
+Route::middleware(['auth','role:admin|capturista'])->group(function () {
+    Route::get('inscripciones/lista', [InscripcionController::class, 'index'])->name('inscripciones.list');
+    Route::get('inscripciones/{inscripcion}/edit', [InscripcionController::class, 'edit'])->name('inscripciones.edit');
+    Route::put('inscripciones/{inscripcion}', [InscripcionController::class, 'update'])->name('inscripciones.update');
+    Route::delete('inscripciones/{inscripcion}', [InscripcionController::class, 'destroy'])->name('inscripciones.destroy');
     Route::get('inscripciones-dashboard', [InscripcionDashboardController::class, 'index'])->name('inscripciones.dashboard');
     Route::get('inscripciones-dashboard/kpis', [InscripcionDashboardController::class, 'kpis'])->name('inscripciones.kpis');
 });

@@ -57,8 +57,23 @@ class InscripcionController extends Controller
         $programas = Programa::where('activo', true)->orderBy('nombre')->get();
         $municipios = Municipio::orderBy('nombre')->pluck('nombre', 'id');
         $periodo = now()->format('Y-m');
+        $dailyCount = null;
+        $dailyCountStart = null;
 
-        return view('inscripciones.create', compact('programas', 'municipios', 'periodo'));
+        $user = auth()->user();
+        if ($user?->hasRole('capturista_programas')) {
+            $now = now();
+            $start = (clone $now)->startOfDay()->addMinute();
+            if ($now->lt($start)) {
+                $start = (clone $now)->subDay()->startOfDay()->addMinute();
+            }
+            $dailyCount = Inscripcion::where('created_by', $user->uuid)
+                ->whereBetween('created_at', [$start, $now])
+                ->count();
+            $dailyCountStart = $start;
+        }
+
+        return view('inscripciones.create', compact('programas', 'municipios', 'periodo', 'dailyCount', 'dailyCountStart'));
     }
 
     public function store(StoreInscripcionRequest $request)

@@ -22,7 +22,7 @@
                 </div>
             </div>
             <div class="d-flex flex-wrap gap-2 mt-3" id="roleChips">
-                @php($roles = ['all' => 'Todos', 'admin' => 'Admin', 'capturista' => 'Capturista'])
+                @php($roles = ['all' => 'Todos', 'admin' => 'Admin', 'capturista' => 'Capturista', 'capturista-programas' => 'Capturista Programas'])
                 @foreach($roles as $roleKey => $roleLabel)
                     <button type="button" class="btn btn-sm btn-outline-light @if($loop->first) active @endif" data-role="{{ $roleKey }}">{{ $roleLabel }}</button>
                 @endforeach
@@ -31,7 +31,9 @@
         <div class="card-body">
             <div id="usersGrid" class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-3">
                 @forelse($users as $user)
+                    @php($roleLabels = ['admin' => 'Admin', 'capturista' => 'Capturista', 'capturista_programas' => 'Capturista Programas'])
                     @php($roleNames = $user->roles->pluck('name')->map(fn($name) => \Illuminate\Support\Str::of($name)->lower()->slug('-'))->toArray())
+                    @php($displayRoles = $user->roles->pluck('name')->map(fn($name) => $roleLabels[$name] ?? ucfirst($name)))
                     <div class="col" data-user-card data-name="{{ \Illuminate\Support\Str::lower($user->name) }}" data-email="{{ \Illuminate\Support\Str::lower($user->email) }}" data-roles="{{ implode(' ', $roleNames) }}">
                         <div class="card bg-dark border border-white text-white h-100 shadow-sm">
                             <div class="card-body d-flex flex-column gap-3">
@@ -40,7 +42,7 @@
                                     <div class="small text-white-50"><i class="bi bi-envelope me-1"></i>{{ $user->email }}</div>
                                 </div>
                                 <div class="text-white-50 small">
-                                    <i class="bi bi-person-badge me-1"></i>{{ $user->roles->pluck('name')->join(', ') }}
+                                    <i class="bi bi-person-badge me-1"></i>{{ $displayRoles->join(', ') }}
                                 </div>
                                 <div class="mt-auto d-flex flex-column gap-2">
                                     <a href="{{ route('admin.usuarios.edit', $user) }}" class="btn btn-outline-light btn-sm w-100">

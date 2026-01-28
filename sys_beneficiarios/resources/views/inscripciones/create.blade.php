@@ -7,6 +7,15 @@
     @if(session('status'))
         <div class="alert alert-success">{{ session('status') }}</div>
     @endif
+    @if(!is_null($dailyCount))
+        <div class="alert alert-info d-flex align-items-center gap-2">
+            <i class="bi bi-clock-history"></i>
+            <div>
+                <div class="fw-semibold">Contador diario</div>
+                <div class="small text-success">{{ $dailyCount }}</div>
+            </div>
+        </div>
+    @endif
 
     <div class="card shadow-sm">
         <div class="card-body">
@@ -56,7 +65,9 @@
                 @include('inscripciones.partials.beneficiario-form', ['municipios' => $municipios])
 
                 <div class="d-flex justify-content-end mt-3">
-                    <a href="{{ route('inscripciones.list') }}" class="btn btn-outline-secondary me-2"><i class="bi bi-x-circle me-1"></i>Cancelar</a>
+                    @if(!auth()->user()?->hasRole('capturista_programas'))
+                        <a href="{{ route('inscripciones.list') }}" class="btn btn-outline-secondary me-2"><i class="bi bi-x-circle me-1"></i>Cancelar</a>
+                    @endif
                     <button class="btn btn-cta" type="submit"><i class="bi bi-save me-1"></i>Guardar</button>
                 </div>
             </form>

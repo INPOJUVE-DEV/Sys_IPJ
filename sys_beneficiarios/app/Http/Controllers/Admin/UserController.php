@@ -11,6 +11,15 @@ use Spatie\Permission\Models\Role;
 
 class UserController extends Controller
 {
+    protected function roleOptions(): array
+    {
+        return [
+            'admin' => 'Admin',
+            'capturista' => 'Capturista',
+            'capturista_programas' => 'Capturista Programas',
+        ];
+    }
+
     public function index()
     {
         $users = User::with('roles')->orderBy('name')->paginate(15);
@@ -19,16 +28,19 @@ class UserController extends Controller
 
     public function create()
     {
-        $allowed = ['admin','capturista'];
+        $roleOptions = $this->roleOptions();
+        $allowed = array_keys($roleOptions);
         $roles = Role::whereIn('name', $allowed)
-            ->orderByRaw("FIELD(name,'admin','capturista')")
-            ->pluck('name', 'name');
+            ->orderByRaw("FIELD(name,'admin','capturista','capturista_programas')")
+            ->pluck('name')
+            ->mapWithKeys(fn ($name) => [$name => $roleOptions[$name] ?? $name])
+            ->toArray();
         return view('admin.users.create', compact('roles'));
     }
 
     public function store(Request $request)
     {
-        $allRoles = Role::whereIn('name', ['admin','capturista'])->pluck('name')->toArray();
+        $allRoles = Role::whereIn('name', array_keys($this->roleOptions()))->pluck('name')->toArray();
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
@@ -50,9 +62,13 @@ class UserController extends Controller
 
     public function edit(User $usuario)
     {
-        $roles = Role::whereIn('name', ['admin','capturista'])
-            ->orderByRaw("FIELD(name,'admin','capturista')")
-            ->pluck('name', 'name');
+        $roleOptions = $this->roleOptions();
+        $allowed = array_keys($roleOptions);
+        $roles = Role::whereIn('name', $allowed)
+            ->orderByRaw("FIELD(name,'admin','capturista','capturista_programas')")
+            ->pluck('name')
+            ->mapWithKeys(fn ($name) => [$name => $roleOptions[$name] ?? $name])
+            ->toArray();
         $currentRole = $usuario->getRoleNames()->first();
         return view('admin.users.edit', [
             'user' => $usuario,
@@ -63,7 +79,7 @@ class UserController extends Controller
 
     public function update(Request $request, User $usuario)
     {
-        $allRoles = Role::whereIn('name', ['admin','capturista'])->pluck('name')->toArray();
+        $allRoles = Role::whereIn('name', array_keys($this->roleOptions()))->pluck('name')->toArray();
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users','email')->ignore($usuario->id)],
