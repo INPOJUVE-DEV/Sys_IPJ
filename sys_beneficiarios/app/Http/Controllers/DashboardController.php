@@ -14,7 +14,7 @@ class DashboardController extends Controller
     public function admin()
     {
         $municipios = Municipio::orderBy('nombre')->pluck('nombre','id');
-        $capturistas = User::role('capturista')->orderBy('name')->get(['uuid','name']);
+        $capturistas = User::role(['capturista', 'capturista_programas'])->orderBy('name')->get(['uuid','name']);
         return view('roles.admin', compact('municipios','capturistas'));
     }
 
