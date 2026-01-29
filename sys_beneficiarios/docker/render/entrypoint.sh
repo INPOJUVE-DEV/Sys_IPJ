@@ -58,6 +58,9 @@ if [ -f artisan ]; then
   if [ "$RUN_MIGRATIONS" = "1" ]; then
     echo "== RUN_MIGRATIONS=1: running migrations =="
     php artisan migrate --force
+    echo "== RUN_MIGRATIONS=1: seeding roles only =="
+    php artisan db:seed --class=RoleSeeder --force
+    php artisan permission:cache-reset || true
   fi
 fi
 
