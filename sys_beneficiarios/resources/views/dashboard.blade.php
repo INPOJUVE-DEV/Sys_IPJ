@@ -59,7 +59,7 @@
                 ->groupBy('programa_id')
                 ->pluck('c', 'programa_id');
 
-            $capturistas = \App\Models\User::role('capturista')->orderBy('name')->get(['uuid', 'name']);
+            $capturistas = \App\Models\User::role(['capturista', 'capturista_programas'])->orderBy('name')->get(['uuid', 'name']);
             $capturistasByWeek = [];
             foreach ($weeks as $index => $range) {
                 $capturistasByWeek[$index] = \App\Models\Beneficiario::whereBetween('created_at', [$range['start'], $range['end']])

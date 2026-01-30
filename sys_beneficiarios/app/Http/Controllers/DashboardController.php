@@ -201,7 +201,7 @@ class DashboardController extends Controller
             ];
         }
 
-        $capturistas = User::role('capturista')
+        $capturistas = User::role(['capturista', 'capturista_programas'])
             ->orderBy('name')
             ->get(['uuid', 'name']);
 
