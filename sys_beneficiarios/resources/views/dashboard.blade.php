@@ -24,6 +24,15 @@
             $now = \Carbon\Carbon::now();
             $todayStart = $now->copy()->startOfDay();
             $weekStart = $now->copy()->startOfWeek();
+            $weeks = [];
+            for ($i = 3; $i >= 0; $i--) {
+                $start = $weekStart->copy()->subWeeks($i);
+                $weeks[] = [
+                    'start' => $start,
+                    'end' => $start->copy()->endOfWeek(),
+                    'label' => $start->format('Y-m-d'),
+                ];
+            }
 
             $ageMin = 17;
             $ageMax = 28;
@@ -49,6 +58,15 @@
                 ->selectRaw('programa_id, COUNT(*) as c')
                 ->groupBy('programa_id')
                 ->pluck('c', 'programa_id');
+
+            $capturistas = \App\Models\User::role('capturista')->orderBy('name')->get(['uuid', 'name']);
+            $capturistasByWeek = [];
+            foreach ($weeks as $index => $range) {
+                $capturistasByWeek[$index] = \App\Models\Beneficiario::whereBetween('created_at', [$range['start'], $range['end']])
+                    ->selectRaw('created_by, COUNT(*) as c')
+                    ->groupBy('created_by')
+                    ->pluck('c', 'created_by');
+            }
         @endphp
 
         <div class="row g-4">
@@ -181,6 +199,54 @@
                             <a class="btn btn-outline-primary w-100" href="{{ route('inscripciones.list', ['periodo' => $periodoActual]) }}">
                                 <i class="bi bi-box-arrow-up-right me-1"></i>{{ __('Ver inscripciones del mes') }}
                             </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12">
+                <div class="card shadow-sm h-100 text-dark border-0">
+                    <div class="card-body d-flex flex-column gap-3">
+                        <div>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h3 class="h5 fw-semibold text-primary mb-0">{{ __('Capturistas por semana') }}</h3>
+                                <span class="badge bg-primary text-white">{{ __('Ultimas 4 semanas') }}</span>
+                            </div>
+                            <p class="text-muted small mb-0">{{ __('Total de beneficiarios capturados por cada usuario.') }}</p>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-borderless mb-0">
+                                <thead>
+                                    <tr class="text-muted small">
+                                        <th>{{ __('Capturista') }}</th>
+                                        @foreach($weeks as $week)
+                                            <th class="text-end">{{ $week['label'] }}</th>
+                                        @endforeach
+                                        <th class="text-end">{{ __('Total') }}</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @forelse($capturistas as $capturista)
+                                        @php
+                                            $rowTotal = 0;
+                                        @endphp
+                                        <tr>
+                                            <td class="fw-semibold">{{ $capturista->name }}</td>
+                                            @foreach($weeks as $index => $week)
+                                                @php
+                                                    $value = (int) ($capturistasByWeek[$index][$capturista->uuid] ?? 0);
+                                                    $rowTotal += $value;
+                                                @endphp
+                                                <td class="text-end">{{ number_format($value) }}</td>
+                                            @endforeach
+                                            <td class="text-end fw-semibold">{{ number_format($rowTotal) }}</td>
+                                        </tr>
+                                    @empty
+                                        <tr>
+                                            <td colspan="{{ count($weeks) + 2 }}" class="text-center text-muted py-3">{{ __('Sin capturistas registrados') }}</td>
+                                        </tr>
+                                    @endforelse
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>

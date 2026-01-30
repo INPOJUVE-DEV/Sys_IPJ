@@ -56,6 +56,23 @@
             <div class="col-lg-6"><div class="card"><div class="card-header">Por capturista (Top 10)</div><div class="card-body"><canvas id="chartByCapturista" height="180"></canvas></div></div></div>
             <div class="col-lg-6"><div class="card"><div class="card-header">Esta semana</div><div class="card-body"><canvas id="chartWeek" height="180"></canvas></div></div></div>
             <div class="col-lg-12"><div class="card"><div class="card-header">Últimos 30 días</div><div class="card-body"><canvas id="chart30" height="200"></canvas></div></div></div>
+            <div class="col-lg-12">
+                <div class="card">
+                    <div class="card-header">Capturistas por semana</div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-sm table-striped align-middle mb-0" id="capturistasWeekTable">
+                                <thead></thead>
+                                <tbody>
+                                    <tr>
+                                        <td class="text-muted">Sin datos</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 

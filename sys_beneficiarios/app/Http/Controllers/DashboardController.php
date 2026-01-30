@@ -27,7 +27,7 @@ class DashboardController extends Controller
     public function adminKpis(Request $request)
     {
         $query = $this->applyFilters(Beneficiario::query(), $request);
-        return $this->buildKpis($query);
+        return $this->buildKpis($query, $request);
     }
 
     public function miProgresoKpis(Request $request)
@@ -73,22 +73,23 @@ class DashboardController extends Controller
         ]);
     }
 
-    protected function applyFilters($query, Request $request)
+    protected function applyFilters($query, Request $request, array $options = [])
     {
         $from = $request->filled('from') ? $request->date('from') : null;
         $to = $request->filled('to') ? $request->date('to') : null;
         if ($from && $to && $from->gt($to)) {
             [$from, $to] = [$to, $from];
         }
+        $ignoreCapturista = $options['ignoreCapturista'] ?? false;
         return $query
             ->when($request->filled('municipio_id'), fn($q)=>$q->where('beneficiarios.municipio_id', $request->input('municipio_id')))
             ->when($request->filled('seccional'), fn($q)=>$q->whereHas('seccion', fn($sq)=>$sq->where('seccional','like','%'.$request->input('seccional').'%')))
-            ->when($request->filled('capturista'), fn($q)=>$q->where('beneficiarios.created_by', $request->input('capturista')))
+            ->when(! $ignoreCapturista && $request->filled('capturista'), fn($q)=>$q->where('beneficiarios.created_by', $request->input('capturista')))
             ->when($from, fn($q)=>$q->whereDate('beneficiarios.created_at','>=', $from))
             ->when($to, fn($q)=>$q->whereDate('beneficiarios.created_at','<=', $to));
     }
 
-    protected function buildKpis($baseQuery)
+    protected function buildKpis($baseQuery, Request $request)
     {
         $now = Carbon::now();
         $startWeek = (clone $now)->startOfWeek();
@@ -158,6 +159,7 @@ class DashboardController extends Controller
             'today' => $today,
             'week' => $weekSeries,
             'last30Days' => $last30Series,
+            'capturistasWeekBoard' => $this->weeklyCapturistaBoard($request),
         ]);
     }
 
@@ -183,6 +185,53 @@ class DashboardController extends Controller
             'labels' => $labels,
             'data' => $data,
             'total' => array_sum($data),
+        ];
+    }
+
+    protected function weeklyCapturistaBoard(Request $request): array
+    {
+        $now = Carbon::now();
+        $start = (clone $now)->startOfWeek();
+        $weeks = [];
+        for ($i = 3; $i >= 0; $i--) {
+            $weekStart = (clone $start)->subWeeks($i);
+            $weeks[] = [
+                'start' => $weekStart,
+                'end' => (clone $weekStart)->endOfWeek(),
+            ];
+        }
+
+        $capturistas = User::role('capturista')
+            ->orderBy('name')
+            ->get(['uuid', 'name']);
+
+        $base = $this->applyFilters(Beneficiario::query(), $request, ['ignoreCapturista' => true]);
+        $countsByWeek = [];
+        foreach ($weeks as $index => $range) {
+            $countsByWeek[$index] = (clone $base)
+                ->whereBetween('beneficiarios.created_at', [$range['start'], $range['end']])
+                ->selectRaw('created_by, COUNT(*) as c')
+                ->groupBy('created_by')
+                ->pluck('c', 'created_by');
+        }
+
+        $rows = [];
+        foreach ($capturistas as $capturista) {
+            $counts = [];
+            foreach ($countsByWeek as $weekly) {
+                $counts[] = (int) ($weekly[$capturista->uuid] ?? 0);
+            }
+            $rows[] = [
+                'uuid' => $capturista->uuid,
+                'name' => $capturista->name,
+                'counts' => $counts,
+                'total' => array_sum($counts),
+            ];
+        }
+
+        return [
+            'labels' => array_map(fn ($week) => $week['start']->format('Y-m-d'), $weeks),
+            'rows' => $rows,
         ];
     }
 }

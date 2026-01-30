@@ -84,6 +84,7 @@ class InscripcionController extends Controller
             $inscripcion = DB::transaction(function () use ($request, $data) {
                 $dom = $request->input('domicilio', []);
                 $seccion = $this->resolveSeccionFromInput($dom);
+                $inputMunicipioId = $dom['municipio_id'] ?? null;
 
                 $beneficiario = Beneficiario::where('curp', $data['curp'])->first();
                 $payload = [
@@ -119,7 +120,7 @@ class InscripcionController extends Controller
                 }
 
                 $beneficiario->seccion()->associate($seccion);
-                $beneficiario->municipio_id = $seccion?->municipio_id;
+                $beneficiario->municipio_id = $seccion?->municipio_id ?? $inputMunicipioId;
                 $beneficiario->save();
 
                 $this->saveDomicilio($request, $beneficiario, $seccion);
@@ -228,9 +229,7 @@ class InscripcionController extends Controller
     {
         $seccion = SeccionResolver::resolve($domicilio['seccional'] ?? null);
         if (! $seccion) {
-            throw ValidationException::withMessages([
-                'domicilio.seccional' => 'La seccional no se encuentra en el catalogo.',
-            ]);
+            return null;
         }
 
         $inputMunicipioId = $domicilio['municipio_id'] ?? null;
