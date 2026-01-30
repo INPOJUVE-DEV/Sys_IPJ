@@ -155,6 +155,7 @@
                 <div class="form-text">Se rellena de acuerdo a la seccional detectada.</div>
                 @error('domicilio.municipio_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
             </div>
+            {{--
             <div class="col-md-4">
                 <label class="form-label">Distritos detectados</label>
                 <div class="bg-dark border border-white border-opacity-25 rounded-3 p-3 h-100" id="dom-seccional-summary">
@@ -164,6 +165,7 @@
                     <div class="fw-semibold" id="dom-seccional-distritos">-</div>
                 </div>
             </div>
+            --}}
         </div>
     </div>
 

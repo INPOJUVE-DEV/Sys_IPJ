@@ -27,6 +27,53 @@ function renderChart(ctxId, type, labels, data, options = {}) {
   return ch;
 }
 
+function createCell(tag, text, className) {
+  const cell = document.createElement(tag);
+  if (className) cell.className = className;
+  cell.textContent = text;
+  return cell;
+}
+
+function renderCapturistasWeekBoard(board) {
+  const table = document.getElementById('capturistasWeekTable');
+  if (!table || !board) return;
+  const thead = table.querySelector('thead');
+  const tbody = table.querySelector('tbody');
+  if (!thead || !tbody) return;
+
+  const labels = Array.isArray(board.labels) ? board.labels : [];
+  thead.innerHTML = '';
+  tbody.innerHTML = '';
+
+  const headRow = document.createElement('tr');
+  headRow.appendChild(createCell('th', 'Capturista'));
+  labels.forEach(label => headRow.appendChild(createCell('th', label, 'text-end')));
+  headRow.appendChild(createCell('th', 'Total', 'text-end'));
+  thead.appendChild(headRow);
+
+  if (!Array.isArray(board.rows) || board.rows.length === 0) {
+    const emptyRow = document.createElement('tr');
+    const cell = createCell('td', 'Sin datos', 'text-muted');
+    cell.colSpan = labels.length + 2;
+    emptyRow.appendChild(cell);
+    tbody.appendChild(emptyRow);
+    return;
+  }
+
+  board.rows.forEach(row => {
+    const tr = document.createElement('tr');
+    tr.appendChild(createCell('td', row.name || row.uuid || ''));
+    const counts = Array.isArray(row.counts) ? row.counts : [];
+    labels.forEach((_, idx) => {
+      const value = Number(counts[idx] ?? 0);
+      tr.appendChild(createCell('td', String(value), 'text-end'));
+    });
+    const total = typeof row.total === 'number' ? row.total : counts.reduce((acc, val) => acc + Number(val || 0), 0);
+    tr.appendChild(createCell('td', String(total), 'text-end fw-semibold'));
+    tbody.appendChild(tr);
+  });
+}
+
 async function renderKpis(url) {
   try {
     destroyCharts();
@@ -52,6 +99,7 @@ async function renderKpis(url) {
       if (data.byCapturista) renderChart('chartByCapturista', 'bar', data.byCapturista.labels, data.byCapturista.data, { label: 'Por capturista' });
       if (data.week) renderChart('chartWeek', 'line', data.week.labels, data.week.data, { label: 'Semana' });
       if (data.last30Days) renderChart('chart30', 'line', data.last30Days.labels, data.last30Days.data, { label: '30 días' });
+      if (data.capturistasWeekBoard) renderCapturistasWeekBoard(data.capturistasWeekBoard);
     } else {
       // Capturista personal
       setText('kpiToday', data.today);
