@@ -4,11 +4,27 @@ services:
       context: ./sys_beneficiarios
       dockerfile: Dockerfile
     container_name: sys_beneficiarios_app
+    environment:
+      OCR_INE_SERVICE_URL: http://ocr-ine:8001
+      OCR_INE_API_KEY: ${OCR_INE_API_KEY:-change-me-in-production}
     volumes:
       - ./sys_beneficiarios:/var/www/html
       # Isolar dirs de escritura a volúmenes nombrados
       - storage_data:/var/www/html/storage
       - cache_data:/var/www/html/bootstrap/cache
+    restart: unless-stopped
+    networks:
+      - backend
+
+  ocr-ine:
+    build:
+      context: ./OCR_INE
+      dockerfile: Dockerfile
+    container_name: sys_beneficiarios_ocr_ine
+    environment:
+      API_KEY: ${OCR_INE_API_KEY:-change-me-in-production}
+    ports:
+      - "8001:8001"
     restart: unless-stopped
     networks:
       - backend

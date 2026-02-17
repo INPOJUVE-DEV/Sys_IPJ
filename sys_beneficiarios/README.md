@@ -22,6 +22,8 @@ Revisa en `.env` (valores por defecto para Docker):
 - `DB_DATABASE=sys_beneficiarios`
 - `DB_USERNAME=app`
 - `DB_PASSWORD=TuClaveSegura123!`
+- `OCR_INE_SERVICE_URL=http://localhost:8001` (si ejecutas Laravel fuera de Docker)
+- `OCR_INE_API_KEY=` (opcional en local; recomendado definir en ambientes compartidos)
 > La base de datos corre fuera de Docker; actualiza estos valores con el host externo que recibas.
 
 2) Levanta contenedores desde la raíz del repo:
@@ -51,9 +53,14 @@ docker compose exec node npm run build
 
 Servicios en Docker:
 - `app`: PHP-FPM 8.3 (Laravel)
+- `ocr-ine`: FastAPI + Tesseract en puerto `8001` (OCR INE)
 - `nginx`: sirve `public/` en puerto 80
 - `bd externa`: conexi�n al MySQL remoto configurado en el `.env`
 - `node`: Node 20 para Vite
+
+Nota OCR en Docker:
+- El contenedor `app` apunta automaticamente a `http://ocr-ine:8001` mediante variables de entorno de `docker-compose.yml`.
+- Si ejecutas Laravel directamente en host (sin contenedor), usa `OCR_INE_SERVICE_URL=http://localhost:8001`.
 
 ## Catálogos (Municipios y Secciones)
 

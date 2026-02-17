@@ -35,4 +35,10 @@ return [
         ],
     ],
 
+    'ocr_ine' => [
+        'url'     => env('OCR_INE_SERVICE_URL', 'http://localhost:8001'),
+        'api_key' => env('OCR_INE_API_KEY', ''),
+        'timeout' => 15,
+    ],
+
 ];

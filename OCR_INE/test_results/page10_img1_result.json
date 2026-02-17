@@ -1,0 +1,87 @@
+{
+  "model_id": "MODEL_UNKNOWN",
+  "beneficiarios": {
+    "nombre": {
+      "value": "O E A",
+      "confidence": 0.733,
+      "requires_review": false
+    },
+    "apellido_paterno": {
+      "value": "SS SS SXIOOXIXASSTOSSSSSS",
+      "confidence": 0.733,
+      "requires_review": false
+    },
+    "apellido_materno": {
+      "value": "O",
+      "confidence": 0.348,
+      "requires_review": true
+    },
+    "curp": {
+      "value": null,
+      "confidence": 0.0,
+      "requires_review": true
+    },
+    "fecha_nacimiento": {
+      "value": null,
+      "confidence": 0.0,
+      "requires_review": true
+    },
+    "sexo": {
+      "value": null,
+      "confidence": 0.0,
+      "requires_review": true
+    },
+    "id_ine": {
+      "value": null,
+      "confidence": 0.0,
+      "requires_review": true
+    }
+  },
+  "domicilio": {
+    "calle": {
+      "value": "IN RSE AIROSO",
+      "confidence": 0.651,
+      "requires_review": false
+    },
+    "colonia": {
+      "value": null,
+      "confidence": 0.0,
+      "requires_review": true
+    },
+    "codigo_postal": {
+      "value": null,
+      "confidence": 0.0,
+      "requires_review": true
+    },
+    "seccional": {
+      "value": null,
+      "confidence": 0.0,
+      "requires_review": true
+    }
+  },
+  "quality": {
+    "front": {
+      "blur": 1.0,
+      "glare": 0.616,
+      "exposure": 0.755,
+      "perspective_ok": false,
+      "quality_grade": "good"
+    },
+    "back": {
+      "blur": 1.0,
+      "glare": 0.381,
+      "exposure": 1.0,
+      "perspective_ok": true,
+      "quality_grade": "good"
+    }
+  },
+  "warnings": [
+    "front_high_glare",
+    "back_high_glare",
+    "model_unknown",
+    "time_budget_exceeded",
+    "id_ine_not_found"
+  ],
+  "processing_ms": 9675,
+  "attempts": 2
+}
