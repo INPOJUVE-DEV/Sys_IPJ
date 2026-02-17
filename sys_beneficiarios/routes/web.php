@@ -53,7 +53,7 @@ Route::middleware(['auth','role:capturista'])->group(function () {
     Route::get('/capturista', [DashboardController::class, 'capturista'])->name('capturista.home');
     // KPIs capturista consistente bajo /capturista/kpis
     Route::get('/capturista/kpis', [DashboardController::class, 'miProgresoKpis'])->name('capturista.kpis');
-    // RedirecciÃ³n de compatibilidad desde ruta anterior
+    // Redirección de compatibilidad desde ruta anterior
     // REDIRECT DISABLED
 
     // Mis registros (solo capturista)
@@ -96,7 +96,7 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
-// Admin: gestiÃ³n de usuarios
+// Admin: gestión de usuarios
 Route::middleware(['auth','role:admin'])->prefix('admin')->name('admin.')->group(function () {
     Route::resource('usuarios', UserController::class)->parameters(['usuarios' => 'usuario']);
 

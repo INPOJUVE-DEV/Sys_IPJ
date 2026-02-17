@@ -1,4 +1,4 @@
-# Sys IPJ 2025 — Módulo Beneficiarios
+# Sys IPJ 2025 - Módulo Beneficiarios
 
 Aplicación Laravel 11 para la gestión y registro de beneficiarios, con autenticación (Breeze), roles (Spatie Permission), paneles con KPIs y carga de catálogos (municipios y secciones). Se ejecuta en Docker (PHP-FPM + Nginx + Node).
 
@@ -55,7 +55,7 @@ Servicios en Docker:
 - `app`: PHP-FPM 8.3 (Laravel)
 - `ocr-ine`: FastAPI + Tesseract en puerto `8001` (OCR INE)
 - `nginx`: sirve `public/` en puerto 80
-- `bd externa`: conexi�n al MySQL remoto configurado en el `.env`
+- `bd externa`: conexión al MySQL remoto configurado en el `.env`
 - `node`: Node 20 para Vite
 
 Nota OCR en Docker:
@@ -166,7 +166,7 @@ docker compose exec app php artisan test
 - Import wizard con validaciones y "dry-run".
 - Endpoints API autenticados por token (solo lectura).
 
-### 0.1.0 — Base inicial
+### 0.1.0 - Base inicial
 - Autenticación con Breeze y roles con Spatie Permission.
 - CRUDs base de beneficiarios y domicilios.
 - Paneles y KPIs por rol (admin, encargado, capturista).
@@ -180,7 +180,7 @@ Proyecto interno del equipo. Uso restringido según políticas vigentes.
 ## API REST /api/v1
 
 ### Setup local
-1. Duplicar `.env.example` a `.env` y definir `APP_URL`, variables `DB_*`, `SANCTUM_STATEFUL_DOMAINS` y los or�genes `APP_IPJ_URL` / `APP_IPJ_PROD_URL`.
+1. Duplicar `.env.example` a `.env` y definir `APP_URL`, variables `DB_*`, `SANCTUM_STATEFUL_DOMAINS` y los orígenes `APP_IPJ_URL` / `APP_IPJ_PROD_URL`.
 2. Instalar dependencias de backend y frontend: `composer install` y `npm install`.
 3. Generar clave y cargar base de datos:
    - `php artisan key:generate`
@@ -191,19 +191,19 @@ Proyecto interno del equipo. Uso restringido según políticas vigentes.
    - `php artisan migrate`
 5. Ejecutar pruebas con Pest: `./vendor/bin/pest`.
 
-### Est�ndares de c�digo
-- PSR-12 y gu�as de Laravel: ejecutar `./vendor/bin/pint` antes de subir cambios.
-- Organizaci�n de carpetas:
-  - `app/Http/Controllers/Auth` para endpoints de autenticaci�n REST.
+### Estándares de código
+- PSR-12 y guías de Laravel: ejecutar `./vendor/bin/pint` antes de subir cambios.
+- Organización de carpetas:
+  - `app/Http/Controllers/Auth` para endpoints de autenticación REST.
   - `app/Http/Middleware` para cross-cutting concerns (ProblemJson, ETag, AccessLog).
   - `app/Http/Requests` para validaciones.
   - `app/Policies` y `app/Providers` para policies y gates.
-  - `app/Services` reservado para l�gica de dominio reusable.
-- Rutas en kebab-case (`beneficiarios.index`), clases en StudlyCase y m�todos en camelCase.
+  - `app/Services` reservado para lógica de dominio reusable.
+- Rutas en kebab-case (`beneficiarios.index`), clases en StudlyCase y métodos en camelCase.
 
 ### Comportamiento clave
-- `GET /api/v1/health` ? `200` + body `{ "status": "ok" }` con cabecera `ETag`.
-- `POST /api/v1/auth/login` ? `200` con token personal Sanctum (`token_type: Bearer`).
-- `POST /api/v1/auth/logout` ? `204` invalidando el token actual.
-- Errores de validaci�n devuelven `422` en formato `application/problem+json`.
+- `GET /api/v1/health` -> `200` + body `{ "status": "ok" }` con cabecera `ETag`.
+- `POST /api/v1/auth/login` -> `200` con token personal Sanctum (`token_type: Bearer`).
+- `POST /api/v1/auth/logout` -> `204` invalidando el token actual.
+- Errores de validación devuelven `422` en formato `application/problem+json`.
 - Respuestas JSON cacheables incluyen `ETag` y respetan `If-None-Match` devolviendo `304` cuando aplica.

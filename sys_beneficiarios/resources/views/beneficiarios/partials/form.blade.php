@@ -11,7 +11,7 @@
         'sexo' => 'Sexo',
         'discapacidad' => 'Discapacidad',
         'id_ine' => 'ID INE',
-        'telefono' => 'TelÃ©fono',
+        'telefono' => 'Teléfono',
         'domicilio.calle' => 'Calle',
         'domicilio.numero_ext' => 'Numero exterior',
         'domicilio.numero_int' => 'Numero interior',
@@ -153,10 +153,10 @@
             <div class="ocr-scan-bar d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
                 <div>
                     <i class="bi bi-camera fs-5 text-primary me-1"></i>
-                    <span class="fw-semibold">Â¿Tienes la INE a la mano?</span>
+                    <span class="fw-semibold">¿Tienes la INE a la mano?</span>
                     <span class="text-muted small ms-1">Escanea para pre-llenar el formulario.</span>
                 </div>
-                <button type="button" class="btn btn-primary btn-sm" id="btnEscanearIne" data-bs-toggle="modal"
+                <button type="button" class="btn btn-primary btn-sm d-none" id="btnEscanearIne" data-bs-toggle="modal"
                     data-bs-target="#ocrIneModal">
                     <i class="bi bi-upc-scan me-1"></i>Escanear INE
                 </button>
@@ -171,6 +171,14 @@
                     class="form-control @error('folio_tarjeta') is-invalid @enderror" required>
                 @error('folio_tarjeta')<div class="invalid-feedback">{{ $message }}</div>@enderror
             </div>
+            @if(($mode ?? 'create') === 'create')
+                <div class="col-md-4">
+                    <label for="telefono" class="form-label">Teléfono (10 dígitos)</label>
+                    <input id="telefono" name="telefono" value="{{ old('telefono', $b->telefono ?? '') }}"
+                        class="form-control @error('telefono') is-invalid @enderror" required>
+                    @error('telefono')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                </div>
+            @endif
             <div class="col-md-4">
                 <label for="nombre" class="form-label">Nombre</label>
                 <input id="nombre" name="nombre" value="{{ old('nombre', $b->nombre ?? '') }}"
@@ -227,18 +235,14 @@
                     <label for="discapacidad" class="form-check-label">Discapacidad</label>
                 </div>
             </div>
-            <div class="col-md-3">
-                <label for="id_ine" class="form-label">ID INE</label>
-                <input id="id_ine" name="id_ine" value="{{ old('id_ine', $b->id_ine ?? '') }}"
-                    class="form-control @error('id_ine') is-invalid @enderror" required>
-                @error('id_ine')<div class="invalid-feedback">{{ $message }}</div>@enderror
-            </div>
-            <div class="col-md-3">
-                <label for="telefono" class="form-label">TelÃ©fono (10 dÃ­gitos)</label>
-                <input id="telefono" name="telefono" value="{{ old('telefono', $b->telefono ?? '') }}"
-                    class="form-control @error('telefono') is-invalid @enderror" required>
-                @error('telefono')<div class="invalid-feedback">{{ $message }}</div>@enderror
-            </div>
+            @if(($mode ?? 'create') !== 'create')
+                <div class="col-md-3">
+                    <label for="telefono" class="form-label">Teléfono (10 dígitos)</label>
+                    <input id="telefono" name="telefono" value="{{ old('telefono', $b->telefono ?? '') }}"
+                        class="form-control @error('telefono') is-invalid @enderror" required>
+                    @error('telefono')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                </div>
+            @endif
         </div>
     </div>
 
@@ -253,14 +257,14 @@
                 @error('domicilio.calle')<div class="invalid-feedback">{{ $message }}</div>@enderror
             </div>
             <div class="col-md-2">
-                <label for="domicilio_numero_ext" class="form-label">NÃºmero ext</label>
+                <label for="domicilio_numero_ext" class="form-label">Número ext</label>
                 <input id="domicilio_numero_ext" name="domicilio[numero_ext]"
                     value="{{ old('domicilio.numero_ext', $domicilio->numero_ext ?? '') }}"
                     class="form-control @error('domicilio.numero_ext') is-invalid @enderror">
                 @error('domicilio.numero_ext')<div class="invalid-feedback">{{ $message }}</div>@enderror
             </div>
             <div class="col-md-2">
-                <label for="domicilio_numero_int" class="form-label">NÃºmero int</label>
+                <label for="domicilio_numero_int" class="form-label">Número int</label>
                 <input id="domicilio_numero_int" name="domicilio[numero_int]"
                     value="{{ old('domicilio.numero_int', $domicilio->numero_int ?? '') }}"
                     class="form-control @error('domicilio.numero_int') is-invalid @enderror">
@@ -279,6 +283,13 @@
                     value="{{ old('domicilio.codigo_postal', $domicilio->codigo_postal ?? '') }}"
                     class="form-control @error('domicilio.codigo_postal') is-invalid @enderror">
                 @error('domicilio.codigo_postal')<div class="invalid-feedback">{{ $message }}</div>@enderror
+            </div>
+            <div class="col-md-4">
+                <label for="id_ine" class="form-label">ID INE</label>
+                <input id="id_ine" name="id_ine" value="{{ old('id_ine', $b->id_ine ?? '') }}"
+                    class="form-control @error('id_ine') is-invalid @enderror" required>
+                <div class="form-text">Los primeros 4 dígitos se sincronizan con la seccional.</div>
+                @error('id_ine')<div class="invalid-feedback">{{ $message }}</div>@enderror
             </div>
             <div class="col-md-4">
                 <label for="dom-seccional" class="form-label">Seccional</label>
@@ -330,18 +341,18 @@
                         aria-label="Cerrar"></button>
                 </div>
                 <div class="modal-body">
-                    <p class="text-muted small mb-3">Se intentarÃ¡ abrir la cÃ¡mara automÃ¡ticamente. Alinea la INE en el
-                        recuadro y captura <strong>frente</strong> + <strong>reverso</strong>. TambiÃ©n puedes subir
+                    <p class="text-muted small mb-3">Se intentará abrir la cámara automáticamente. Alinea la INE en el
+                        recuadro y captura <strong>frente</strong> + <strong>reverso</strong>. También puedes subir
                         archivos manualmente.</p>
                     <div class="border border-secondary rounded-3 p-3 mb-3">
                         <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
-                            <div class="small text-muted">Usa el recuadro como guÃ­a para mejorar la captura.</div>
+                            <div class="small text-muted">Usa el recuadro como guía para mejorar la captura.</div>
                             <div class="d-flex gap-2">
                                 <button type="button" class="btn btn-outline-light btn-sm" id="btnOcrSwitchCamera">
-                                    <i class="bi bi-arrow-repeat me-1"></i>Cambiar cÃ¡mara
+                                    <i class="bi bi-arrow-repeat me-1"></i>Cambiar cámara
                                 </button>
                                 <button type="button" class="btn btn-outline-light btn-sm d-none" id="btnOcrStartCamera">
-                                    <i class="bi bi-camera-video me-1"></i>Abrir cÃ¡mara
+                                    <i class="bi bi-camera-video me-1"></i>Abrir cámara
                                 </button>
                                 <button type="button" class="btn btn-outline-secondary btn-sm" id="btnOcrStopCamera">
                                     <i class="bi bi-pause-circle me-1"></i>Pausar
@@ -469,6 +480,7 @@
             updateStep();
 
             const secc = document.getElementById('dom-seccional');
+            const idIne = document.getElementById('id_ine');
             if (window.beneficiarioWizardShouldReset && form) {
                 form.reset();
                 currentStep = 0;
@@ -483,9 +495,31 @@
             const seccMunicipio = document.getElementById('dom-seccional-muni');
             const seccDistritos = document.getElementById('dom-seccional-distritos');
             if (secc) {
+                const firstFourDigits = (value) => (value || '').replace(/\D/g, '').slice(0, 4);
+                const syncSeccionalFromIdIne = () => {
+                    const pref = firstFourDigits(idIne?.value);
+                    if (pref.length < 4 || secc.value === pref) return;
+                    secc.value = pref;
+                    secc.dispatchEvent(new Event('input', { bubbles: true }));
+                };
+                const syncIdIneFromSeccional = () => {
+                    if (!idIne) return;
+                    const pref = firstFourDigits(secc.value);
+                    if (pref.length < 4) return;
+                    const current = (idIne.value || '').trim();
+                    if (!current) {
+                        idIne.value = pref;
+                        idIne.dispatchEvent(new Event('input', { bubbles: true }));
+                        return;
+                    }
+                    if (current.slice(0, 4) !== pref) {
+                        idIne.value = `${pref}${current.slice(4)}`;
+                        idIne.dispatchEvent(new Event('input', { bubbles: true }));
+                    }
+                };
                 const renderSummary = (municipio = '-', dl = '-', df = '-') => {
                     if (seccMunicipio) seccMunicipio.textContent = municipio || '-';
-                    if (seccDistritos) seccDistritos.textContent = `DL: ${dl || '--'} Â· DF: ${df || '--'}`;
+                    if (seccDistritos) seccDistritos.textContent = `DL: ${dl || '--'} · DF: ${df || '--'}`;
                 };
                 const toggleSummaryState = (hasData) => {
                     seccCard?.classList.toggle('border-success', !!hasData);
@@ -515,9 +549,19 @@
                     } catch (_) { clearData(); }
                 };
                 const debouncedFetch = debounced(fetchDistritos, 400);
+                idIne?.addEventListener('input', syncSeccionalFromIdIne);
                 secc.addEventListener('input', (e) => debouncedFetch(e.target.value));
-                secc.addEventListener('change', (e) => fetchDistritos(e.target.value));
-                secc.addEventListener('blur', (e) => fetchDistritos(e.target.value));
+                secc.addEventListener('change', (e) => {
+                    syncIdIneFromSeccional();
+                    fetchDistritos(e.target.value);
+                });
+                secc.addEventListener('blur', (e) => {
+                    syncIdIneFromSeccional();
+                    fetchDistritos(e.target.value);
+                });
+                if (idIne?.value) {
+                    syncSeccionalFromIdIne();
+                }
                 if (secc.value) {
                     fetchDistritos(secc.value);
                 } else {

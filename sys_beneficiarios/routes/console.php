@@ -7,18 +7,18 @@ Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
-// Utilidad para detectar artefactos de codificación sospechosos en el código fuente
+// Utilidad para detectar artefactos de codificacion sospechosos en el codigo fuente
 Artisan::command('scan:encoding {--path= : Ruta base a escanear (por defecto, base_path())} {--all : Incluir vendor/node_modules/storage/etc}', function () {
     $base = $this->option('path') ?: base_path();
-    // Patrones comunes de mojibake en español
+    // Patrones comunes de mojibake en espanol
     $patterns = [
-        '�',        // Unicode replacement char
-        'Ã',        // Indicativo de UTF-8 mal interpretado (Ã¡, Ã³, etc.)
-        'dA-as',    // "días" roto
-        'Asltimos', // "Últimos" roto
-        'TelA',     // "Teléfono" roto
-        'NA�mero',  // "Número" roto
-        'CatA',     // "Catálogos" roto
+        "\u{FFFD}",                // Unicode replacement char
+        "\u{00C3}",                // Indicativo de UTF-8 mal interpretado (acento roto)
+        "d\u{00C3}\u{00AD}as",     // "dias" roto
+        "\u{00C3}\u{009A}ltimos",  // "Ultimos" roto
+        "Tel\u{00C3}\u{00A9}fono", // "Telefono" roto
+        "N\u{00C3}\u{00BA}mero",   // "Numero" roto
+        "Cat\u{00C3}\u{00A1}logos",// "Catalogos" roto
     ];
     $exts = ['php','blade.php','js','ts','css','scss','json','md','yml','yaml'];
     $excludeDirs = $this->option('all') ? [] : [
@@ -65,7 +65,7 @@ Artisan::command('scan:encoding {--path= : Ruta base a escanear (por defecto, ba
     $this->info("Scanned $files files under $base. Hits: $hits" . ($excludeDirs ? ", skipped: $skipped" : ""));
 })->purpose('Scan source files for suspicious encoding artifacts');
 
-// Comando simple para importar catálogos (CSV / SQL)
+// Comando simple para importar catalogos (CSV / SQL)
 Artisan::command('catalogos:import {--path=} {--sql=} {--fresh}', function () {
     $path = $this->option('path') ?: database_path('seeders/data');
     $sql = $this->option('sql');
