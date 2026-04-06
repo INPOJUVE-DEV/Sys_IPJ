@@ -19,6 +19,7 @@ class Beneficiario extends Model
     protected $fillable = [
         'id',
         'folio_tarjeta',
+        'tarjeta_id',
         'nombre',
         'apellido_paterno',
         'apellido_materno',
@@ -69,6 +70,11 @@ class Beneficiario extends Model
         return $this->belongsTo(User::class, 'created_by', 'uuid');
     }
 
+    public function tarjeta()
+    {
+        return $this->belongsTo(Tarjeta::class);
+    }
+
     public function municipio()
     {
         return $this->belongsTo(Municipio::class);
@@ -87,6 +93,11 @@ class Beneficiario extends Model
     public function inscripciones()
     {
         return $this->hasMany(Inscripcion::class);
+    }
+
+    public function protecciones()
+    {
+        return $this->hasMany(Proteccion::class);
     }
 
 }

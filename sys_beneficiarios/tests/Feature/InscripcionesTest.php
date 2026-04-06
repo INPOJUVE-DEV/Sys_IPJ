@@ -5,8 +5,10 @@ namespace Tests\Feature;
 use App\Models\Beneficiario;
 use App\Models\Inscripcion;
 use App\Models\Municipio;
+use App\Models\Oficina;
 use App\Models\Programa;
 use App\Models\Seccion;
+use App\Models\Tarjeta;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
@@ -20,15 +22,40 @@ class InscripcionesTest extends TestCase
     {
         parent::setUp();
         $this->seed(\Database\Seeders\RoleSeeder::class);
+        $this->seed(\Database\Seeders\OficinaSeeder::class);
     }
 
-    protected function makeSeccion(): Seccion
+    protected function makeOfficeAndSeccion(int $clave = 1, string $seccional = '0001'): array
     {
-        $mun = Municipio::firstOrCreate(['clave' => 1], ['nombre' => 'Test']);
-        return Seccion::firstOrCreate(
-            ['seccional' => '0001'],
+        $office = Oficina::where('tipo', Oficina::TIPO_DELEGACION)->orderBy('id')->firstOrFail();
+        $mun = Municipio::updateOrCreate(
+            ['clave' => $clave],
+            ['nombre' => 'Test '.$clave, 'oficina_id' => $office->id]
+        );
+        $seccion = Seccion::updateOrCreate(
+            ['seccional' => $seccional],
             ['municipio_id' => $mun->id, 'distrito_local' => 'DL', 'distrito_federal' => 'DF']
         );
+
+        return [$office, $seccion];
+    }
+
+    protected function makeCapturista(Oficina $office): User
+    {
+        $user = User::factory()->create(['oficina_id' => $office->id]);
+        $user->assignRole('capturista');
+
+        return $user;
+    }
+
+    protected function createCard(Oficina $office, string $folio): Tarjeta
+    {
+        return Tarjeta::create([
+            'id' => (string) Str::uuid(),
+            'folio' => $folio,
+            'estatus' => Tarjeta::STATUS_ASIGNADA_OFICINA,
+            'oficina_id' => $office->id,
+        ]);
     }
 
     protected function basePayload(Programa $programa, Seccion $seccion, array $overrides = []): array
@@ -60,10 +87,8 @@ class InscripcionesTest extends TestCase
 
     public function test_capturista_can_register_inscripcion_without_folio(): void
     {
-        $user = User::factory()->create();
-        $user->assignRole('capturista');
-
-        $seccion = $this->makeSeccion();
+        [$office, $seccion] = $this->makeOfficeAndSeccion();
+        $user = $this->makeCapturista($office);
         $programa = Programa::create([
             'nombre' => 'Cabina de grabacion',
             'slug' => 'cabina-de-grabacion',
@@ -93,10 +118,8 @@ class InscripcionesTest extends TestCase
 
     public function test_duplicate_inscripcion_is_rejected(): void
     {
-        $user = User::factory()->create();
-        $user->assignRole('capturista');
-
-        $seccion = $this->makeSeccion();
+        [$office, $seccion] = $this->makeOfficeAndSeccion();
+        $user = $this->makeCapturista($office);
         $programa = Programa::create([
             'nombre' => 'Club de tareas',
             'slug' => 'club-de-tareas',
@@ -116,12 +139,50 @@ class InscripcionesTest extends TestCase
             ->assertSessionHasErrors('periodo');
     }
 
+    public function test_capturista_can_consume_inventory_card_during_inscripcion(): void
+    {
+        [$office, $seccion] = $this->makeOfficeAndSeccion(2, '0002');
+        $user = $this->makeCapturista($office);
+        $this->createCard($office, 'TAR-0002');
+
+        $programa = Programa::create([
+            'nombre' => 'Laboratorio creativo',
+            'slug' => 'laboratorio-creativo',
+            'tipo_periodo' => 'mensual',
+            'renovable' => false,
+            'activo' => true,
+        ]);
+
+        $payload = $this->basePayload($programa, $seccion, [
+            'folio_tarjeta' => 'TAR-0002',
+            'curp' => 'LODA000101MDFLRNB3',
+            'id_ine' => 'INE789',
+        ]);
+
+        $this->actingAs($user)
+            ->post(route('inscripciones.store'), $payload)
+            ->assertSessionHasNoErrors()
+            ->assertRedirect(route('inscripciones.index'));
+
+        $beneficiario = Beneficiario::where('curp', 'LODA000101MDFLRNB3')->first();
+        $this->assertNotNull($beneficiario);
+        $this->assertSame('TAR-0002', $beneficiario->folio_tarjeta);
+        $this->assertNotNull($beneficiario->tarjeta_id);
+
+        $this->assertDatabaseHas('tarjetas', [
+            'id' => $beneficiario->tarjeta_id,
+            'folio' => 'TAR-0002',
+            'estatus' => Tarjeta::STATUS_CONSUMIDA,
+            'beneficiario_id' => $beneficiario->id,
+        ]);
+    }
+
     public function test_dashboard_kpis_use_periodo(): void
     {
         $admin = User::factory()->create();
         $admin->assignRole('admin');
 
-        $seccion = $this->makeSeccion();
+        [, $seccion] = $this->makeOfficeAndSeccion();
         $programa = Programa::create([
             'nombre' => 'Clases de guitarra',
             'slug' => 'clases-de-guitarra',

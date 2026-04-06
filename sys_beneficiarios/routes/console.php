@@ -1,5 +1,6 @@
 <?php
 
+use App\Services\CatalogoCsvSyncService;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 
@@ -10,17 +11,16 @@ Artisan::command('inspire', function () {
 // Utilidad para detectar artefactos de codificacion sospechosos en el codigo fuente
 Artisan::command('scan:encoding {--path= : Ruta base a escanear (por defecto, base_path())} {--all : Incluir vendor/node_modules/storage/etc}', function () {
     $base = $this->option('path') ?: base_path();
-    // Patrones comunes de mojibake en espanol
     $patterns = [
-        "\u{FFFD}",                // Unicode replacement char
-        "\u{00C3}",                // Indicativo de UTF-8 mal interpretado (acento roto)
-        "d\u{00C3}\u{00AD}as",     // "dias" roto
-        "\u{00C3}\u{009A}ltimos",  // "Ultimos" roto
-        "Tel\u{00C3}\u{00A9}fono", // "Telefono" roto
-        "N\u{00C3}\u{00BA}mero",   // "Numero" roto
-        "Cat\u{00C3}\u{00A1}logos",// "Catalogos" roto
+        "\u{FFFD}",
+        "\u{00C3}",
+        "d\u{00C3}\u{00AD}as",
+        "\u{00C3}\u{009A}ltimos",
+        "Tel\u{00C3}\u{00A9}fono",
+        "N\u{00C3}\u{00BA}mero",
+        "Cat\u{00C3}\u{00A1}logos",
     ];
-    $exts = ['php','blade.php','js','ts','css','scss','json','md','yml','yaml'];
+    $exts = ['php', 'blade.php', 'js', 'ts', 'css', 'scss', 'json', 'md', 'yml', 'yaml'];
     $excludeDirs = $this->option('all') ? [] : [
         DIRECTORY_SEPARATOR.'vendor'.DIRECTORY_SEPARATOR,
         DIRECTORY_SEPARATOR.'node_modules'.DIRECTORY_SEPARATOR,
@@ -30,49 +30,80 @@ Artisan::command('scan:encoding {--path= : Ruta base a escanear (por defecto, ba
         DIRECTORY_SEPARATOR.'.git'.DIRECTORY_SEPARATOR,
     ];
     $rii = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($base, \FilesystemIterator::SKIP_DOTS));
-    $hits = 0; $files = 0; $skipped = 0;
+    $hits = 0;
+    $files = 0;
+    $skipped = 0;
+
     foreach ($rii as $file) {
-        if (!$file->isFile()) continue;
+        if (! $file->isFile()) {
+            continue;
+        }
+
         $name = $file->getFilename();
         $path = $file->getPathname();
-        // Excluir rutas no relevantes por defecto
         $skip = false;
-        foreach ($excludeDirs as $ex) {
-            if (str_contains($path, $ex)) { $skip = true; break; }
+
+        foreach ($excludeDirs as $exclude) {
+            if (str_contains($path, $exclude)) {
+                $skip = true;
+                break;
+            }
         }
-        // Evitar auto-reportarse por contener patrones en este archivo
-        if (!$skip && str_contains($path, DIRECTORY_SEPARATOR.'routes'.DIRECTORY_SEPARATOR.'console.php')) {
+
+        if (! $skip && str_contains($path, DIRECTORY_SEPARATOR.'routes'.DIRECTORY_SEPARATOR.'console.php')) {
             $skip = true;
         }
-        if ($skip) { $skipped++; continue; }
+
+        if ($skip) {
+            $skipped++;
+            continue;
+        }
+
         $lower = strtolower($name);
         $ok = false;
-        foreach ($exts as $e) {
-            if (str_ends_with($lower, $e)) { $ok = true; break; }
+        foreach ($exts as $ext) {
+            if (str_ends_with($lower, $ext)) {
+                $ok = true;
+                break;
+            }
         }
-        if (!$ok) continue;
+
+        if (! $ok) {
+            continue;
+        }
+
         $files++;
         $content = @file_get_contents($path);
-        if ($content === false) continue;
-        foreach ($patterns as $p) {
-            if (str_contains($content, $p)) {
-                $this->line("[hit] $path contains '$p'");
+        if ($content === false) {
+            continue;
+        }
+
+        foreach ($patterns as $pattern) {
+            if (str_contains($content, $pattern)) {
+                $this->line("[hit] $path contains '$pattern'");
                 $hits++;
-                break; // report file once
+                break;
             }
         }
     }
-    $this->info("Scanned $files files under $base. Hits: $hits" . ($excludeDirs ? ", skipped: $skipped" : ""));
+
+    $this->info("Scanned $files files under $base. Hits: $hits".($excludeDirs ? ", skipped: $skipped" : ''));
 })->purpose('Scan source files for suspicious encoding artifacts');
 
-// Comando simple para importar catalogos (CSV / SQL)
-Artisan::command('catalogos:import {--path=} {--sql=} {--fresh}', function () {
-    $path = $this->option('path') ?: database_path('seeders/data');
+// Sincronizacion de catalogos (CSV / SQL)
+Artisan::command('catalogos:import {--path=} {--municipios=} {--secciones=} {--sql=} {--fresh} {--prune} {--dry-run}', function (CatalogoCsvSyncService $service) {
+    $path = $this->option('path') ?: config('catalogos.path', database_path('seeders/data'));
+    $municipios = $this->option('municipios') ?: config('catalogos.municipios_file', 'municipios.csv');
+    $secciones = $this->option('secciones') ?: config('catalogos.secciones_file', 'secciones.csv');
     $sql = $this->option('sql');
-    $fresh = (bool)$this->option('fresh');
+    $fresh = (bool) $this->option('fresh');
+    $prune = (bool) $this->option('prune');
+    $dryRun = (bool) $this->option('dry-run');
 
-    $this->info('Importando catálogos');
+    $this->info('Importando catalogos');
     $this->line('Ruta CSV: '.$path);
+    $this->line('Archivo municipios: '.$municipios);
+    $this->line('Archivo secciones: '.$secciones);
 
     if ($fresh) {
         $this->warn('Fresh: limpiando tablas municipios y secciones...');
@@ -85,92 +116,94 @@ Artisan::command('catalogos:import {--path=} {--sql=} {--fresh}', function () {
         $sqlContents = @file_get_contents($sql);
         if ($sqlContents === false) {
             $this->error('No se pudo leer el archivo SQL');
+
             return 1;
         }
         \Illuminate\Support\Facades\DB::unprepared($sqlContents);
     }
 
-    config(['catalogos.path' => $path]);
-    $this->info('Ejecutando CatalogosSeeder...');
-    \Illuminate\Support\Facades\Artisan::call('db:seed', [
-        '--class' => \Database\Seeders\CatalogosSeeder::class,
-        '--force' => true,
+    $stats = $service->sync([
+        'base_path' => $path,
+        'municipios_file' => $municipios,
+        'secciones_file' => $secciones,
+        'prune' => $prune,
+        'dry_run' => $dryRun,
     ]);
-    $this->line(\Illuminate\Support\Facades\Artisan::output());
 
-    $this->info('Importación finalizada');
+    $this->info(($dryRun ? 'Validacion' : 'Sincronizacion').' finalizada');
+    $this->line('Municipios: +'.$stats['municipios']['inserted'].' ~'.$stats['municipios']['updated'].' -'.$stats['municipios']['deleted'].' total='.$stats['municipios']['source_total']);
+    $this->line('Secciones: +'.$stats['secciones']['inserted'].' ~'.$stats['secciones']['updated'].' -'.$stats['secciones']['deleted'].' omitidas='.$stats['secciones']['skipped'].' total='.$stats['secciones']['source_total']);
+
     return 0;
-})->purpose('Importa catálogos de municipios y secciones desde CSV/SQL con logs de progreso');
+})->purpose('Sincroniza catalogos de municipios y secciones desde CSV/SQL con opcion de prune y dry-run');
 
-// Verificación rápida de Beneficiarios (edad, soft delete, activity log)
+// Verificacion rapida de Beneficiarios (edad, soft delete, activity log)
 Artisan::command('verify:quick', function () {
-    $this->info('Verificación rápida de Beneficiarios');
+    $this->info('Verificacion rapida de Beneficiarios');
 
-    $admin = \App\Models\User::where('email','admin@example.com')->first();
+    $admin = \App\Models\User::where('email', 'admin@example.com')->first();
     if (! $admin) {
         $this->error('No existe el usuario admin@example.com');
+
         return 1;
     }
 
-    // Municipio y seccion de prueba
     $mun = \App\Models\Municipio::firstOrCreate(['clave' => 9999], ['nombre' => 'Prueba']);
     $seccion = \App\Models\Seccion::firstOrCreate(
         ['seccional' => '0001'],
         ['municipio_id' => $mun->id, 'distrito_local' => 'DL-01', 'distrito_federal' => 'DF-01']
     );
 
-    // Crear beneficiario
-    $b = new \App\Models\Beneficiario();
-    $b->id = (string) \Illuminate\Support\Str::uuid();
-    $b->folio_tarjeta = 'TEST-'.substr((string) \Illuminate\Support\Str::uuid(), 0, 8);
-    $b->nombre = 'Juan';
-    $b->apellido_paterno = 'Pérez';
-    $b->apellido_materno = 'Lopez';
+    $beneficiario = new \App\Models\Beneficiario();
+    $beneficiario->id = (string) \Illuminate\Support\Str::uuid();
+    $beneficiario->folio_tarjeta = 'TEST-'.substr((string) \Illuminate\Support\Str::uuid(), 0, 8);
+    $beneficiario->nombre = 'Juan';
+    $beneficiario->apellido_paterno = 'Perez';
+    $beneficiario->apellido_materno = 'Lopez';
     $rand17 = strtoupper(substr(str_replace('-', '', (string) \Illuminate\Support\Str::uuid()), 0, 1));
-    if (! preg_match('/[A-Z\d]/', $rand17)) { $rand17 = 'A'; }
-    $rand18 = (string) random_int(0,9);
-    $b->curp = 'PEPJ000101HDFLRN'.$rand17.$rand18;
-    $b->fecha_nacimiento = '2000-01-01';
-    $b->sexo = 'H' === 'H' ? 'M' : 'M'; // ensure a valid value
-    $b->discapacidad = false;
-    $b->id_ine = 'INE123';
-    $b->telefono = '5512345678';
-    $b->municipio_id = $mun->id;
-    $b->seccion()->associate($seccion);
-    $b->created_by = $admin->uuid;
-    $b->save();
+    if (! preg_match('/[A-Z\d]/', $rand17)) {
+        $rand17 = 'A';
+    }
+    $rand18 = (string) random_int(0, 9);
+    $beneficiario->curp = 'PEPJ000101HDFLRN'.$rand17.$rand18;
+    $beneficiario->fecha_nacimiento = '2000-01-01';
+    $beneficiario->sexo = 'M';
+    $beneficiario->discapacidad = false;
+    $beneficiario->id_ine = 'INE123';
+    $beneficiario->telefono = '5512345678';
+    $beneficiario->municipio_id = $mun->id;
+    $beneficiario->seccion()->associate($seccion);
+    $beneficiario->created_by = $admin->uuid;
+    $beneficiario->save();
 
-    $this->line('Edad calculada (esperado ~'.\Carbon\Carbon::parse('2000-01-01')->age.'): '.$b->edad);
+    $this->line('Edad calculada (esperado ~'.\Carbon\Carbon::parse('2000-01-01')->age.'): '.$beneficiario->edad);
 
-    // Actualizar fecha para recalcular edad
-    $b->fecha_nacimiento = '1990-01-01';
-    $b->save();
-    $this->line('Edad recalculada (esperado ~'.\Carbon\Carbon::parse('1990-01-01')->age.'): '.$b->edad);
+    $beneficiario->fecha_nacimiento = '1990-01-01';
+    $beneficiario->save();
+    $this->line('Edad recalculada (esperado ~'.\Carbon\Carbon::parse('1990-01-01')->age.'): '.$beneficiario->edad);
 
-    // Domicilio
-    $d = new \App\Models\Domicilio();
-    $d->id = (string) \Illuminate\Support\Str::uuid();
-    $d->beneficiario_id = $b->id;
-    $d->calle = 'Falsa';
-    $d->numero_ext = '123';
-    $d->colonia = 'Centro';
-    $d->municipio_id = $mun->id;
-    $d->codigo_postal = '01234';
-    $d->seccion_id = $seccion->id;
-    $d->save();
+    $domicilio = new \App\Models\Domicilio();
+    $domicilio->id = (string) \Illuminate\Support\Str::uuid();
+    $domicilio->beneficiario_id = $beneficiario->id;
+    $domicilio->calle = 'Falsa';
+    $domicilio->numero_ext = '123';
+    $domicilio->colonia = 'Centro';
+    $domicilio->municipio_id = $mun->id;
+    $domicilio->codigo_postal = '01234';
+    $domicilio->seccion_id = $seccion->id;
+    $domicilio->save();
 
-    // Activity log count
     $logs = \Illuminate\Support\Facades\DB::table('activity_log')
         ->where('subject_type', \App\Models\Beneficiario::class)
-        ->where('subject_id', $b->id)
+        ->where('subject_id', $beneficiario->id)
         ->count();
     $this->line('Logs de actividad para beneficiario: '.$logs);
 
-    // Soft delete
-    $b->delete();
-    $trashed = \App\Models\Beneficiario::withTrashed()->where('id',$b->id)->whereNotNull('deleted_at')->exists();
-    $this->line('Soft delete aplicado: '.($trashed ? 'sí' : 'no'));
+    $beneficiario->delete();
+    $trashed = \App\Models\Beneficiario::withTrashed()->where('id', $beneficiario->id)->whereNotNull('deleted_at')->exists();
+    $this->line('Soft delete aplicado: '.($trashed ? 'si' : 'no'));
 
     $this->info('OK');
+
     return 0;
-})->purpose('Ejecuta verificación rápida de modelo Beneficiario');
+})->purpose('Ejecuta verificacion rapida de modelo Beneficiario');

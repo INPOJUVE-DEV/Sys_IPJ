@@ -10,7 +10,7 @@ class Municipio extends Model
     use HasFactory;
 
     protected $fillable = [
-        'clave', 'nombre',
+        'clave', 'nombre', 'oficina_id',
     ];
 
     public function beneficiarios()
@@ -18,9 +18,13 @@ class Municipio extends Model
         return $this->hasMany(Beneficiario::class);
     }
 
+    public function oficina()
+    {
+        return $this->belongsTo(Oficina::class, 'oficina_id');
+    }
+
     public function secciones()
     {
         return $this->hasMany(Seccion::class);
     }
 }
-

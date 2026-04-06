@@ -35,6 +35,19 @@
                         </select>
                         @error('role')<div class="invalid-feedback">{{ $message }}</div>@enderror
                     </div>
+                    <div class="col-md-6">
+                        <label for="oficina_id" class="form-label">Oficina</label>
+                        <select id="oficina_id" name="oficina_id" class="form-select @error('oficina_id') is-invalid @enderror">
+                            <option value="">Sin oficina</option>
+                            @foreach($offices as $office)
+                                <option value="{{ $office->id }}" @selected((string) old('oficina_id', $user->oficina_id) === (string) $office->id)>
+                                    {{ $office->nombre }} ({{ $office->tipo }})
+                                </option>
+                            @endforeach
+                        </select>
+                        <div class="form-text">Obligatoria para delegados y capturistas. Skate Plaza puede operar sin oficina.</div>
+                        @error('oficina_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                    </div>
                 </div>
 
                 <div class="d-flex justify-content-end mt-4">

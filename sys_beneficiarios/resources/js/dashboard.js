@@ -100,6 +100,12 @@ async function renderKpis(url) {
       if (data.week) renderChart('chartWeek', 'line', data.week.labels, data.week.data, { label: 'Semana' });
       if (data.last30Days) renderChart('chart30', 'line', data.last30Days.labels, data.last30Days.data, { label: '30 días' });
       if (data.capturistasWeekBoard) renderCapturistasWeekBoard(data.capturistasWeekBoard);
+      if (data.skatePlaza) {
+        setText('kpiSkatePlazaMonth', data.skatePlaza.currentMonth ?? '0');
+        if (data.skatePlaza.monthly) {
+          renderChart('chartSkatePlaza', 'line', data.skatePlaza.monthly.labels, data.skatePlaza.monthly.data, { label: 'Skate Plaza' });
+        }
+      }
     } else {
       // Capturista personal
       setText('kpiToday', data.today);

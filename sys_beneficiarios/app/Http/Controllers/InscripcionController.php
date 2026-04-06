@@ -10,6 +10,7 @@ use App\Models\Inscripcion;
 use App\Models\Municipio;
 use App\Models\Programa;
 use App\Models\Seccion;
+use App\Services\TarjetaService;
 use App\Support\SeccionResolver;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -24,6 +25,7 @@ class InscripcionController extends Controller
     {
         $q = $request->get('q');
         $filters = $request->only(['programa_id', 'periodo', 'estatus']);
+        $user = $request->user();
 
         $query = Inscripcion::with(['beneficiario', 'programa', 'creador'])
             ->when($q, function ($query) use ($q) {
@@ -39,6 +41,13 @@ class InscripcionController extends Controller
             ->when($filters['programa_id'] ?? null, fn ($q2, $v) => $q2->where('programa_id', $v))
             ->when($filters['periodo'] ?? null, fn ($q2, $v) => $q2->where('periodo', $v))
             ->when($filters['estatus'] ?? null, fn ($q2, $v) => $q2->where('estatus', $v))
+            ->when($user?->hasRole('delegado'), function ($q2) use ($user) {
+                $officeId = $user->oficina_id;
+                $q2->where(function ($sub) use ($officeId) {
+                    $sub->whereHas('beneficiario.municipio', fn ($mq) => $mq->where('oficina_id', $officeId))
+                        ->orWhereHas('beneficiario.tarjeta', fn ($tq) => $tq->where('oficina_id', $officeId));
+                });
+            })
             ->orderBy('created_at', 'desc');
 
         $inscripciones = $query->paginate(15)->withQueryString();
@@ -55,7 +64,7 @@ class InscripcionController extends Controller
     public function create()
     {
         $programas = Programa::where('activo', true)->orderBy('nombre')->get();
-        $municipios = Municipio::orderBy('nombre')->pluck('nombre', 'id');
+        $municipios = $this->availableMunicipios();
         $periodo = now()->format('Y-m');
         $dailyCount = null;
         $dailyCountStart = null;
@@ -76,17 +85,19 @@ class InscripcionController extends Controller
         return view('inscripciones.create', compact('programas', 'municipios', 'periodo', 'dailyCount', 'dailyCountStart'));
     }
 
-    public function store(StoreInscripcionRequest $request)
+    public function store(StoreInscripcionRequest $request, TarjetaService $tarjetaService)
     {
         $data = $request->validated();
 
         try {
-            $inscripcion = DB::transaction(function () use ($request, $data) {
+            $inscripcion = DB::transaction(function () use ($request, $data, $tarjetaService) {
                 $dom = $request->input('domicilio', []);
                 $seccion = $this->resolveSeccionFromInput($dom);
+                $seccion?->loadMissing('municipio');
+                $this->ensureUserCanCaptureSeccion($seccion);
                 $inputMunicipioId = $dom['municipio_id'] ?? null;
 
-                $beneficiario = Beneficiario::where('curp', $data['curp'])->first();
+                $beneficiario = Beneficiario::where('curp', $data['curp'])->lockForUpdate()->first();
                 $payload = [
                     'nombre' => $data['nombre'],
                     'apellido_paterno' => $data['apellido_paterno'],
@@ -98,6 +109,7 @@ class InscripcionController extends Controller
                     'id_ine' => $data['id_ine'],
                     'telefono' => $data['telefono'],
                 ];
+                $requestedFolio = trim((string) ($data['folio_tarjeta'] ?? ''));
 
                 if ($beneficiario) {
                     $beneficiario->fill($payload);
@@ -107,16 +119,10 @@ class InscripcionController extends Controller
                     $beneficiario->created_by = Auth::user()->uuid;
                 }
 
-                if (!empty($data['folio_tarjeta'])) {
-                    $conflict = Beneficiario::where('folio_tarjeta', $data['folio_tarjeta'])
-                        ->when($beneficiario->id ?? null, fn ($q2, $id) => $q2->where('id', '!=', $id))
-                        ->exists();
-                    if ($conflict) {
-                        throw ValidationException::withMessages([
-                            'folio_tarjeta' => 'Este folio ya esta registrado.',
-                        ]);
-                    }
-                    $beneficiario->folio_tarjeta = $data['folio_tarjeta'];
+                if ($requestedFolio !== '' && $beneficiario->folio_tarjeta && $beneficiario->folio_tarjeta !== $requestedFolio) {
+                    throw ValidationException::withMessages([
+                        'folio_tarjeta' => 'El beneficiario ya cuenta con una tarjeta asignada y no puede cambiarse desde este flujo.',
+                    ]);
                 }
 
                 $beneficiario->seccion()->associate($seccion);
@@ -124,6 +130,21 @@ class InscripcionController extends Controller
                 $beneficiario->save();
 
                 $this->saveDomicilio($request, $beneficiario, $seccion);
+
+                if ($requestedFolio !== '' && ! $beneficiario->tarjeta_id) {
+                    $tarjeta = $tarjetaService->findConsumableByFolio($requestedFolio, Auth::user());
+                    if (! $tarjeta) {
+                        throw ValidationException::withMessages([
+                            'folio_tarjeta' => 'El folio indicado no esta disponible en inventario.',
+                        ]);
+                    }
+
+                    $tarjetaService->consume(Auth::user(), $tarjeta, $beneficiario);
+                    $beneficiario->forceFill([
+                        'tarjeta_id' => $tarjeta->id,
+                        'folio_tarjeta' => $tarjeta->folio,
+                    ])->save();
+                }
 
                 $programa = Programa::findOrFail($data['programa_id']);
                 $periodo = $data['periodo'];
@@ -169,12 +190,14 @@ class InscripcionController extends Controller
 
     public function edit(Inscripcion $inscripcion)
     {
+        $this->ensureCanManageInscripcion($inscripcion);
         $programas = Programa::orderBy('nombre')->get();
         return view('inscripciones.edit', compact('inscripcion', 'programas'));
     }
 
     public function update(UpdateInscripcionRequest $request, Inscripcion $inscripcion)
     {
+        $this->ensureCanManageInscripcion($inscripcion);
         $data = $request->validated();
 
         $exists = Inscripcion::where('beneficiario_id', $inscripcion->beneficiario_id)
@@ -196,6 +219,7 @@ class InscripcionController extends Controller
 
     public function destroy(Inscripcion $inscripcion)
     {
+        $this->ensureCanManageInscripcion($inscripcion);
         $inscripcion->delete();
         return redirect()->route('inscripciones.index')->with('status', 'Inscripcion eliminada');
     }
@@ -229,7 +253,9 @@ class InscripcionController extends Controller
     {
         $seccion = SeccionResolver::resolve($domicilio['seccional'] ?? null);
         if (! $seccion) {
-            return null;
+            throw ValidationException::withMessages([
+                'domicilio.seccional' => 'La seccional no se encuentra en el catalogo.',
+            ]);
         }
 
         $inputMunicipioId = $domicilio['municipio_id'] ?? null;
@@ -240,5 +266,48 @@ class InscripcionController extends Controller
         }
 
         return $seccion;
+    }
+
+    private function availableMunicipios()
+    {
+        $query = Municipio::orderBy('nombre');
+        $user = auth()->user();
+        if ($user?->hasAnyRole(['delegado', 'capturista']) && $user->oficina_id) {
+            $query->where('oficina_id', $user->oficina_id);
+        }
+
+        return $query->pluck('nombre', 'id');
+    }
+
+    private function ensureUserCanCaptureSeccion(?Seccion $seccion): void
+    {
+        $user = auth()->user();
+        if (! $user?->hasAnyRole(['delegado', 'capturista']) || ! $user->oficina_id || ! $seccion) {
+            return;
+        }
+
+        $seccion->loadMissing('municipio');
+        $officeId = $seccion->municipio?->oficina_id;
+        if ($officeId && (int) $officeId !== (int) $user->oficina_id) {
+            throw ValidationException::withMessages([
+                'domicilio.seccional' => 'La seccional seleccionada no pertenece a tu oficina.',
+            ]);
+        }
+    }
+
+    private function ensureCanManageInscripcion(Inscripcion $inscripcion): void
+    {
+        $user = auth()->user();
+        if (! $user?->hasRole('delegado')) {
+            return;
+        }
+
+        $inscripcion->loadMissing(['beneficiario.municipio', 'beneficiario.tarjeta']);
+        $officeId = $inscripcion->beneficiario?->tarjeta?->oficina_id
+            ?? $inscripcion->beneficiario?->municipio?->oficina_id;
+
+        if ($officeId !== null && (int) $officeId !== (int) $user->oficina_id) {
+            abort(403);
+        }
     }
 }

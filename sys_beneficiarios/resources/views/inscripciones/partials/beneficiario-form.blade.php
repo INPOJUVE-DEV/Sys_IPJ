@@ -2,6 +2,7 @@
     $b = $beneficiario ?? null;
     $domicilio = $domicilio ?? $b?->domicilio;
     $fieldLabels = [
+        'folio_tarjeta' => 'Folio tarjeta',
         'nombre' => 'Nombre',
         'apellido_paterno' => 'Apellido paterno',
         'apellido_materno' => 'Apellido materno',
@@ -51,6 +52,12 @@
 
     <div class="wizard-step active" data-step="1">
         <div class="row g-3">
+            <div class="col-md-4">
+                <label for="folio_tarjeta" class="form-label">Folio tarjeta</label>
+                <input id="folio_tarjeta" name="folio_tarjeta" value="{{ old('folio_tarjeta', $b->folio_tarjeta ?? '') }}" class="form-control @error('folio_tarjeta') is-invalid @enderror">
+                <div class="form-text">Opcional. Si lo capturas, el sistema consumira una tarjeta disponible de tu inventario.</div>
+                @error('folio_tarjeta')<div class="invalid-feedback">{{ $message }}</div>@enderror
+            </div>
             <div class="col-md-4">
                 <label for="nombre" class="form-label">Nombre</label>
                 <input id="nombre" name="nombre" value="{{ old('nombre', $b->nombre ?? '') }}" class="form-control @error('nombre') is-invalid @enderror" required>

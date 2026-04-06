@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Beneficiario;
 use App\Models\Municipio;
+use App\Models\ProteccionMovimiento;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -160,6 +161,7 @@ class DashboardController extends Controller
             'week' => $weekSeries,
             'last30Days' => $last30Series,
             'capturistasWeekBoard' => $this->weeklyCapturistaBoard($request),
+            'skatePlaza' => $this->buildSkatePlazaMetrics($request),
         ]);
     }
 
@@ -232,6 +234,53 @@ class DashboardController extends Controller
         return [
             'labels' => array_map(fn ($week) => $week['start']->format('Y-m-d'), $weeks),
             'rows' => $rows,
+        ];
+    }
+
+    protected function buildSkatePlazaMetrics(Request $request): array
+    {
+        $now = Carbon::now();
+        $from = $request->filled('from') ? $request->date('from') : null;
+        $to = $request->filled('to') ? $request->date('to') : null;
+
+        $start = $from ? (clone $from)->startOfMonth() : (clone $now)->subMonths(11)->startOfMonth();
+        $end = $to ? (clone $to)->endOfMonth() : (clone $now)->endOfMonth();
+
+        if ($start->gt($end)) {
+            [$start, $end] = [$end, $start];
+        }
+
+        $movements = ProteccionMovimiento::query()
+            ->where('tipo', 'prestamo')
+            ->whereBetween('created_at', [$start, $end])
+            ->get(['created_at']);
+
+        $counts = $movements
+            ->groupBy(fn ($movement) => optional($movement->created_at)->format('Y-m'))
+            ->map(fn ($group) => $group->count());
+
+        $labels = [];
+        $data = [];
+        $cursor = (clone $start)->startOfMonth();
+        while ($cursor->lte($end)) {
+            $key = $cursor->format('Y-m');
+            $labels[] = $key;
+            $data[] = (int) ($counts[$key] ?? 0);
+            $cursor->addMonth();
+        }
+
+        $currentMonth = ProteccionMovimiento::query()
+            ->where('tipo', 'prestamo')
+            ->whereBetween('created_at', [(clone $now)->startOfMonth(), $now])
+            ->count();
+
+        return [
+            'currentMonth' => $currentMonth,
+            'monthly' => [
+                'labels' => $labels,
+                'data' => $data,
+                'total' => array_sum($data),
+            ],
         ];
     }
 }

@@ -9,7 +9,7 @@ class UpdateInscripcionRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()?->hasAnyRole(['admin', 'capturista']) ?? false;
+        return $this->user()?->hasAnyRole(['admin', 'delegado', 'capturista']) ?? false;
     }
 
     public function rules(): array

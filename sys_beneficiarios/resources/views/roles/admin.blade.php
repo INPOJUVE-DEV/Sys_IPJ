@@ -48,6 +48,7 @@
             <div class="col-sm-6 col-lg-3"><div class="card"><div class="card-body"><div class="text-muted">Últimos 7 días</div><div class="h3" id="kpiWeekTotal">—</div></div></div></div>
             <div class="col-sm-6 col-lg-3"><div class="card"><div class="card-body"><div class="text-muted">Últimos 30 días</div><div class="h3" id="kpiLast30Total">—</div></div></div></div>
             <div class="col-sm-6 col-lg-3"><div class="card"><div class="card-body"><div class="text-muted">En rango de edad</div><div class="h3" id="kpiAgeRange">—</div><div class="small text-muted">18-28</div></div></div></div>
+            <div class="col-sm-6 col-lg-3"><div class="card"><div class="card-body"><div class="text-muted">Préstamos Skate Plaza del mes</div><div class="h3" id="kpiSkatePlazaMonth">—</div></div></div></div>
         </div>
 
         <div class="row g-3">
@@ -55,6 +56,7 @@
             <div class="col-lg-6"><div class="card"><div class="card-header">Por seccional (Top 10)</div><div class="card-body"><canvas id="chartBySeccional" height="180"></canvas></div></div></div>
             <div class="col-lg-6"><div class="card"><div class="card-header">Por capturista (Top 10)</div><div class="card-body"><canvas id="chartByCapturista" height="180"></canvas></div></div></div>
             <div class="col-lg-6"><div class="card"><div class="card-header">Esta semana</div><div class="card-body"><canvas id="chartWeek" height="180"></canvas></div></div></div>
+            <div class="col-lg-12"><div class="card"><div class="card-header">Préstamos Skate Plaza por mes</div><div class="card-body"><canvas id="chartSkatePlaza" height="180"></canvas></div></div></div>
             <div class="col-lg-12"><div class="card"><div class="card-header">Últimos 30 días</div><div class="card-body"><canvas id="chart30" height="200"></canvas></div></div></div>
             <div class="col-lg-12">
                 <div class="card">

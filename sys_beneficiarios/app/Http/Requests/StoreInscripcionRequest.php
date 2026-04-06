@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Rules\ValidSeccional;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -9,7 +10,7 @@ class StoreInscripcionRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()?->hasAnyRole(['admin', 'capturista', 'capturista_programas']) ?? false;
+        return $this->user()?->hasAnyRole(['admin', 'delegado', 'capturista', 'capturista_programas']) ?? false;
     }
 
     public function rules(): array
@@ -39,7 +40,7 @@ class StoreInscripcionRequest extends FormRequest
             'domicilio.colonia' => ['required', 'string', 'max:255'],
             'domicilio.municipio_id' => ['nullable', 'exists:municipios,id'],
             'domicilio.codigo_postal' => ['required', 'string', 'max:20'],
-            'domicilio.seccional' => ['required', 'string', 'max:255'],
+            'domicilio.seccional' => ['required', 'string', 'max:255', new ValidSeccional()],
         ];
     }
 }

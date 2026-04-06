@@ -3,10 +3,18 @@
 use App\Http\Controllers\Admin\BeneficiariosController as AdminBeneficiariosController;
 use App\Http\Controllers\Admin\CatalogosController;
 use App\Http\Controllers\Admin\ComponentCatalogController;
+use App\Http\Controllers\Admin\InventarioMovimientoController;
+use App\Http\Controllers\Admin\InventarioProteccionController as AdminInventarioProteccionController;
+use App\Http\Controllers\Admin\InventarioTarjetaController as AdminInventarioTarjetaController;
+use App\Http\Controllers\Admin\InventarioValeController as AdminInventarioValeController;
+use App\Http\Controllers\Admin\OficinaController;
 use App\Http\Controllers\Admin\PageController as AdminPageController;
 use App\Http\Controllers\Admin\ThemeController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\BeneficiarioController;
+use App\Http\Controllers\Delegacion\DashboardController as DelegacionDashboardController;
+use App\Http\Controllers\Delegacion\InventarioTarjetaController as DelegacionInventarioTarjetaController;
+use App\Http\Controllers\Delegacion\InventarioValeController as DelegacionInventarioValeController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DomicilioController;
 use App\Http\Controllers\InscripcionController;
@@ -14,6 +22,9 @@ use App\Http\Controllers\InscripcionDashboardController;
 use App\Http\Controllers\MisRegistrosController;
 use App\Http\Controllers\ProgramaController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\SkatePlaza\BeneficiarioController as SkatePlazaBeneficiarioController;
+use App\Http\Controllers\SkatePlaza\DashboardController as SkatePlazaDashboardController;
+use App\Http\Controllers\SkatePlaza\PrestamoController as SkatePlazaPrestamoController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 Route::get('/', function () {
@@ -25,11 +36,17 @@ Route::get('/', function () {
     if ($user->hasRole('admin')) {
         return redirect('/admin');
     }
+    if ($user->hasRole('delegado')) {
+        return redirect('/delegacion');
+    }
     if ($user->hasRole('capturista')) {
         return redirect('/capturista');
     }
     if ($user->hasRole('capturista_programas')) {
         return redirect('/inscripciones');
+    }
+    if ($user->hasRole('skate_plaza')) {
+        return redirect('/skate-plaza');
     }
     return redirect()->route('dashboard');
 });
@@ -42,7 +59,7 @@ Route::get('/dashboard', function () {
 Route::get('/mi-progreso/kpis', [DashboardController::class, 'miProgresoKpis'])->middleware(['auth','role:capturista']);
 
 // Alias de registro de captura usado en tests
-Route::post('/captura/registrar', [BeneficiarioController::class, 'store'])->name('captura.registrar')->middleware(['auth','role:admin|capturista']);
+Route::post('/captura/registrar', [BeneficiarioController::class, 'store'])->name('captura.registrar')->middleware(['auth','role:admin|delegado|capturista']);
 
 // Secciones por rol
 Route::middleware(['auth','role:admin'])->group(function () {
@@ -65,8 +82,8 @@ Route::middleware(['auth','role:capturista'])->group(function () {
     });
 });
 
-// Beneficiarios y Domicilios (admin, capturista)
-Route::middleware(['auth','role:admin|capturista'])->group(function () {
+// Beneficiarios y Domicilios (admin, delegado, capturista)
+Route::middleware(['auth','role:admin|delegado|capturista'])->group(function () {
     Route::resource('beneficiarios', BeneficiarioController::class)->except(['show']);
     Route::resource('domicilios', DomicilioController::class)->except(['show']);
 });
@@ -75,13 +92,13 @@ Route::middleware(['auth','role:admin'])->group(function () {
     Route::resource('programas', ProgramaController::class)->except(['show']);
 });
 
-Route::middleware(['auth','role:admin|capturista|capturista_programas'])->group(function () {
+Route::middleware(['auth','role:admin|delegado|capturista|capturista_programas'])->group(function () {
     Route::get('inscripciones', [InscripcionController::class, 'create'])->name('inscripciones.index');
     Route::get('inscripciones/create', fn () => redirect()->route('inscripciones.index'))->name('inscripciones.create');
     Route::post('inscripciones', [InscripcionController::class, 'store'])->name('inscripciones.store');
 });
 
-Route::middleware(['auth','role:admin|capturista'])->group(function () {
+Route::middleware(['auth','role:admin|delegado|capturista'])->group(function () {
     Route::get('inscripciones/lista', [InscripcionController::class, 'index'])->name('inscripciones.list');
     Route::get('inscripciones/{inscripcion}/edit', [InscripcionController::class, 'edit'])->name('inscripciones.edit');
     Route::put('inscripciones/{inscripcion}', [InscripcionController::class, 'update'])->name('inscripciones.update');
@@ -96,9 +113,53 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
+Route::middleware(['auth', 'role:delegado'])->prefix('delegacion')->name('delegacion.')->group(function () {
+    Route::get('/', [DelegacionDashboardController::class, 'index'])->name('home');
+    Route::prefix('inventario/tarjetas')->name('inventario.tarjetas.')->group(function () {
+        Route::get('/', [DelegacionInventarioTarjetaController::class, 'index'])->name('index');
+        Route::post('assign-range', [DelegacionInventarioTarjetaController::class, 'assignRange'])->name('assignRange');
+        Route::post('{tarjeta}/status', [DelegacionInventarioTarjetaController::class, 'updateStatus'])->name('status');
+    });
+    Route::prefix('inventario/vales')->name('inventario.vales.')->group(function () {
+        Route::get('/', [DelegacionInventarioValeController::class, 'index'])->name('index');
+        Route::post('{valeBloc}/assign', [DelegacionInventarioValeController::class, 'assign'])->name('assign');
+        Route::post('{valeBloc}/status', [DelegacionInventarioValeController::class, 'updateStatus'])->name('status');
+    });
+});
+
+Route::middleware(['auth', 'role:skate_plaza'])->prefix('skate-plaza')->name('skate-plaza.')->group(function () {
+    Route::get('/', [SkatePlazaDashboardController::class, 'index'])->name('home');
+    Route::get('beneficiarios/buscar', [SkatePlazaBeneficiarioController::class, 'search'])->name('beneficiarios.search');
+    Route::post('prestamos', [SkatePlazaPrestamoController::class, 'store'])->name('prestamos.store');
+    Route::post('prestamos/{proteccion}/devolver', [SkatePlazaPrestamoController::class, 'devolver'])->name('prestamos.devolver');
+});
+
 // Admin: gestión de usuarios
 Route::middleware(['auth','role:admin'])->prefix('admin')->name('admin.')->group(function () {
     Route::resource('usuarios', UserController::class)->parameters(['usuarios' => 'usuario']);
+    Route::get('oficinas', [OficinaController::class, 'index'])->name('oficinas.index');
+    Route::post('oficinas/municipios/{municipio}', [OficinaController::class, 'assignMunicipio'])->name('oficinas.municipios.assign');
+    Route::prefix('inventario/tarjetas')->name('inventario.tarjetas.')->group(function () {
+        Route::get('/', [AdminInventarioTarjetaController::class, 'index'])->name('index');
+        Route::post('store-range', [AdminInventarioTarjetaController::class, 'storeRange'])->name('storeRange');
+        Route::post('transfer-range', [AdminInventarioTarjetaController::class, 'transferRange'])->name('transferRange');
+        Route::post('assign-range', [AdminInventarioTarjetaController::class, 'assignRange'])->name('assignRange');
+        Route::post('{tarjeta}/status', [AdminInventarioTarjetaController::class, 'updateStatus'])->name('status');
+    });
+    Route::prefix('inventario/vales')->name('inventario.vales.')->group(function () {
+        Route::get('/', [AdminInventarioValeController::class, 'index'])->name('index');
+        Route::post('/', [AdminInventarioValeController::class, 'store'])->name('store');
+        Route::post('{valeBloc}/transfer', [AdminInventarioValeController::class, 'transfer'])->name('transfer');
+        Route::post('{valeBloc}/assign', [AdminInventarioValeController::class, 'assign'])->name('assign');
+        Route::post('{valeBloc}/status', [AdminInventarioValeController::class, 'updateStatus'])->name('status');
+    });
+    Route::prefix('inventario/protecciones')->name('inventario.protecciones.')->group(function () {
+        Route::get('/', [AdminInventarioProteccionController::class, 'index'])->name('index');
+        Route::post('store-batch', [AdminInventarioProteccionController::class, 'storeBatch'])->name('storeBatch');
+        Route::post('{proteccion}/transfer', [AdminInventarioProteccionController::class, 'transfer'])->name('transfer');
+        Route::post('{proteccion}/status', [AdminInventarioProteccionController::class, 'updateStatus'])->name('status');
+    });
+    Route::get('inventario/movimientos', [InventarioMovimientoController::class, 'index'])->name('inventario.movimientos.index');
 
     Route::prefix('pages')->name('pages.')->group(function () {
         Route::get('/', [AdminPageController::class, 'index'])->name('index');

@@ -9,7 +9,7 @@ class BeneficiarioPolicy
 {
     public function viewAny(User $user): bool
     {
-        return $user->hasAnyRole(['admin','capturista']);
+        return $user->hasAnyRole(['admin', 'delegado', 'capturista']);
     }
 
     public function view(User $user, Beneficiario $beneficiario): bool
@@ -20,12 +20,15 @@ class BeneficiarioPolicy
         if ($user->hasRole('capturista')) {
             return $beneficiario->created_by === $user->uuid;
         }
+        if ($user->hasRole('delegado')) {
+            return $this->belongsToUserOffice($user, $beneficiario);
+        }
         return false;
     }
 
     public function create(User $user): bool
     {
-        return $user->hasAnyRole(['admin','capturista']);
+        return $user->hasAnyRole(['admin', 'delegado', 'capturista']);
     }
 
     public function update(User $user, Beneficiario $beneficiario): bool
@@ -35,6 +38,9 @@ class BeneficiarioPolicy
         }
         if ($user->hasRole('capturista')) {
             return $beneficiario->created_by === $user->uuid;
+        }
+        if ($user->hasRole('delegado')) {
+            return $this->belongsToUserOffice($user, $beneficiario);
         }
         return false;
     }
@@ -54,5 +60,19 @@ class BeneficiarioPolicy
     {
         // Delete duro solo admin
         return $user->hasRole('admin');
+    }
+
+    protected function belongsToUserOffice(User $user, Beneficiario $beneficiario): bool
+    {
+        if (! $user->oficina_id) {
+            return false;
+        }
+
+        $officeId = $beneficiario->tarjeta?->oficina_id
+            ?? $beneficiario->municipio?->oficina_id
+            ?? $beneficiario->domicilio?->municipio?->oficina_id
+            ?? $beneficiario->creador?->oficina_id;
+
+        return $officeId !== null && (int) $officeId === (int) $user->oficina_id;
     }
 }

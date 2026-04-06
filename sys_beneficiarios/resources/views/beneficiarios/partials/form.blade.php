@@ -148,6 +148,7 @@
     </div>
 
     <div class="wizard-step active" data-step="1">
+        @php($isEditMode = ($mode ?? 'create') !== 'create')
         {{-- OCR Escanear INE --}}
         @if(($mode ?? 'create') === 'create')
             <div class="ocr-scan-bar d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
@@ -168,7 +169,12 @@
                 <label for="folio_tarjeta" class="form-label">Folio tarjeta</label>
                 <input id="folio_tarjeta" name="folio_tarjeta"
                     value="{{ old('folio_tarjeta', $b->folio_tarjeta ?? '') }}"
-                    class="form-control @error('folio_tarjeta') is-invalid @enderror" required>
+                    class="form-control @error('folio_tarjeta') is-invalid @enderror"
+                    @required(! $isEditMode)
+                    @readonly($isEditMode)>
+                <div class="form-text">
+                    {{ $isEditMode ? 'El folio se conserva como referencia y no puede cambiarse desde esta pantalla.' : 'El folio debe existir en inventario y estar disponible para tu oficina o asignacion.' }}
+                </div>
                 @error('folio_tarjeta')<div class="invalid-feedback">{{ $message }}</div>@enderror
             </div>
             @if(($mode ?? 'create') === 'create')

@@ -1,15 +1,29 @@
 @php
     $user = Auth::user();
     $isAdmin = $user?->hasRole('admin');
+    $isDelegado = $user?->hasRole('delegado');
     $isCapturista = $user?->hasRole('capturista');
     $isCapturistaProgramas = $user?->hasRole('capturista_programas');
-    $homeRoute = $isCapturistaProgramas
-        ? route('inscripciones.index')
-        : ($isCapturista ? route('capturista.home') : route('dashboard'));
+    $isSkatePlaza = $user?->hasRole('skate_plaza');
+    $homeRoute = $isAdmin
+        ? route('admin.home')
+        : ($isDelegado
+            ? route('delegacion.home')
+            : ($isCapturistaProgramas
+                ? route('inscripciones.index')
+                : ($isCapturista
+                    ? route('capturista.home')
+                    : ($isSkatePlaza ? route('skate-plaza.home') : route('dashboard')))));
 
-    $dashboardActive = $isCapturista
-        ? (request()->routeIs('capturista.home') || request()->routeIs('capturista.kpis'))
-        : (request()->routeIs('dashboard') || request()->routeIs('admin.home') || request()->routeIs('admin.kpis'));
+    $dashboardActive = $isAdmin
+        ? (request()->routeIs('admin.home') || request()->routeIs('admin.kpis'))
+        : ($isDelegado
+            ? request()->routeIs('delegacion.home')
+            : ($isCapturista
+                ? (request()->routeIs('capturista.home') || request()->routeIs('capturista.kpis'))
+                : ($isSkatePlaza
+                    ? request()->routeIs('skate-plaza.*')
+                    : request()->routeIs('dashboard'))));
 
     $primaryLinks = [];
     if (! $isCapturistaProgramas) {
@@ -36,7 +50,7 @@
         ];
     }
 
-    if ($isAdmin || $isCapturista) {
+    if ($isAdmin || $isDelegado || $isCapturista) {
         $primaryLinks[] = [
             'label' => 'Captura',
             'route' => route('beneficiarios.create'),
@@ -51,12 +65,27 @@
         ];
     }
 
-    if ($isAdmin || $isCapturista || $isCapturistaProgramas) {
+    if ($isAdmin || $isDelegado || $isCapturista || $isCapturistaProgramas) {
         $primaryLinks[] = [
             'label' => 'Inscripciones',
             'route' => route('inscripciones.index'),
             'icon' => 'bi-calendar-check',
             'active' => request()->routeIs('inscripciones.*'),
+        ];
+    }
+
+    if ($isDelegado) {
+        $primaryLinks[] = [
+            'label' => 'Tarjetas',
+            'route' => route('delegacion.inventario.tarjetas.index'),
+            'icon' => 'bi-credit-card-2-front',
+            'active' => request()->routeIs('delegacion.inventario.tarjetas.*'),
+        ];
+        $primaryLinks[] = [
+            'label' => 'Vales',
+            'route' => route('delegacion.inventario.vales.index'),
+            'icon' => 'bi-journal-text',
+            'active' => request()->routeIs('delegacion.inventario.vales.*'),
         ];
     }
 
@@ -76,6 +105,31 @@
                 'label' => 'Usuarios',
                 'route' => route('admin.usuarios.index'),
                 'pattern' => 'admin.usuarios.*',
+            ],
+            [
+                'label' => 'Oficinas',
+                'route' => route('admin.oficinas.index'),
+                'pattern' => 'admin.oficinas.*',
+            ],
+            [
+                'label' => 'Tarjetas',
+                'route' => route('admin.inventario.tarjetas.index'),
+                'pattern' => 'admin.inventario.tarjetas.*',
+            ],
+            [
+                'label' => 'Vales',
+                'route' => route('admin.inventario.vales.index'),
+                'pattern' => 'admin.inventario.vales.*',
+            ],
+            [
+                'label' => 'Protecciones',
+                'route' => route('admin.inventario.protecciones.index'),
+                'pattern' => 'admin.inventario.protecciones.*',
+            ],
+            [
+                'label' => 'Movimientos',
+                'route' => route('admin.inventario.movimientos.index'),
+                'pattern' => 'admin.inventario.movimientos.*',
             ],
             [
                 'label' => 'Catálogos',

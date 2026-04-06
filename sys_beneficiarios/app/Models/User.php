@@ -24,6 +24,7 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'oficina_id',
     ];
 
     /**
@@ -52,6 +53,26 @@ class User extends Authenticatable
     public function beneficiarios()
     {
         return $this->hasMany(Beneficiario::class, 'created_by', 'uuid');
+    }
+
+    public function office()
+    {
+        return $this->belongsTo(Oficina::class, 'oficina_id');
+    }
+
+    public function tarjetas()
+    {
+        return $this->hasMany(Tarjeta::class, 'usuario_uuid', 'uuid');
+    }
+
+    public function valeBlocs()
+    {
+        return $this->hasMany(ValeBloc::class, 'usuario_uuid', 'uuid');
+    }
+
+    public function protecciones()
+    {
+        return $this->hasMany(Proteccion::class, 'usuario_uuid', 'uuid');
     }
 
     protected static function booted()
