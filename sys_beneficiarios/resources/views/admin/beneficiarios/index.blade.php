@@ -62,8 +62,8 @@
                             </div>
                         </div>
                         <div class="text-white text-md-end text-nowrap">
-                            <div class="text-white-50 text-uppercase small">Folio</div>
-                            <div class="fs-5 fw-semibold font-monospace">{{ $b->folio_tarjeta ?? 'N/D' }}</div>
+                            <div class="text-white-50 text-uppercase small">Tarjeta</div>
+                            <div class="fs-5 fw-semibold">{{ $b->tarjeta_id ? 'Asignada' : 'Sin tarjeta' }}</div>
                         </div>
                     </a>
                 @empty

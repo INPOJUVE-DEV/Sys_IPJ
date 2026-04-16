@@ -15,6 +15,7 @@ class Oficina extends Model
     protected $fillable = [
         'nombre',
         'tipo',
+        'region',
         'activo',
     ];
 

@@ -82,3 +82,40 @@ it('permite crear un usuario skate plaza sin oficina', function () {
     expect($user->hasRole('skate_plaza'))->toBeTrue();
     expect($user->oficina_id)->toBeNull();
 });
+
+it('permite a un delegado crear capturistas de programas en su region', function () {
+    $delegado = User::factory()->create(['oficina_id' => $this->delegacion->id]);
+    $delegado->assignRole('delegado');
+
+    $response = $this->actingAs($delegado)->post(route('delegacion.usuarios.store'), [
+        'name' => 'Capturista Programas Region',
+        'email' => 'programas-region@example.com',
+        'password' => 'Password1',
+        'role' => 'capturista_programas',
+        'oficina_id' => $this->central->id,
+    ]);
+
+    $response->assertRedirect(route('delegacion.usuarios.index'));
+
+    $user = User::where('email', 'programas-region@example.com')->first();
+
+    expect($user)->not->toBeNull();
+    expect($user->hasRole('capturista_programas'))->toBeTrue();
+    expect($user->oficina_id)->toBe($this->delegacion->id);
+});
+
+it('impide a un delegado crear usuarios administradores', function () {
+    $delegado = User::factory()->create(['oficina_id' => $this->delegacion->id]);
+    $delegado->assignRole('delegado');
+
+    $response = $this->actingAs($delegado)->post(route('delegacion.usuarios.store'), [
+        'name' => 'Admin No Permitido',
+        'email' => 'admin-no@example.com',
+        'password' => 'Password1',
+        'role' => 'admin',
+        'oficina_id' => $this->delegacion->id,
+    ]);
+
+    $response->assertSessionHasErrors('role');
+    expect(User::where('email', 'admin-no@example.com')->exists())->toBeFalse();
+});

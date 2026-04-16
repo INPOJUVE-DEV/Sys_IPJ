@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Municipio;
+use App\Models\Oficina;
 use App\Models\Seccion;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
@@ -80,18 +81,31 @@ class CatalogoCsvSyncService
     protected function syncMunicipios(array $sourceRows, bool $prune, array &$stats): array
     {
         $existing = Municipio::query()->get()->keyBy('clave');
+        $officesByRegion = Oficina::query()
+            ->where('tipo', Oficina::TIPO_DELEGACION)
+            ->whereNotNull('region')
+            ->get()
+            ->keyBy(fn (Oficina $office) => $this->normalizeLookupKey($office->region));
         $seenClaves = [];
         $idsByClave = [];
 
         foreach ($sourceRows as $row) {
             $seenClaves[] = $row['clave'];
             $current = $existing->get($row['clave']);
+            $office = $row['region'] !== ''
+                ? $officesByRegion->get($this->normalizeLookupKey($row['region']))
+                : null;
+            $payload = [
+                'nombre' => $row['nombre'],
+                'region' => $row['region'] ?: null,
+            ];
+
+            if ($office) {
+                $payload['oficina_id'] = $office->id;
+            }
 
             if (! $current) {
-                $created = Municipio::create([
-                    'clave' => $row['clave'],
-                    'nombre' => $row['nombre'],
-                ]);
+                $created = Municipio::create(['clave' => $row['clave']] + $payload);
                 $idsByClave[$row['clave']] = $created->id;
                 $stats['municipios']['inserted']++;
                 continue;
@@ -99,8 +113,12 @@ class CatalogoCsvSyncService
 
             $idsByClave[$row['clave']] = $current->id;
 
-            if ($current->nombre !== $row['nombre']) {
-                $current->update(['nombre' => $row['nombre']]);
+            $changed = $current->nombre !== $payload['nombre']
+                || $current->region !== $payload['region']
+                || (array_key_exists('oficina_id', $payload) && (int) $current->oficina_id !== (int) $payload['oficina_id']);
+
+            if ($changed) {
+                $current->update($payload);
                 $stats['municipios']['updated']++;
             }
         }
@@ -171,7 +189,8 @@ class CatalogoCsvSyncService
         foreach ($rows as $row) {
             $clave = (int) ($row['clave'] ?? $row['id'] ?? 0);
             $sourceId = (int) ($row['id'] ?? 0);
-            $nombre = $this->normalizeValue($row['nombre'] ?? '');
+            $nombre = $this->normalizeValue($row['nombre'] ?? $row['municipio'] ?? '');
+            $region = $this->normalizeRegion($row['region'] ?? '');
 
             if ($clave <= 0 || $nombre === '') {
                 continue;
@@ -186,6 +205,7 @@ class CatalogoCsvSyncService
                 'source_id' => $sourceId > 0 ? $sourceId : null,
                 'clave' => $clave,
                 'nombre' => $nombre,
+                'region' => $region,
                 'nombre_key' => $this->normalizeLookupKey($nombre),
             ];
         }
@@ -251,21 +271,15 @@ class CatalogoCsvSyncService
 
     protected function readCsv(string $path): array
     {
-        $contents = file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-        if ($contents === false || count($contents) === 0) {
+        $lines = file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+        if ($lines === false || count($lines) === 0) {
             return [];
         }
 
-        $headerLine = $this->stripBom((string) array_shift($contents));
+        [$headerLine, $contents] = $this->extractHeaderAndRows($lines);
         $delimiter = $this->detectDelimiter($headerLine);
         $rawHeaders = str_getcsv($headerLine, $delimiter);
-        $headers = array_map(function ($header) {
-            $header = $this->normalizeValue($header);
-            $header = strtolower($header);
-            $header = preg_replace('/[^a-z0-9]+/', '_', $header ?? '');
-
-            return trim((string) $header, '_');
-        }, $rawHeaders);
+        $headers = $this->normalizeHeaders($rawHeaders);
 
         $rows = [];
         foreach ($contents as $line) {
@@ -299,9 +313,65 @@ class CatalogoCsvSyncService
         return substr_count($line, ';') > substr_count($line, ',') ? ';' : ',';
     }
 
+    protected function extractHeaderAndRows(array $lines): array
+    {
+        foreach ($lines as $index => $line) {
+            $candidate = $this->stripBom((string) $line);
+            $delimiter = $this->detectDelimiter($candidate);
+            $headers = $this->normalizeHeaders(str_getcsv($candidate, $delimiter));
+
+            if ($this->looksLikeCatalogHeader($headers)) {
+                return [$candidate, array_slice($lines, $index + 1)];
+            }
+        }
+
+        $headerLine = $this->stripBom((string) array_shift($lines));
+
+        return [$headerLine, $lines];
+    }
+
+    protected function looksLikeCatalogHeader(array $headers): bool
+    {
+        $headers = array_values(array_filter($headers, fn (string $header) => ! str_starts_with($header, '__blank_')));
+
+        $hasMunicipios = in_array('clave', $headers, true)
+            && (in_array('nombre', $headers, true) || in_array('municipio', $headers, true));
+
+        $hasSecciones = in_array('seccional', $headers, true)
+            || in_array('seccion', $headers, true);
+
+        return $hasMunicipios || $hasSecciones;
+    }
+
+    protected function normalizeHeaders(array $rawHeaders): array
+    {
+        return array_map(function ($header, $index) {
+            $header = $this->normalizeValue($header);
+            $header = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $header) ?: $header;
+            $header = strtolower($header);
+            $header = preg_replace('/[^a-z0-9]+/', '_', $header ?? '');
+            $header = trim((string) $header, '_');
+
+            return $header !== '' ? $header : '__blank_'.$index;
+        }, $rawHeaders, array_keys($rawHeaders));
+    }
+
     protected function normalizeLookupKey(string $value): string
     {
         return mb_strtoupper($this->normalizeValue($value), 'UTF-8');
+    }
+
+    protected function normalizeRegion(string $value): string
+    {
+        $value = $this->normalizeValue($value);
+
+        return match ($this->normalizeLookupKey($value)) {
+            'ALTIPLANO' => 'Altiplano',
+            'CENTRO' => 'Centro',
+            'HUASTECA' => 'Huasteca',
+            'MEDIA' => 'Media',
+            default => $value,
+        };
     }
 
     protected function normalizeValue(mixed $value): string

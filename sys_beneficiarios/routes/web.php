@@ -25,6 +25,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SkatePlaza\BeneficiarioController as SkatePlazaBeneficiarioController;
 use App\Http\Controllers\SkatePlaza\DashboardController as SkatePlazaDashboardController;
 use App\Http\Controllers\SkatePlaza\PrestamoController as SkatePlazaPrestamoController;
+use App\Http\Controllers\StackController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 Route::get('/', function () {
@@ -60,6 +61,10 @@ Route::get('/mi-progreso/kpis', [DashboardController::class, 'miProgresoKpis'])-
 
 // Alias de registro de captura usado en tests
 Route::post('/captura/registrar', [BeneficiarioController::class, 'store'])->name('captura.registrar')->middleware(['auth','role:admin|delegado|capturista']);
+
+Route::get('/stack', [StackController::class, 'index'])
+    ->middleware(['auth', 'role:admin|delegado'])
+    ->name('stack.index');
 
 // Secciones por rol
 Route::middleware(['auth','role:admin'])->group(function () {
@@ -115,6 +120,7 @@ Route::middleware('auth')->group(function () {
 
 Route::middleware(['auth', 'role:delegado'])->prefix('delegacion')->name('delegacion.')->group(function () {
     Route::get('/', [DelegacionDashboardController::class, 'index'])->name('home');
+    Route::resource('usuarios', UserController::class)->except(['show'])->parameters(['usuarios' => 'usuario']);
     Route::prefix('inventario/tarjetas')->name('inventario.tarjetas.')->group(function () {
         Route::get('/', [DelegacionInventarioTarjetaController::class, 'index'])->name('index');
         Route::post('assign-range', [DelegacionInventarioTarjetaController::class, 'assignRange'])->name('assignRange');
@@ -136,7 +142,7 @@ Route::middleware(['auth', 'role:skate_plaza'])->prefix('skate-plaza')->name('sk
 
 // Admin: gestión de usuarios
 Route::middleware(['auth','role:admin'])->prefix('admin')->name('admin.')->group(function () {
-    Route::resource('usuarios', UserController::class)->parameters(['usuarios' => 'usuario']);
+    Route::resource('usuarios', UserController::class)->except(['show'])->parameters(['usuarios' => 'usuario']);
     Route::get('oficinas', [OficinaController::class, 'index'])->name('oficinas.index');
     Route::post('oficinas/municipios/{municipio}', [OficinaController::class, 'assignMunicipio'])->name('oficinas.municipios.assign');
     Route::prefix('inventario/tarjetas')->name('inventario.tarjetas.')->group(function () {

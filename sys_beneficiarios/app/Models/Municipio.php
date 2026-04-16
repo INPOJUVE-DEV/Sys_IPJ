@@ -10,7 +10,7 @@ class Municipio extends Model
     use HasFactory;
 
     protected $fillable = [
-        'clave', 'nombre', 'oficina_id',
+        'clave', 'nombre', 'region', 'oficina_id',
     ];
 
     public function beneficiarios()

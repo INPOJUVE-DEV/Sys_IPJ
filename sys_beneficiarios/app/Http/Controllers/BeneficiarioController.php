@@ -125,17 +125,10 @@ class BeneficiarioController extends Controller
 
                 $this->saveDomicilio($request, $beneficiario, $seccion);
 
-                $tarjeta = $tarjetaService->findConsumableByFolio($data['folio_tarjeta'] ?? null, Auth::user());
-                if (! $tarjeta) {
-                    throw ValidationException::withMessages([
-                        'folio_tarjeta' => 'Debes capturar un folio de tarjeta valido.',
-                    ]);
-                }
-
-                $tarjetaService->consume(Auth::user(), $tarjeta, $beneficiario);
+                $tarjeta = $tarjetaService->consumeNextAvailable(Auth::user(), $beneficiario, $beneficiario->municipio_id);
                 $beneficiario->forceFill([
                     'tarjeta_id' => $tarjeta->id,
-                    'folio_tarjeta' => $tarjeta->folio,
+                    'folio_tarjeta' => null,
                 ])->save();
 
                 return $beneficiario;
@@ -171,13 +164,6 @@ class BeneficiarioController extends Controller
     {
         $this->authorize('update', $beneficiario);
         $data = $request->validated();
-        $requestedFolio = trim((string) ($data['folio_tarjeta'] ?? ''));
-        $currentFolio = trim((string) ($beneficiario->folio_tarjeta ?? ''));
-        if ($requestedFolio !== $currentFolio) {
-            throw ValidationException::withMessages([
-                'folio_tarjeta' => 'La tarjeta no se puede cambiar desde esta pantalla.',
-            ]);
-        }
 
         $beneficiario->fill(collect($data)->except('folio_tarjeta')->all());
         $dom = $request->input('domicilio', []);

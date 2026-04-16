@@ -2,7 +2,7 @@
     $b = $beneficiario ?? null;
     $domicilio = $domicilio ?? $b?->domicilio;
     $fieldLabels = [
-        'folio_tarjeta' => 'Folio tarjeta',
+        'folio_tarjeta' => 'Tarjeta',
         'nombre' => 'Nombre',
         'apellido_paterno' => 'Apellido paterno',
         'apellido_materno' => 'Apellido materno',
@@ -165,18 +165,14 @@
         @endif
 
         <div class="row g-3">
-            <div class="col-md-4">
-                <label for="folio_tarjeta" class="form-label">Folio tarjeta</label>
-                <input id="folio_tarjeta" name="folio_tarjeta"
-                    value="{{ old('folio_tarjeta', $b->folio_tarjeta ?? '') }}"
-                    class="form-control @error('folio_tarjeta') is-invalid @enderror"
-                    @required(! $isEditMode)
-                    @readonly($isEditMode)>
-                <div class="form-text">
-                    {{ $isEditMode ? 'El folio se conserva como referencia y no puede cambiarse desde esta pantalla.' : 'El folio debe existir en inventario y estar disponible para tu oficina o asignacion.' }}
+            @if(($mode ?? 'create') === 'create')
+                <div class="col-md-4">
+                    <div class="border rounded-3 p-3 bg-light h-100">
+                        <div class="fw-semibold">Tarjeta</div>
+                        <div class="small text-muted">No escribas folios. Al guardar, el sistema tomara una tarjeta disponible de tu inventario.</div>
+                    </div>
                 </div>
-                @error('folio_tarjeta')<div class="invalid-feedback">{{ $message }}</div>@enderror
-            </div>
+            @endif
             @if(($mode ?? 'create') === 'create')
                 <div class="col-md-4">
                     <label for="telefono" class="form-label">Teléfono (10 dígitos)</label>

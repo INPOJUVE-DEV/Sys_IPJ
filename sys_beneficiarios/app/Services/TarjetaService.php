@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Beneficiario;
+use App\Models\Municipio;
 use App\Models\Oficina;
 use App\Models\Tarjeta;
 use App\Models\TarjetaMovimiento;
@@ -14,6 +15,144 @@ use Illuminate\Validation\ValidationException;
 
 class TarjetaService
 {
+    public function createQuantity(User $actor, Oficina $oficina, int $cantidad, ?Municipio $municipio = null, ?string $observaciones = null): int
+    {
+        $this->ensurePositiveQuantity($cantidad);
+        $this->ensureMunicipioMatchesOffice($oficina, $municipio);
+
+        $status = $oficina->tipo === Oficina::TIPO_CENTRAL
+            ? Tarjeta::STATUS_DISPONIBLE
+            : Tarjeta::STATUS_ASIGNADA_OFICINA;
+
+        return DB::transaction(function () use ($actor, $oficina, $municipio, $cantidad, $status, $observaciones) {
+            for ($index = 0; $index < $cantidad; $index++) {
+                $tarjeta = Tarjeta::create([
+                    'id' => (string) Str::uuid(),
+                    'folio' => $this->makeInternalFolio(),
+                    'estatus' => $status,
+                    'oficina_id' => $oficina->id,
+                    'municipio_id' => $municipio?->id,
+                    'observaciones' => $observaciones,
+                ]);
+
+                $this->recordMovement($tarjeta, 'alta', $actor, [
+                    'to_oficina_id' => $oficina->id,
+                    'metadata_json' => [
+                        'municipio_id' => $municipio?->id,
+                        'observaciones' => $observaciones,
+                        'captura_por' => 'cantidad',
+                    ],
+                ]);
+            }
+
+            return $cantidad;
+        });
+    }
+
+    public function transferQuantity(
+        User $actor,
+        Oficina $destino,
+        int $cantidad,
+        ?Municipio $municipio = null,
+        ?Oficina $origen = null,
+        ?string $observaciones = null
+    ): int {
+        $this->ensurePositiveQuantity($cantidad);
+        $this->ensureMunicipioMatchesOffice($destino, $municipio);
+
+        return DB::transaction(function () use ($actor, $destino, $cantidad, $municipio, $origen, $observaciones) {
+            $tarjetas = $this->loadAvailableCardsForQuantity(
+                actor: $actor,
+                cantidad: $cantidad,
+                officeId: $origen?->id,
+                municipioId: $municipio?->id
+            );
+            $this->ensureCanManageTarjetas($actor, $tarjetas);
+
+            foreach ($tarjetas as $tarjeta) {
+                $fromOficinaId = $tarjeta->oficina_id;
+                $fromUsuarioUuid = $tarjeta->usuario_uuid;
+
+                $tarjeta->oficina_id = $destino->id;
+                $tarjeta->usuario_uuid = null;
+                $tarjeta->municipio_id = $municipio?->id ?? $tarjeta->municipio_id;
+                $tarjeta->estatus = $destino->tipo === Oficina::TIPO_CENTRAL
+                    ? Tarjeta::STATUS_DISPONIBLE
+                    : Tarjeta::STATUS_ASIGNADA_OFICINA;
+                $tarjeta->observaciones = $observaciones ?: $tarjeta->observaciones;
+                $tarjeta->save();
+
+                $this->recordMovement($tarjeta, 'transferencia_oficina', $actor, [
+                    'from_oficina_id' => $fromOficinaId,
+                    'to_oficina_id' => $destino->id,
+                    'from_usuario_uuid' => $fromUsuarioUuid,
+                    'metadata_json' => [
+                        'municipio_id' => $tarjeta->municipio_id,
+                        'observaciones' => $observaciones,
+                        'captura_por' => 'cantidad',
+                    ],
+                ]);
+            }
+
+            return $tarjetas->count();
+        });
+    }
+
+    public function assignQuantityToUser(User $actor, User $destino, int $cantidad, ?Municipio $municipio = null, ?string $observaciones = null): int
+    {
+        $this->ensurePositiveQuantity($cantidad);
+
+        if (! $destino->oficina_id) {
+            throw ValidationException::withMessages([
+                'usuario_uuid' => 'La persona destino no tiene region asignada.',
+            ]);
+        }
+
+        if ($actor->hasRole('delegado') && (int) $actor->oficina_id !== (int) $destino->oficina_id) {
+            throw ValidationException::withMessages([
+                'usuario_uuid' => 'Solo puedes entregar tarjetas a capturistas de tu region.',
+            ]);
+        }
+
+        $this->ensureMunicipioMatchesOffice(Oficina::findOrFail($destino->oficina_id), $municipio);
+
+        return DB::transaction(function () use ($actor, $destino, $cantidad, $municipio, $observaciones) {
+            $tarjetas = $this->loadAvailableCardsForQuantity(
+                actor: $actor,
+                cantidad: $cantidad,
+                officeId: $destino->oficina_id,
+                municipioId: $municipio?->id
+            );
+            $this->ensureCanManageTarjetas($actor, $tarjetas);
+
+            foreach ($tarjetas as $tarjeta) {
+                $fromOficinaId = $tarjeta->oficina_id;
+                $fromUsuarioUuid = $tarjeta->usuario_uuid;
+
+                $tarjeta->oficina_id = $destino->oficina_id;
+                $tarjeta->usuario_uuid = $destino->uuid;
+                $tarjeta->municipio_id = $municipio?->id ?? $tarjeta->municipio_id;
+                $tarjeta->estatus = Tarjeta::STATUS_ASIGNADA_USUARIO;
+                $tarjeta->observaciones = $observaciones ?: $tarjeta->observaciones;
+                $tarjeta->save();
+
+                $this->recordMovement($tarjeta, 'asignacion_usuario', $actor, [
+                    'from_oficina_id' => $fromOficinaId,
+                    'to_oficina_id' => $destino->oficina_id,
+                    'from_usuario_uuid' => $fromUsuarioUuid,
+                    'to_usuario_uuid' => $destino->uuid,
+                    'metadata_json' => [
+                        'municipio_id' => $tarjeta->municipio_id,
+                        'observaciones' => $observaciones,
+                        'captura_por' => 'cantidad',
+                    ],
+                ]);
+            }
+
+            return $tarjetas->count();
+        });
+    }
+
     public function createRange(User $actor, Oficina $oficina, string $prefijo, int $desde, int $hasta, int $padding = 0, ?string $observaciones = null): int
     {
         $folios = $this->buildFolios($prefijo, $desde, $hasta, $padding);
@@ -213,6 +352,7 @@ class TarjetaService
         $tarjeta->beneficiario_id = $beneficiario->id;
         $tarjeta->oficina_id = $actor->oficina_id ?: $tarjeta->oficina_id;
         $tarjeta->usuario_uuid = $actor->uuid;
+        $tarjeta->municipio_id = $beneficiario->municipio_id ?: $tarjeta->municipio_id;
         $tarjeta->save();
 
         $this->recordMovement($tarjeta, 'consumo', $actor, [
@@ -224,6 +364,23 @@ class TarjetaService
         ]);
 
         return $tarjeta;
+    }
+
+    public function consumeNextAvailable(User $actor, Beneficiario $beneficiario, ?int $municipioId = null): Tarjeta
+    {
+        $municipioId = $municipioId ?: $beneficiario->municipio_id;
+
+        return DB::transaction(function () use ($actor, $beneficiario, $municipioId) {
+            $tarjeta = $this->findNextConsumableCard($actor, $municipioId);
+
+            if (! $tarjeta) {
+                throw ValidationException::withMessages([
+                    'tarjetas' => 'No hay tarjetas disponibles para este municipio. Pide que te asignen mas tarjetas antes de continuar.',
+                ]);
+            }
+
+            return $this->consume($actor, $tarjeta, $beneficiario);
+        });
     }
 
     public function backfillConsumedCard(Beneficiario $beneficiario, Oficina $fallbackOficina, User $actor): Tarjeta
@@ -277,6 +434,122 @@ class TarjetaService
         }
 
         return collect($folios)->map(fn (string $folio) => $tarjetas->get($folio));
+    }
+
+    protected function loadAvailableCardsForQuantity(User $actor, int $cantidad, ?int $officeId = null, ?int $municipioId = null): Collection
+    {
+        $query = Tarjeta::query()
+            ->lockForUpdate()
+            ->whereNull('usuario_uuid')
+            ->whereIn('estatus', [
+                Tarjeta::STATUS_DISPONIBLE,
+                Tarjeta::STATUS_ASIGNADA_OFICINA,
+                Tarjeta::STATUS_DEVUELTA,
+            ])
+            ->when($officeId, fn ($cards) => $cards->where('oficina_id', $officeId))
+            ->when($municipioId, function ($cards) use ($municipioId) {
+                $cards->where(function ($scope) use ($municipioId) {
+                    $scope->whereNull('municipio_id')->orWhere('municipio_id', $municipioId);
+                });
+            })
+            ->when($actor->hasRole('delegado'), fn ($cards) => $cards->where('oficina_id', $actor->oficina_id))
+            ->orderByRaw($municipioId ? 'CASE WHEN municipio_id = ? THEN 0 WHEN municipio_id IS NULL THEN 1 ELSE 2 END' : 'municipio_id IS NOT NULL', $municipioId ? [$municipioId] : [])
+            ->orderBy('created_at')
+            ->limit($cantidad)
+            ->get();
+
+        if ($query->count() < $cantidad) {
+            throw ValidationException::withMessages([
+                'cantidad' => 'No hay suficientes tarjetas disponibles para completar esta entrega.',
+            ]);
+        }
+
+        return $query;
+    }
+
+    protected function findNextConsumableCard(User $actor, ?int $municipioId = null): ?Tarjeta
+    {
+        if (! $actor->hasRole('admin') && ! $actor->oficina_id) {
+            throw ValidationException::withMessages([
+                'tarjetas' => 'Tu usuario no tiene region asignada para consumir tarjetas.',
+            ]);
+        }
+
+        $base = function () use ($municipioId) {
+            return Tarjeta::query()
+                ->lockForUpdate()
+                ->whereIn('estatus', [
+                    Tarjeta::STATUS_ASIGNADA_USUARIO,
+                    Tarjeta::STATUS_ASIGNADA_OFICINA,
+                    Tarjeta::STATUS_DEVUELTA,
+                    Tarjeta::STATUS_DISPONIBLE,
+                ])
+                ->when($municipioId, function ($cards) use ($municipioId) {
+                    $cards->where(function ($scope) use ($municipioId) {
+                        $scope->where('municipio_id', $municipioId)->orWhereNull('municipio_id');
+                    });
+                })
+                ->orderByRaw($municipioId ? 'CASE WHEN municipio_id = ? THEN 0 WHEN municipio_id IS NULL THEN 1 ELSE 2 END' : 'municipio_id IS NOT NULL', $municipioId ? [$municipioId] : [])
+                ->orderBy('created_at');
+        };
+
+        $assignedToUser = $base()
+            ->where('usuario_uuid', $actor->uuid)
+            ->first();
+
+        if ($assignedToUser) {
+            return $assignedToUser;
+        }
+
+        $officePool = $base()
+            ->whereNull('usuario_uuid')
+            ->when(! $actor->hasRole('admin'), fn ($cards) => $cards->where('oficina_id', $actor->oficina_id))
+            ->when($actor->hasRole('admin') && $actor->oficina_id, fn ($cards) => $cards->where('oficina_id', $actor->oficina_id))
+            ->first();
+
+        if ($officePool) {
+            return $officePool;
+        }
+
+        if ($actor->hasRole('admin') && ! $actor->oficina_id) {
+            return $base()->whereNull('usuario_uuid')->first();
+        }
+
+        return null;
+    }
+
+    protected function ensurePositiveQuantity(int $cantidad): void
+    {
+        if ($cantidad < 1) {
+            throw ValidationException::withMessages([
+                'cantidad' => 'Captura una cantidad mayor a cero.',
+            ]);
+        }
+    }
+
+    protected function ensureMunicipioMatchesOffice(Oficina $oficina, ?Municipio $municipio = null): void
+    {
+        if (! $municipio || $oficina->tipo !== Oficina::TIPO_DELEGACION) {
+            return;
+        }
+
+        $differentOffice = $municipio->oficina_id && (int) $municipio->oficina_id !== (int) $oficina->id;
+        $differentRegion = $oficina->region && $municipio->region && $oficina->region !== $municipio->region;
+
+        if ($differentOffice || $differentRegion) {
+            throw ValidationException::withMessages([
+                'municipio_id' => 'El municipio seleccionado no pertenece a esa region.',
+            ]);
+        }
+    }
+
+    protected function makeInternalFolio(): string
+    {
+        do {
+            $folio = 'STK-'.now()->format('Ymd').'-'.Str::upper(Str::random(10));
+        } while (Tarjeta::where('folio', $folio)->exists());
+
+        return $folio;
     }
 
     protected function ensureCanManageTarjetas(User $actor, Collection $tarjetas): void

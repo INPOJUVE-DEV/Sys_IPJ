@@ -15,7 +15,7 @@
             <form class="row gy-2 gx-3 align-items-end" method="GET">
                 <div class="col-12 col-md-3">
                     <label class="form-label">Búsqueda</label>
-                    <input type="text" name="q" value="{{ $q }}" class="form-control" placeholder="Folio, CURP o nombre">
+                    <input type="text" name="q" value="{{ $q }}" class="form-control" placeholder="CURP o nombre">
                 </div>
                 <div class="col-12 col-md-3">
                     <label class="form-label">Municipio</label>
@@ -81,8 +81,8 @@
                                 <div>
                                     <div class="d-flex justify-content-between align-items-start gap-2">
                                         <div>
-                                            <span class="text-white-50 small text-uppercase">Folio</span>
-                                            <div class="h6 text-white mb-0">{{ $b->folio_tarjeta }}</div>
+                                            <span class="text-white-50 small text-uppercase">Tarjeta</span>
+                                            <div class="h6 text-white mb-0">{{ $b->tarjeta_id ? 'Asignada' : 'Sin tarjeta' }}</div>
                                         </div>
                                         <span class="badge bg-secondary text-white">{{ $b->curp }}</span>
                                     </div>

@@ -2,7 +2,7 @@
     $b = $beneficiario ?? null;
     $domicilio = $domicilio ?? $b?->domicilio;
     $fieldLabels = [
-        'folio_tarjeta' => 'Folio tarjeta',
+        'folio_tarjeta' => 'Tarjeta',
         'nombre' => 'Nombre',
         'apellido_paterno' => 'Apellido paterno',
         'apellido_materno' => 'Apellido materno',
@@ -53,10 +53,10 @@
     <div class="wizard-step active" data-step="1">
         <div class="row g-3">
             <div class="col-md-4">
-                <label for="folio_tarjeta" class="form-label">Folio tarjeta</label>
-                <input id="folio_tarjeta" name="folio_tarjeta" value="{{ old('folio_tarjeta', $b->folio_tarjeta ?? '') }}" class="form-control @error('folio_tarjeta') is-invalid @enderror">
-                <div class="form-text">Opcional. Si lo capturas, el sistema consumira una tarjeta disponible de tu inventario.</div>
-                @error('folio_tarjeta')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                <div class="border rounded-3 p-3 bg-light h-100">
+                    <div class="fw-semibold">Tarjeta</div>
+                    <div class="small text-muted">No se capturan folios. El control de tarjetas se lleva desde Stack.</div>
+                </div>
             </div>
             <div class="col-md-4">
                 <label for="nombre" class="form-label">Nombre</label>

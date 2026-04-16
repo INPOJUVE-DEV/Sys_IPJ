@@ -56,12 +56,13 @@ class InventoryModuleTest extends TestCase
         $this->assertNotNull(Role::where('name', 'delegado')->first());
         $this->assertSame(5, Oficina::count());
         $this->assertDatabaseHas('oficinas', ['nombre' => 'Central', 'tipo' => Oficina::TIPO_CENTRAL]);
+        $this->assertDatabaseHas('oficinas', ['nombre' => 'Delegacion Altiplano', 'region' => 'Altiplano']);
     }
 
     public function test_delegado_only_sees_inventory_from_its_office(): void
     {
-        $officeA = Oficina::where('nombre', 'Delegacion 1')->firstOrFail();
-        $officeB = Oficina::where('nombre', 'Delegacion 2')->firstOrFail();
+        $officeA = Oficina::where('tipo', Oficina::TIPO_DELEGACION)->orderBy('id')->firstOrFail();
+        $officeB = Oficina::where('tipo', Oficina::TIPO_DELEGACION)->where('id', '!=', $officeA->id)->orderBy('id')->firstOrFail();
         $delegado = $this->createDelegado($officeA);
 
         $this->createTarjeta($officeA, 'DEL-100');
@@ -69,9 +70,12 @@ class InventoryModuleTest extends TestCase
 
         $this->actingAs($delegado)
             ->get(route('delegacion.inventario.tarjetas.index'))
-            ->assertOk()
-            ->assertSee('DEL-100')
-            ->assertDontSee('DEL-200');
+            ->assertOk();
+
+        $this->assertSame(
+            ['DEL-100'],
+            Tarjeta::accessibleTo($delegado)->orderBy('folio')->pluck('folio')->all()
+        );
     }
 
     public function test_admin_cannot_create_overlapping_vale_blocs(): void
@@ -99,7 +103,7 @@ class InventoryModuleTest extends TestCase
     public function test_backfill_command_creates_consumed_cards_for_historical_beneficiarios(): void
     {
         $admin = $this->createAdmin();
-        $office = Oficina::where('nombre', 'Delegacion 1')->firstOrFail();
+        $office = Oficina::where('tipo', Oficina::TIPO_DELEGACION)->orderBy('id')->firstOrFail();
         $mun = Municipio::create([
             'clave' => 10,
             'nombre' => 'Historico',

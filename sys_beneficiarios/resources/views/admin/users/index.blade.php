@@ -1,8 +1,9 @@
 <x-app-layout>
+    @php($userRoutes = request()->routeIs('delegacion.*') ? 'delegacion.usuarios' : 'admin.usuarios')
     <x-slot name="header">
         <div class="d-flex justify-content-between align-items-center">
             <h2 class="h4 m-0">Usuarios</h2>
-            <a href="{{ route('admin.usuarios.create') }}" class="btn btn-primary">Nuevo usuario</a>
+            <a href="{{ route($userRoutes.'.create') }}" class="btn btn-primary">Nuevo usuario</a>
         </div>
     </x-slot>
 
@@ -48,10 +49,10 @@
                                     <i class="bi bi-building me-1"></i>{{ $user->office?->nombre ?? 'Sin oficina' }}
                                 </div>
                                 <div class="mt-auto d-flex flex-column gap-2">
-                                    <a href="{{ route('admin.usuarios.edit', $user) }}" class="btn btn-outline-light btn-sm w-100">
+                                    <a href="{{ route($userRoutes.'.edit', $user) }}" class="btn btn-outline-light btn-sm w-100">
                                         <i class="bi bi-pencil-square me-1"></i>Editar
                                     </a>
-                                    <form action="{{ route('admin.usuarios.destroy', $user) }}" method="POST" class="m-0" onsubmit="return confirm('¿Eliminar usuario?');">
+                                    <form action="{{ route($userRoutes.'.destroy', $user) }}" method="POST" class="m-0" onsubmit="return confirm('Eliminar usuario?');">
                                         @csrf
                                         @method('DELETE')
                                         <button type="submit" class="btn btn-outline-danger btn-sm w-100">

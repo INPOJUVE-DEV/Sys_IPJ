@@ -100,6 +100,13 @@ class DemoDataSeeder extends Seeder
                 $office->id
             );
 
+            $this->upsertUser(
+                "capturista_programas{$slot}@example.com",
+                'Capturista Programas '.$office->nombre,
+                'capturista_programas',
+                $office->id
+            );
+
             $capturistasByOffice[$office->id] = [
                 $this->upsertUser(
                     "capturista{$slot}a@example.com",
@@ -177,43 +184,37 @@ class DemoDataSeeder extends Seeder
         $central = Oficina::where('tipo', Oficina::TIPO_CENTRAL)->firstOrFail();
         $delegaciones = Oficina::where('tipo', Oficina::TIPO_DELEGACION)->orderBy('id')->get()->values();
 
-        $service->createRange($admin, $central, self::CARD_PREFIX, 1, 480, self::CARD_PADDING, 'Carga demo local');
+        $service->createQuantity($admin, $central, 480, null, 'Carga demo local');
 
         foreach ($delegaciones as $officeIndex => $office) {
-            $start = ($officeIndex * 100) + 1;
-            $end = $start + 99;
+            $municipio = Municipio::where('oficina_id', $office->id)->orderBy('nombre')->first();
 
-            $service->transferRange(
+            $service->transferQuantity(
                 $admin,
                 $office,
-                self::CARD_PREFIX,
-                $start,
-                $end,
-                self::CARD_PADDING,
+                100,
+                $municipio,
+                $central,
                 'Distribucion inicial demo'
             );
 
             $capturistas = $capturistasByOffice[$office->id] ?? [];
             if (isset($capturistas[0])) {
-                $service->assignRangeToUser(
+                $service->assignQuantityToUser(
                     $admin,
                     $capturistas[0],
-                    self::CARD_PREFIX,
-                    $start,
-                    $start + 14,
-                    self::CARD_PADDING,
+                    15,
+                    $municipio,
                     'Asignacion demo A'
                 );
             }
 
             if (isset($capturistas[1])) {
-                $service->assignRangeToUser(
+                $service->assignQuantityToUser(
                     $admin,
                     $capturistas[1],
-                    self::CARD_PREFIX,
-                    $start + 15,
-                    $start + 29,
-                    self::CARD_PADDING,
+                    15,
+                    $municipio,
                     'Asignacion demo B'
                 );
             }
@@ -322,7 +323,7 @@ class DemoDataSeeder extends Seeder
                         $service->consume($capturista, $tarjeta, $beneficiario);
                         $beneficiario->forceFill([
                             'tarjeta_id' => $tarjeta->id,
-                            'folio_tarjeta' => $tarjeta->folio,
+                            'folio_tarjeta' => null,
                         ])->save();
                     }
                 }
@@ -363,13 +364,18 @@ class DemoDataSeeder extends Seeder
 
         $service = app(TarjetaService::class);
         $targets = [
-            ['folio' => $this->formatCardFolio(15), 'status' => Tarjeta::STATUS_DEVUELTA, 'note' => 'Tarjeta demo devuelta'],
-            ['folio' => $this->formatCardFolio(130), 'status' => Tarjeta::STATUS_BLOQUEADA, 'note' => 'Tarjeta demo bloqueada'],
-            ['folio' => $this->formatCardFolio(230), 'status' => Tarjeta::STATUS_EXTRAVIADA, 'note' => 'Tarjeta demo extraviada'],
+            ['status' => Tarjeta::STATUS_DEVUELTA, 'note' => 'Tarjeta demo devuelta'],
+            ['status' => Tarjeta::STATUS_BLOQUEADA, 'note' => 'Tarjeta demo bloqueada'],
+            ['status' => Tarjeta::STATUS_EXTRAVIADA, 'note' => 'Tarjeta demo extraviada'],
         ];
 
         foreach ($targets as $target) {
-            $tarjeta = Tarjeta::where('folio', $target['folio'])->first();
+            $tarjeta = Tarjeta::whereNotIn('estatus', [
+                Tarjeta::STATUS_CONSUMIDA,
+                Tarjeta::STATUS_DEVUELTA,
+                Tarjeta::STATUS_BLOQUEADA,
+                Tarjeta::STATUS_EXTRAVIADA,
+            ])->oldest()->first();
             if (! $tarjeta || $tarjeta->estatus === Tarjeta::STATUS_CONSUMIDA || $tarjeta->estatus === $target['status']) {
                 continue;
             }

@@ -272,7 +272,7 @@ class InscripcionController extends Controller
     {
         $query = Municipio::orderBy('nombre');
         $user = auth()->user();
-        if ($user?->hasAnyRole(['delegado', 'capturista']) && $user->oficina_id) {
+        if ($user?->hasAnyRole(['delegado', 'capturista', 'capturista_programas']) && $user->oficina_id) {
             $query->where('oficina_id', $user->oficina_id);
         }
 
@@ -282,7 +282,7 @@ class InscripcionController extends Controller
     private function ensureUserCanCaptureSeccion(?Seccion $seccion): void
     {
         $user = auth()->user();
-        if (! $user?->hasAnyRole(['delegado', 'capturista']) || ! $user->oficina_id || ! $seccion) {
+        if (! $user?->hasAnyRole(['delegado', 'capturista', 'capturista_programas']) || ! $user->oficina_id || ! $seccion) {
             return;
         }
 

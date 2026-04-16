@@ -35,6 +35,15 @@
         ];
     }
 
+    if ($isAdmin || $isDelegado) {
+        $primaryLinks[] = [
+            'label' => 'Stack',
+            'route' => route('stack.index'),
+            'icon' => 'bi-stack',
+            'active' => request()->routeIs('stack.*') || request()->routeIs('admin.inventario.tarjetas.*') || request()->routeIs('delegacion.inventario.tarjetas.*'),
+        ];
+    }
+
     if ($isAdmin) {
         $primaryLinks[] = [
             'label' => 'Beneficiarios',
@@ -71,21 +80,6 @@
             'route' => route('inscripciones.index'),
             'icon' => 'bi-calendar-check',
             'active' => request()->routeIs('inscripciones.*'),
-        ];
-    }
-
-    if ($isDelegado) {
-        $primaryLinks[] = [
-            'label' => 'Tarjetas',
-            'route' => route('delegacion.inventario.tarjetas.index'),
-            'icon' => 'bi-credit-card-2-front',
-            'active' => request()->routeIs('delegacion.inventario.tarjetas.*'),
-        ];
-        $primaryLinks[] = [
-            'label' => 'Vales',
-            'route' => route('delegacion.inventario.vales.index'),
-            'icon' => 'bi-journal-text',
-            'active' => request()->routeIs('delegacion.inventario.vales.*'),
         ];
     }
 

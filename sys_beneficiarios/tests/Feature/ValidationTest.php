@@ -59,7 +59,6 @@ class ValidationTest extends TestCase
     {
         [, $mun, $seccion] = $this->officeAndSeccion();
         return array_merge([
-            'folio_tarjeta' => 'FT-'.rand(100,999),
             'nombre' => 'Juan',
             'apellido_paterno' => 'Perez',
             'apellido_materno' => 'Lopez',
@@ -96,19 +95,18 @@ class ValidationTest extends TestCase
         $this->actingAs($u)->post(route('beneficiarios.store'), $payload)->assertSessionHasErrors('telefono');
     }
 
-    public function test_unique_folio(): void
+    public function test_card_inventory_cannot_be_consumed_twice(): void
     {
         [$office] = $this->officeAndSeccion();
         $u = $this->capturistaForOffice($office);
         $this->createCard($office, 'FT-1');
-        $p1 = $this->validPayload(['folio_tarjeta' => 'FT-1']);
+        $p1 = $this->validPayload();
         $p2 = $this->validPayload([
-            'folio_tarjeta' => 'FT-1',
             'curp' => 'PEPJ000101HDFLRNB2',
             'id_ine' => 'INE999',
         ]);
         $this->actingAs($u)->post(route('beneficiarios.store'), $p1);
-        $this->actingAs($u)->post(route('beneficiarios.store'), $p2)->assertSessionHasErrors('folio_tarjeta');
+        $this->actingAs($u)->post(route('beneficiarios.store'), $p2)->assertSessionHasErrors('tarjetas');
     }
 
     public function test_beneficiario_can_be_created_without_is_draft(): void
@@ -116,20 +114,21 @@ class ValidationTest extends TestCase
         [$office] = $this->officeAndSeccion();
         $u = $this->capturistaForOffice($office);
         $this->createCard($office, 'FT-CREATE');
-        $payload = $this->validPayload(['folio_tarjeta' => 'FT-CREATE']);
+        $payload = $this->validPayload();
 
         $response = $this->actingAs($u)->post(route('beneficiarios.store'), $payload);
 
         $response->assertRedirect(route('beneficiarios.create'));
 
         $this->assertDatabaseHas('beneficiarios', [
-            'folio_tarjeta' => 'FT-CREATE',
+            'folio_tarjeta' => null,
             'nombre' => 'Juan',
             'apellido_paterno' => 'Perez',
         ]);
 
-        $benef = \App\Models\Beneficiario::where('folio_tarjeta', 'FT-CREATE')->first();
+        $benef = \App\Models\Beneficiario::where('curp', 'PEPJ000101HDFLRNA1')->first();
         $this->assertNotNull($benef);
+        $this->assertNotNull($benef->tarjeta_id);
         $this->assertSame('0001', optional($benef->seccion)->seccional);
         $this->assertNotNull($benef->municipio_id);
 
