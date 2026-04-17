@@ -1,3 +1,5 @@
+@use "sass:color";
+
 // Fonts
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Montserrat:wght@600;700;800&display=swap');
 
@@ -8,8 +10,11 @@
 // Helpers / layout tweaks
 body {
   font-family: $font-family-sans-serif;
-  background-color: $body-bg;
+  background:
+    radial-gradient(circle at top left, rgba($green, .18), transparent 34rem),
+    linear-gradient(180deg, $surface-base 0%, color.adjust($surface-base, $lightness: -2%) 100%);
   color: $body-color;
+  min-height: 100vh;
 }
 h1, h2, h3, h4, h5, h6 {
   font-family: $headings-font-family;
@@ -27,8 +32,8 @@ h1, h2, h3, h4, h5, h6 {
 }
 .btn-cta:hover {
   color: #fff;
-  background-color: darken($pink-cta, 5%);
-  border-color: darken($pink-cta, 5%);
+  background-color: color.adjust($pink-cta, $lightness: -5%);
+  border-color: color.adjust($pink-cta, $lightness: -5%);
   transform: translateY(-1px);
   box-shadow: 0 6px 18px rgba($pink-cta, .45);
 }
@@ -74,11 +79,134 @@ h1, h2, h3, h4, h5, h6 {
   pointer-events: none;
 }
 
-// Cards on dark
-.card { background-color: $card-bg; border-color: $card-border-color; }
-.dropdown-menu { background-color: $card-bg; color: $body-color; }
+// Dark surfaces
+.card,
+.modal-content,
+.offcanvas,
+.list-group-item {
+  background-color: $card-bg;
+  border-color: $card-border-color;
+  color: $body-color;
+}
+.card {
+  box-shadow: 0 14px 34px rgba(0, 0, 0, .24);
+}
+.card-header,
+.card-footer {
+  background-color: $surface-2 !important;
+  border-color: $surface-border;
+  color: $body-color;
+}
+.dropdown-menu { background-color: $surface-1; border-color: $surface-border; color: $body-color; }
 .dropdown-item { color: $body-color; }
-.dropdown-item:hover { background: rgba(255,255,255,.06); }
+.dropdown-item:hover,
+.dropdown-item:focus,
+.dropdown-item.active {
+  background: $surface-2;
+  color: $body-color;
+}
+.dropdown-divider { border-color: $surface-border; }
+
+// Bootstrap light/white utilities are remapped to dark surfaces.
+.bg-white,
+.bg-light,
+.bg-body,
+.bg-body-tertiary,
+.table-light,
+.list-group-item-light {
+  background-color: $surface-2 !important;
+  color: $body-color !important;
+}
+.bg-dark,
+.bg-dark-subtle {
+  background-color: $surface-base !important;
+  color: $body-color !important;
+}
+.text-bg-light {
+  background-color: $surface-2 !important;
+  border: 1px solid $surface-border;
+  color: $body-color !important;
+}
+.border-white {
+  border-color: $surface-border !important;
+}
+.shadow-sm {
+  box-shadow: 0 .45rem 1.2rem rgba(0, 0, 0, .24) !important;
+}
+.text-muted,
+.form-text,
+.text-white-50 {
+  color: $text-muted !important;
+}
+
+// Controls
+.form-control,
+.form-select,
+.input-group-text {
+  background-color: $surface-2;
+  border-color: $surface-border;
+  color: $body-color;
+}
+.form-control:focus,
+.form-select:focus {
+  background-color: $surface-2;
+  border-color: $green-light;
+  box-shadow: 0 0 0 .2rem rgba($green-light, .18);
+  color: $body-color;
+}
+.form-control::placeholder {
+  color: rgba($text-muted, .78);
+}
+.form-check-input {
+  background-color: $surface-2;
+  border-color: $surface-border-strong;
+}
+.form-check-input:checked {
+  background-color: $green;
+  border-color: $green-light;
+}
+.form-check {
+  color: $body-color;
+}
+
+// Buttons that used Bootstrap "light" now follow the dark surface palette.
+.btn-light {
+  background-color: $surface-2;
+  border-color: $surface-border-strong;
+  color: $body-color;
+}
+.btn-light:hover,
+.btn-light:focus {
+  background-color: $surface-3;
+  border-color: $green-light;
+  color: $body-color;
+}
+.btn-outline-light {
+  border-color: $surface-border-strong;
+  color: $body-color;
+}
+.btn-outline-light:hover,
+.btn-outline-light:focus,
+.btn-outline-light.active {
+  background-color: $surface-3;
+  border-color: $green-light;
+  color: $body-color;
+}
+.btn-outline-secondary {
+  border-color: $surface-border-strong;
+  color: $text-muted;
+}
+.btn-outline-secondary:hover,
+.btn-outline-secondary:focus {
+  background-color: $surface-3;
+  border-color: $green-light;
+  color: $body-color;
+}
+.badge.bg-light {
+  background-color: $surface-2 !important;
+  border: 1px solid $surface-border;
+  color: $body-color !important;
+}
 
 // Bottom-left responsive page logo
 .page-logo-img {
@@ -93,32 +221,32 @@ h1, h2, h3, h4, h5, h6 {
   left: 0; right: 0; bottom: 0;
   display: flex; align-items: center; justify-content: center;
   padding: .25rem 0 .35rem;
-  background: linear-gradient(180deg, rgba(11,11,11,0) 0%, rgba(11,11,11,.55) 35%, rgba(11,11,11,.85) 100%);
+  background: linear-gradient(180deg, rgba($surface-base, 0) 0%, rgba($surface-base, .55) 35%, rgba($surface-base, .85) 100%);
   pointer-events: none;
   z-index: 1050;
 }
 
-// Tables (datagrid) on dark: white text, subtle lines
+// Tables (datagrid) on dark surfaces
 .card .table {
   background-color: transparent;
-  color: #f8f9fa;
+  color: $body-color;
 }
 .card .table tbody tr { background-color: transparent; }
 .card .table td,
-.card .table th { color: #f8f9fa; border-color: rgba(255,255,255,.15) !important; }
-.card .table-hover tbody tr:hover { background-color: rgba(255,255,255,.06); }
+.card .table th { color: $body-color; border-color: $surface-border !important; }
+.card .table-hover tbody tr:hover { background-color: rgba($green-light, .08); }
 // Dark header for datagrids
 .card .table thead,
 .card .table .table-light {
-  background-color: #1e1e1e !important;
-  color: #f8f9fa !important;
+  background-color: $surface-2 !important;
+  color: $body-color !important;
 }
 .card .table thead th,
 .card .table thead td {
-  border-color: rgba(255,255,255,.15) !important;
+  border-color: $surface-border !important;
 }
 .container.py-4, main.container {
-  border: 1px solid rgba(255,255,255,.12);
+  border: 1px solid $surface-border;
   border-radius: 12px;
   padding-top: 0 !important;
 }
@@ -129,8 +257,8 @@ h1, h2, h3, h4, h5, h6 {
   gap: .75rem;
 }
 .beneficiarios-list-item {
-  background-color: rgba(255,255,255,.03);
-  border: 1px solid rgba(255,255,255,.08);
+  background-color: $surface-1;
+  border: 1px solid $surface-border;
   border-radius: 1rem;
   padding: 1rem 1.25rem;
   color: inherit;
@@ -138,7 +266,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 .beneficiarios-list-item:hover {
   border-color: rgba($green-light, .85);
-  background-color: rgba(255,255,255,.05);
+  background-color: $surface-2;
   transform: translateY(-1px);
   text-decoration: none;
 }
@@ -154,4 +282,38 @@ h1, h2, h3, h4, h5, h6 {
 .pagination-wrapper svg {
   width: 1rem;
   height: 1rem;
+}
+
+.pagination .page-link {
+  background-color: $surface-2;
+  border-color: $surface-border;
+  color: $body-color;
+}
+.pagination .page-link:hover,
+.pagination .page-link:focus {
+  background-color: $surface-3;
+  border-color: $green-light;
+  color: $body-color;
+}
+.pagination .active > .page-link,
+.pagination .page-link.active {
+  background-color: $green;
+  border-color: $green-light;
+  color: #fff;
+}
+.alert {
+  background-color: $surface-2;
+  border-color: $surface-border;
+  color: $body-color;
+}
+.alert-success {
+  border-color: rgba($success, .55);
+}
+.alert-danger {
+  border-color: rgba($danger, .55);
+}
+.toast {
+  background-color: $surface-1;
+  border-color: $surface-border;
+  color: $body-color;
 }

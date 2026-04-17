@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\ProteccionMovimiento;
 use App\Models\TarjetaMovimiento;
-use App\Models\ValeMovimiento;
 
 class InventarioMovimientoController extends Controller
 {
@@ -19,20 +18,6 @@ class InventarioMovimientoController extends Controller
                 return [
                     'tipo_recurso' => 'tarjeta',
                     'folio' => $movement->tarjeta?->folio,
-                    'tipo' => $movement->tipo,
-                    'actor' => $movement->actor?->name,
-                    'created_at' => $movement->created_at,
-                ];
-            });
-
-        $valeMovimientos = ValeMovimiento::with(['valeBloc', 'actor'])
-            ->latest()
-            ->limit(50)
-            ->get()
-            ->map(function ($movement) {
-                return [
-                    'tipo_recurso' => 'vale',
-                    'folio' => $movement->valeBloc ? ($movement->valeBloc->folio_inicio.'-'.$movement->valeBloc->folio_fin) : null,
                     'tipo' => $movement->tipo,
                     'actor' => $movement->actor?->name,
                     'created_at' => $movement->created_at,
@@ -54,7 +39,6 @@ class InventarioMovimientoController extends Controller
             });
 
         $movimientos = $tarjetaMovimientos
-            ->concat($valeMovimientos)
             ->concat($proteccionMovimientos)
             ->sortByDesc('created_at')
             ->values();

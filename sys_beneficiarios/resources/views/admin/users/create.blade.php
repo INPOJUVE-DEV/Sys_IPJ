@@ -54,7 +54,7 @@
                 </div>
 
                 @if($canAssignMunicipios)
-                    <div class="card bg-light border-0 mt-4 d-none" id="municipiosPanel" data-has-old="{{ old('municipio_ids') ? '1' : '0' }}">
+                    <div class="card border-0 mt-4 d-none" id="municipiosPanel" data-has-old="{{ old('municipio_ids') ? '1' : '0' }}">
                         <div class="card-body">
                             <input type="hidden" name="municipio_ids_present" value="1">
                             <div class="d-flex flex-wrap justify-content-between gap-2 mb-3">
@@ -69,7 +69,7 @@
                                 <div class="row g-2 d-none" data-region-group="{{ $region }}">
                                     @foreach($municipios as $municipio)
                                         <div class="col-sm-6 col-lg-4">
-                                            <label class="form-check border rounded bg-white p-2 h-100">
+                                            <label class="form-check border rounded p-2 h-100">
                                                 <input class="form-check-input ms-0 me-2" type="checkbox" name="municipio_ids[]" value="{{ $municipio->id }}" @checked(collect(old('municipio_ids', []))->contains((string) $municipio->id))>
                                                 <span class="form-check-label">{{ $municipio->nombre }}</span>
                                             </label>

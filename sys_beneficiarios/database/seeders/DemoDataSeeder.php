@@ -11,9 +11,7 @@ use App\Models\Programa;
 use App\Models\Seccion;
 use App\Models\Tarjeta;
 use App\Models\User;
-use App\Models\ValeBloc;
 use App\Services\TarjetaService;
-use App\Services\ValeBlocService;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
@@ -33,7 +31,6 @@ class DemoDataSeeder extends Seeder
         $programas = $this->seedProgramas();
 
         $this->seedTarjetas($users['admin'], $users['capturistas_by_office']);
-        $this->seedVales($users['admin'], $users['capturistas_by_office']);
         $this->seedBeneficiarios($users['capturistas_by_office'], $programas);
     }
 
@@ -219,44 +216,6 @@ class DemoDataSeeder extends Seeder
                 );
             }
         }
-    }
-
-    private function seedVales(User $admin, array $capturistasByOffice): void
-    {
-        if (ValeBloc::count() > 0) {
-            return;
-        }
-
-        $service = app(ValeBlocService::class);
-        $central = Oficina::where('tipo', Oficina::TIPO_CENTRAL)->firstOrFail();
-        $delegaciones = Oficina::where('tipo', Oficina::TIPO_DELEGACION)->orderBy('id')->get()->values();
-        $rangeStart = 1000;
-
-        foreach ($delegaciones as $officeIndex => $office) {
-            $officeBloc = $service->createBlock($admin, $central, $rangeStart, $rangeStart + 999, 'Bloc demo oficina');
-            $service->transfer($admin, $officeBloc, $office, 'Resguardo demo delegacion');
-            $rangeStart += 1000;
-
-            $userBloc = $service->createBlock($admin, $central, $rangeStart, $rangeStart + 999, 'Bloc demo usuario');
-            $service->transfer($admin, $userBloc, $office, 'Entrega demo delegacion');
-
-            $capturista = $capturistasByOffice[$office->id][0] ?? null;
-            if ($capturista) {
-                $service->assignToUser($admin, $userBloc, $capturista, 'Asignacion demo a capturista');
-            }
-
-            if ($officeIndex === 1) {
-                $service->markStatus($admin, $officeBloc, ValeBloc::STATUS_CERRADO, 'Bloc demo cerrado');
-            }
-
-            if ($officeIndex === 2 && $capturista) {
-                $service->markStatus($admin, $userBloc, ValeBloc::STATUS_BLOQUEADO, 'Bloc demo bloqueado');
-            }
-
-            $rangeStart += 1000;
-        }
-
-        $service->createBlock($admin, $central, $rangeStart, $rangeStart + 999, 'Bloc demo disponible en central');
     }
 
     private function seedBeneficiarios(array $capturistasByOffice, array $programas): void

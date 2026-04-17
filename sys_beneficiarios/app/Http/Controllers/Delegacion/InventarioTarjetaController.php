@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Delegacion;
 use App\Http\Controllers\Controller;
 use App\Models\Municipio;
 use App\Models\Tarjeta;
-use App\Models\User;
 use App\Services\TarjetaService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -15,31 +14,23 @@ class InventarioTarjetaController extends Controller
     public function index(Request $request)
     {
         $user = $request->user();
-        $filters = $request->only(['estatus', 'usuario_uuid', 'municipio_id']);
+        $filters = $request->only(['municipio_id']);
 
         $groups = Tarjeta::query()
+            ->with('municipio:id,nombre')
             ->select([
-                'oficina_id',
                 'municipio_id',
-                'usuario_uuid',
-                'estatus',
-                DB::raw('COUNT(*) as total'),
+                DB::raw('COUNT(*) as asignadas'),
             ])
+            ->selectRaw('SUM(CASE WHEN estatus = ? THEN 1 ELSE 0 END) as capturadas', [Tarjeta::STATUS_CONSUMIDA])
             ->accessibleTo($user)
-            ->when($filters['estatus'] ?? null, fn ($q, $value) => $q->where('estatus', $value))
-            ->when($filters['usuario_uuid'] ?? null, fn ($q, $value) => $q->where('usuario_uuid', $value))
+            ->whereNotNull('municipio_id')
             ->when($filters['municipio_id'] ?? null, fn ($q, $value) => $q->where('municipio_id', $value))
-            ->groupBy('oficina_id', 'municipio_id', 'usuario_uuid', 'estatus')
+            ->groupBy('municipio_id')
             ->orderBy('municipio_id')
-            ->orderBy('estatus')
             ->paginate(25)
             ->withQueryString();
 
-        $capturistas = User::role(['capturista', 'capturista_programas'])
-            ->where('oficina_id', $user->oficina_id)
-            ->orderBy('name')
-            ->get(['uuid', 'name']);
-        $capturistasByUuid = $capturistas->keyBy('uuid');
         $municipios = Municipio::where('oficina_id', $user->oficina_id)
             ->orderBy('nombre')
             ->get(['id', 'nombre', 'region']);
@@ -50,7 +41,12 @@ class InventarioTarjetaController extends Controller
                 ->whereIn('estatus', [Tarjeta::STATUS_ASIGNADA_OFICINA, Tarjeta::STATUS_DEVUELTA])
                 ->count(),
             'usuario' => Tarjeta::where('oficina_id', $user->oficina_id)
-                ->where('estatus', Tarjeta::STATUS_ASIGNADA_USUARIO)
+                ->whereNotNull('municipio_id')
+                ->whereNotIn('estatus', [
+                    Tarjeta::STATUS_CONSUMIDA,
+                    Tarjeta::STATUS_BLOQUEADA,
+                    Tarjeta::STATUS_EXTRAVIADA,
+                ])
                 ->count(),
             'consumida' => Tarjeta::where('oficina_id', $user->oficina_id)
                 ->where('estatus', Tarjeta::STATUS_CONSUMIDA)
@@ -60,35 +56,25 @@ class InventarioTarjetaController extends Controller
                 ->count(),
         ];
 
-        return view('delegacion.inventario.tarjetas.index', compact('groups', 'capturistas', 'capturistasByUuid', 'municipios', 'municipiosById', 'filters', 'summary'));
+        return view('delegacion.inventario.tarjetas.index', compact('groups', 'municipios', 'municipiosById', 'filters', 'summary'));
     }
 
     public function assignRange(Request $request, TarjetaService $tarjetaService)
     {
         $data = $request->validate([
             'cantidad' => ['required', 'integer', 'min:1', 'max:50000'],
-            'usuario_uuid' => ['required', 'exists:users,uuid'],
-            'municipio_id' => ['nullable', 'exists:municipios,id'],
+            'municipio_id' => ['required', 'exists:municipios,id'],
             'observaciones' => ['nullable', 'string'],
         ]);
 
-        $destino = User::where('uuid', $data['usuario_uuid'])
-            ->where('oficina_id', $request->user()->oficina_id)
-            ->firstOrFail();
-
-        $municipio = isset($data['municipio_id'])
-            ? Municipio::where('oficina_id', $request->user()->oficina_id)->where('id', $data['municipio_id'])->firstOrFail()
-            : null;
-
-        $count = $tarjetaService->assignQuantityToUser(
+        $count = $tarjetaService->assignQuantityToMunicipio(
             $request->user(),
-            $destino,
+            Municipio::findOrFail($data['municipio_id']),
             (int) $data['cantidad'],
-            $municipio,
             $data['observaciones'] ?? null,
         );
 
-        return redirect()->route('delegacion.inventario.tarjetas.index')->with('status', "Tarjetas entregadas: {$count}");
+        return redirect()->route('delegacion.inventario.tarjetas.index')->with('status', "Tarjetas asignadas al municipio: {$count}");
     }
 
     public function updateStatus(Request $request, Tarjeta $tarjeta, TarjetaService $tarjetaService)

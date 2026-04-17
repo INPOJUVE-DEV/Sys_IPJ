@@ -27,4 +27,9 @@ class Municipio extends Model
     {
         return $this->hasMany(Seccion::class);
     }
+
+    public function eventos()
+    {
+        return $this->hasMany(Evento::class);
+    }
 }

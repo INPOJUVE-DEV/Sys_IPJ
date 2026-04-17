@@ -11,7 +11,7 @@
             </h2>
             @if($isAdmin)
                 <div class="d-flex flex-wrap gap-2">
-                    <a href="{{ route('beneficiarios.create') }}" class="btn btn-outline-light btn-sm">
+                    <a href="{{ route('beneficiarios.create') }}" class="btn btn-outline-secondary btn-sm">
                         <i class="bi bi-person-plus-fill me-1"></i>{{ __('Nuevo beneficiario') }}
                     </a>
                 </div>
@@ -71,7 +71,7 @@
 
         <div class="row g-4">
             <div class="col-12 col-xl-6">
-                <div class="card shadow-sm h-100 text-dark border-0">
+                <div class="card shadow-sm h-100 border-0">
                     <div class="card-body d-flex flex-column gap-3">
                         <div>
                             <div class="d-flex justify-content-between align-items-center">
@@ -134,7 +134,7 @@
                 </div>
             </div>
             <div class="col-12">
-                <div class="card shadow-sm h-100 text-dark border-0">
+                <div class="card shadow-sm h-100 border-0">
                     <div class="card-body d-flex flex-column gap-3">
                         <div>
                             <div class="d-flex justify-content-between align-items-center">
@@ -156,7 +156,7 @@
                 </div>
             </div>
             <div class="col-12">
-                <div class="card shadow-sm h-100 text-dark border-0">
+                <div class="card shadow-sm h-100 border-0">
                     <div class="card-body d-flex flex-column gap-3">
                         <div>
                             <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-2">
@@ -204,7 +204,7 @@
                 </div>
             </div>
             <div class="col-12">
-                <div class="card shadow-sm h-100 text-dark border-0">
+                <div class="card shadow-sm h-100 border-0">
                     <div class="card-body d-flex flex-column gap-3">
                         <div>
                             <div class="d-flex justify-content-between align-items-center">

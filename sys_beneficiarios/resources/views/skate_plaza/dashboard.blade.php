@@ -158,7 +158,7 @@
         const renderResult = (payload) => {
             const loan = payload.prestamo_activo;
             const summary = `
-                <div class="card border border-white border-opacity-10 bg-dark-subtle">
+                <div class="card border border-secondary border-opacity-25 bg-dark-subtle">
                     <div class="card-body">
                         <div class="small text-muted">Beneficiario</div>
                         <div class="h5 mb-1">${payload.nombre_completo}</div>

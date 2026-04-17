@@ -65,14 +65,14 @@ class User extends Authenticatable
         return $this->hasMany(Tarjeta::class, 'usuario_uuid', 'uuid');
     }
 
-    public function valeBlocs()
-    {
-        return $this->hasMany(ValeBloc::class, 'usuario_uuid', 'uuid');
-    }
-
     public function protecciones()
     {
         return $this->hasMany(Proteccion::class, 'usuario_uuid', 'uuid');
+    }
+
+    public function eventos()
+    {
+        return $this->hasMany(Evento::class, 'created_by', 'uuid');
     }
 
     protected static function booted()

@@ -8,6 +8,7 @@ use App\Models\Domicilio;
 use App\Models\Municipio;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Spatie\Activitylog\Models\Activity;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -50,10 +51,11 @@ class MisRegistrosController extends Controller
             5 => 'May', 6 => 'Jun', 7 => 'Jul', 8 => 'Ago',
             9 => 'Sep', 10 => 'Oct', 11 => 'Nov', 12 => 'Dic',
         ];
+        $monthNumberExpression = $this->monthNumberExpression();
         $monthlyRows = (clone $baseQuery)
             ->whereYear('created_at', $year)
-            ->selectRaw('MONTH(created_at) as m, COUNT(*) as c')
-            ->groupBy('m')
+            ->selectRaw($monthNumberExpression.' as m, COUNT(*) as c')
+            ->groupByRaw($monthNumberExpression)
             ->pluck('c', 'm');
         $monthlyCounts = [];
         foreach ($monthLabels as $m => $label) {
@@ -136,5 +138,14 @@ class MisRegistrosController extends Controller
         }
 
         return Carbon::now()->startOfMonth();
+    }
+
+    private function monthNumberExpression(): string
+    {
+        return match (DB::connection()->getDriverName()) {
+            'sqlite' => "CAST(strftime('%m', created_at) AS INTEGER)",
+            'pgsql' => 'EXTRACT(MONTH FROM created_at)',
+            default => 'MONTH(created_at)',
+        };
     }
 }

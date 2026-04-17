@@ -167,7 +167,7 @@
         <div class="row g-3">
             @if(($mode ?? 'create') === 'create')
                 <div class="col-md-4">
-                    <div class="border rounded-3 p-3 bg-light h-100">
+                    <div class="border rounded-3 p-3 h-100">
                         <div class="fw-semibold">Tarjeta</div>
                         <div class="small text-muted">No escribas folios. Al guardar, el sistema tomara una tarjeta disponible de tu inventario.</div>
                     </div>
@@ -315,7 +315,7 @@
             </div>
             <div class="col-md-4">
                 <label class="form-label">Distritos detectados</label>
-                <div class="bg-dark border border-white border-opacity-25 rounded-3 p-3 h-100"
+                <div class="bg-dark border border-secondary border-opacity-25 rounded-3 p-3 h-100"
                     id="dom-seccional-summary">
                     <div class="small text-white-50">Municipio</div>
                     <div class="fw-semibold" id="dom-seccional-muni">-</div>
@@ -350,10 +350,10 @@
                         <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
                             <div class="small text-muted">Usa el recuadro como guía para mejorar la captura.</div>
                             <div class="d-flex gap-2">
-                                <button type="button" class="btn btn-outline-light btn-sm" id="btnOcrSwitchCamera">
+                                <button type="button" class="btn btn-outline-secondary btn-sm" id="btnOcrSwitchCamera">
                                     <i class="bi bi-arrow-repeat me-1"></i>Cambiar cámara
                                 </button>
-                                <button type="button" class="btn btn-outline-light btn-sm d-none" id="btnOcrStartCamera">
+                                <button type="button" class="btn btn-outline-secondary btn-sm d-none" id="btnOcrStartCamera">
                                     <i class="bi bi-camera-video me-1"></i>Abrir cámara
                                 </button>
                                 <button type="button" class="btn btn-outline-secondary btn-sm" id="btnOcrStopCamera">
@@ -525,7 +525,7 @@
                 };
                 const toggleSummaryState = (hasData) => {
                     seccCard?.classList.toggle('border-success', !!hasData);
-                    seccCard?.classList.toggle('border-white', !hasData);
+                    seccCard?.classList.toggle('border-secondary', !hasData);
                 };
                 const applyData = (data) => {
                     if (!data) return;

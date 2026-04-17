@@ -25,7 +25,7 @@
             <div class="d-flex flex-wrap gap-2 mt-3" id="roleChips">
                 @php($roles = ['all' => 'Todos', 'admin' => 'Admin', 'delegado' => 'Delegado', 'capturista' => 'Capturista', 'capturista-programas' => 'Capturista Programas', 'skate-plaza' => 'Skate Plaza'])
                 @foreach($roles as $roleKey => $roleLabel)
-                    <button type="button" class="btn btn-sm btn-outline-light @if($loop->first) active @endif" data-role="{{ $roleKey }}">{{ $roleLabel }}</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary @if($loop->first) active @endif" data-role="{{ $roleKey }}">{{ $roleLabel }}</button>
                 @endforeach
             </div>
         </div>
@@ -36,7 +36,7 @@
                     @php($roleNames = $user->roles->pluck('name')->map(fn($name) => \Illuminate\Support\Str::of($name)->lower()->slug('-'))->toArray())
                     @php($displayRoles = $user->roles->pluck('name')->map(fn($name) => $roleLabels[$name] ?? ucfirst($name)))
                     <div class="col" data-user-card data-name="{{ \Illuminate\Support\Str::lower($user->name) }}" data-email="{{ \Illuminate\Support\Str::lower($user->email) }}" data-roles="{{ implode(' ', $roleNames) }}">
-                        <div class="card bg-dark border border-white text-white h-100 shadow-sm">
+                        <div class="card bg-dark border border-secondary border-opacity-25 text-white h-100 shadow-sm">
                             <div class="card-body d-flex flex-column gap-3">
                                 <div>
                                     <h3 class="h6 text-white mb-1">{{ $user->name }}</h3>
@@ -49,7 +49,7 @@
                                     <i class="bi bi-building me-1"></i>{{ $user->office?->nombre ?? 'Sin oficina' }}
                                 </div>
                                 <div class="mt-auto d-flex flex-column gap-2">
-                                    <a href="{{ route($userRoutes.'.edit', $user) }}" class="btn btn-outline-light btn-sm w-100">
+                                    <a href="{{ route($userRoutes.'.edit', $user) }}" class="btn btn-outline-secondary btn-sm w-100">
                                         <i class="bi bi-pencil-square me-1"></i>Editar
                                     </a>
                                     <form action="{{ route($userRoutes.'.destroy', $user) }}" method="POST" class="m-0" onsubmit="return confirm('Eliminar usuario?');">

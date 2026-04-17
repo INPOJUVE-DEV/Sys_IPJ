@@ -38,8 +38,8 @@ class Oficina extends Model
         return $this->hasMany(Tarjeta::class);
     }
 
-    public function valeBlocs()
+    public function eventos()
     {
-        return $this->hasMany(ValeBloc::class);
+        return $this->hasMany(Evento::class);
     }
 }

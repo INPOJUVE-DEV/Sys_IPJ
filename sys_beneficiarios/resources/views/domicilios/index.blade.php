@@ -24,7 +24,7 @@
             <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-3">
                 @forelse($domicilios as $d)
                     <div class="col">
-                        <div class="card bg-dark border border-white text-white h-100 shadow-sm">
+                        <div class="card bg-dark border border-secondary border-opacity-25 text-white h-100 shadow-sm">
                             <div class="card-body d-flex flex-column gap-3">
                                 <div>
                                     <h3 class="h6 text-white mb-1">{{ optional($d->beneficiario)->nombre }} {{ optional($d->beneficiario)->apellido_paterno }}</h3>
@@ -37,7 +37,7 @@
                                     <div><i class="bi bi-diagram-3 me-1"></i>Seccional {{ optional($d->seccion)->seccional }}</div>
                                 </div>
                                 <div class="mt-auto d-flex flex-column gap-2">
-                                    <a href="{{ route('domicilios.edit', $d) }}" class="btn btn-outline-light btn-sm w-100">
+                                    <a href="{{ route('domicilios.edit', $d) }}" class="btn btn-outline-secondary btn-sm w-100">
                                         <i class="bi bi-pencil-square me-1"></i>Editar
                                     </a>
                                     <form action="{{ route('domicilios.destroy', $d) }}" method="POST" class="m-0" onsubmit="return confirm('¿Eliminar domicilio?');">

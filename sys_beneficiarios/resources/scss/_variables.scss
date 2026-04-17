@@ -1,3 +1,5 @@
+@use "sass:color";
+
 // Theme colors
 $green-dark: #055A1C; // nav/headers
 $green: #338C36;
@@ -5,6 +7,14 @@ $green-light: #76BB2A;
 $pink-cta: #E60064; // CTAs
 $gray-700: #706F6F;
 $gray-400: #A6AEB4;
+$surface-base: #07110B;
+$surface-1: #0D1911;
+$surface-2: #132319;
+$surface-3: #1B3022;
+$surface-border: #294532;
+$surface-border-strong: #3D654A;
+$text-main: #F2F7EF;
+$text-muted: #A9B8AA;
 
 // Bootstrap color overrides
 $primary: $green-dark;
@@ -12,6 +22,8 @@ $secondary: $gray-700;
 $success: #2ECC71;
 $danger: #E74C3C;
 $info: $green-light;
+$light: $surface-2;
+$dark: $surface-base;
 
 // Extend theme colors map
 $theme-colors: (
@@ -32,14 +44,42 @@ $font-family-sans-serif: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, 
 $headings-font-family: "Montserrat", $font-family-sans-serif !default;
 
 // Dark mode baseline
-$body-bg: #0b0b0b;
-$body-color: #e6e6e6;
-$card-bg: #151515;
-$card-border-color: #222;
-$border-color: #222;
+$body-bg: $surface-base;
+$body-color: $text-main;
+$body-secondary-color: $text-muted;
+$body-tertiary-color: rgba($text-muted, .75);
+$body-secondary-bg: $surface-1;
+$body-tertiary-bg: $surface-2;
+$card-bg: $surface-1;
+$card-color: $text-main;
+$card-border-color: $surface-border;
+$border-color: $surface-border;
+$headings-color: $text-main;
+$link-color: $green-light;
+$link-hover-color: color.adjust($green-light, $lightness: 8%);
+$input-bg: $surface-2;
+$input-color: $text-main;
+$input-border-color: $surface-border;
+$input-focus-bg: $surface-2;
+$input-focus-color: $text-main;
+$input-focus-border-color: $green-light;
+$input-placeholder-color: rgba($text-muted, .78);
+$form-select-bg: $surface-2;
+$form-select-color: $text-main;
+$form-select-border-color: $surface-border;
+$dropdown-bg: $surface-1;
+$dropdown-color: $text-main;
+$dropdown-link-color: $text-main;
+$dropdown-link-hover-bg: $surface-2;
+$dropdown-border-color: $surface-border;
+$modal-content-bg: $surface-1;
+$modal-content-color: $text-main;
+$modal-content-border-color: $surface-border;
+$table-color: $text-main;
+$table-border-color: $surface-border;
 
 // Navbar dark
-$navbar-dark-color: #eaeaea;
+$navbar-dark-color: $text-main;
 $navbar-dark-hover-color: #ffffff;
 $navbar-dark-active-color: #ffffff;
 $navbar-dark-brand-color: #ffffff;

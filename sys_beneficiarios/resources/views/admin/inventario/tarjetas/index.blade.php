@@ -2,7 +2,7 @@
     $statusLabels = [
         \App\Models\Tarjeta::STATUS_DISPONIBLE => 'En bodega central',
         \App\Models\Tarjeta::STATUS_ASIGNADA_OFICINA => 'En region',
-        \App\Models\Tarjeta::STATUS_ASIGNADA_USUARIO => 'Entregadas a capturista',
+        \App\Models\Tarjeta::STATUS_ASIGNADA_USUARIO => 'Asignadas a municipio',
         \App\Models\Tarjeta::STATUS_CONSUMIDA => 'Capturadas',
         \App\Models\Tarjeta::STATUS_DEVUELTA => 'Devueltas',
         \App\Models\Tarjeta::STATUS_BLOQUEADA => 'Bloqueadas',
@@ -30,7 +30,7 @@
     @if($errors->any())
         <div class="alert alert-danger">
             <strong>No se pudo guardar.</strong>
-            <div class="small">Revisa la cantidad, region, municipio o capturista seleccionado.</div>
+            <div class="small">Revisa la cantidad, region o municipio seleccionado.</div>
         </div>
     @endif
 
@@ -38,7 +38,7 @@
         <div class="col-sm-6 col-xl-2"><div class="card border-0 shadow-sm"><div class="card-body"><div class="text-muted small">Total</div><div class="h3 mb-0">{{ $summary['total'] }}</div></div></div></div>
         <div class="col-sm-6 col-xl-2"><div class="card border-0 shadow-sm"><div class="card-body"><div class="text-muted small">Central</div><div class="h3 mb-0">{{ $summary['disponible'] }}</div></div></div></div>
         <div class="col-sm-6 col-xl-2"><div class="card border-0 shadow-sm"><div class="card-body"><div class="text-muted small">En regiones</div><div class="h3 mb-0">{{ $summary['oficina'] }}</div></div></div></div>
-        <div class="col-sm-6 col-xl-2"><div class="card border-0 shadow-sm"><div class="card-body"><div class="text-muted small">Con capturistas</div><div class="h3 mb-0">{{ $summary['usuario'] }}</div></div></div></div>
+        <div class="col-sm-6 col-xl-2"><div class="card border-0 shadow-sm"><div class="card-body"><div class="text-muted small">Asignadas a municipio</div><div class="h3 mb-0">{{ $summary['usuario'] }}</div></div></div></div>
         <div class="col-sm-6 col-xl-2"><div class="card border-0 shadow-sm"><div class="card-body"><div class="text-muted small">Capturadas</div><div class="h3 mb-0">{{ $summary['consumida'] }}</div></div></div></div>
         <div class="col-sm-6 col-xl-2"><div class="card border-0 shadow-sm"><div class="card-body"><div class="text-muted small">Incidencias</div><div class="h3 mb-0">{{ $summary['incidencias'] }}</div></div></div></div>
     </div>
@@ -46,7 +46,7 @@
     <div class="row g-3 mb-4">
         <div class="col-12 col-xl-4" id="agregar-tarjetas">
             <div class="card shadow-sm h-100">
-                <div class="card-header bg-white">
+                <div class="card-header">
                     <div class="fw-semibold">Agregar tarjetas</div>
                     <div class="small text-muted">Cuando llegan tarjetas nuevas al stock.</div>
                 </div>
@@ -92,7 +92,7 @@
 
         <div class="col-12 col-xl-4" id="mover-tarjetas">
             <div class="card shadow-sm h-100">
-                <div class="card-header bg-white">
+                <div class="card-header">
                     <div class="fw-semibold">Mover a region o municipio</div>
                     <div class="small text-muted">Para repartir desde central hacia una delegacion.</div>
                 </div>
@@ -143,9 +143,9 @@
 
         <div class="col-12 col-xl-4" id="entregar-tarjetas">
             <div class="card shadow-sm h-100">
-                <div class="card-header bg-white">
-                    <div class="fw-semibold">Entregar a capturista</div>
-                    <div class="small text-muted">Para que una persona pueda capturar beneficiarios.</div>
+                <div class="card-header">
+                    <div class="fw-semibold">Asignar tarjetas a municipio</div>
+                    <div class="small text-muted">Selecciona el municipio destino. El consumo se controla por municipio.</div>
                 </div>
                 <div class="card-body">
                     <form method="POST" action="{{ route('admin.inventario.tarjetas.assignRange') }}" class="row g-3">
@@ -155,17 +155,9 @@
                             <input name="cantidad" type="number" min="1" class="form-control form-control-lg" required>
                         </div>
                         <div class="col-md-7">
-                            <label class="form-label">Capturista</label>
-                            <select name="usuario_uuid" class="form-select form-select-lg" required>
-                                @foreach($users as $user)
-                                    <option value="{{ $user->uuid }}">{{ $user->name }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div class="col-12">
                             <label class="form-label">Municipio a trabajar</label>
-                            <select name="municipio_id" class="form-select">
-                                <option value="">Sin municipio especifico</option>
+                            <select name="municipio_id" class="form-select form-select-lg" required>
+                                <option value="" disabled selected>Selecciona un municipio</option>
                                 @foreach($municipios as $municipio)
                                     <option value="{{ $municipio->id }}">{{ $municipio->region ?: 'Sin region' }} - {{ $municipio->nombre }}</option>
                                 @endforeach
@@ -176,7 +168,7 @@
                             <input name="observaciones" class="form-control" placeholder="Ej. entrega a Juan">
                         </div>
                         <div class="col-12 d-grid">
-                            <button class="btn btn-outline-primary btn-lg" type="submit">Entregar tarjetas</button>
+                            <button class="btn btn-outline-primary btn-lg" type="submit">Asignar tarjetas</button>
                         </div>
                     </form>
                 </div>
@@ -185,9 +177,9 @@
     </div>
 
     <div class="card shadow-sm">
-        <div class="card-header bg-white">
+        <div class="card-header">
             <div class="fw-semibold">Resumen del stock</div>
-            <div class="small text-muted">Agrupado por region, municipio, responsable y estado.</div>
+            <div class="small text-muted">Agrupado por region, municipio y estado.</div>
         </div>
         <div class="card-body">
             <form method="GET" class="row g-2 mb-3">
@@ -216,14 +208,6 @@
                     </select>
                 </div>
                 <div class="col-md-3">
-                    <select name="usuario_uuid" class="form-select">
-                        <option value="">Todos los responsables</option>
-                        @foreach($users as $user)
-                            <option value="{{ $user->uuid }}" @selected(($filters['usuario_uuid'] ?? '') === $user->uuid)>{{ $user->name }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="col-md-3">
                     <button class="btn btn-outline-secondary w-100" type="submit">Ver resultado</button>
                 </div>
             </form>
@@ -234,7 +218,6 @@
                         <tr>
                             <th>Region</th>
                             <th>Municipio</th>
-                            <th>Responsable</th>
                             <th>Estado</th>
                             <th class="text-end">Cantidad</th>
                         </tr>
@@ -244,24 +227,22 @@
                             @php
                                 $office = $officesById->get($group->oficina_id);
                                 $municipio = $municipiosById->get($group->municipio_id);
-                                $responsable = $group->usuario_uuid ? $usersByUuid->get($group->usuario_uuid) : null;
                             @endphp
                             <tr>
                                 <td>{{ $office?->nombre ?? 'Sin region' }}</td>
                                 <td>{{ $municipio?->nombre ?? 'Sin municipio especifico' }}</td>
-                                <td>{{ $responsable?->name ?? ($office?->nombre ?? 'Stock general') }}</td>
-                                <td><span class="badge text-bg-light">{{ $statusLabels[$group->estatus] ?? $group->estatus }}</span></td>
+                                <td><span class="badge text-bg-secondary">{{ $statusLabels[$group->estatus] ?? $group->estatus }}</span></td>
                                 <td class="text-end h5 mb-0">{{ $group->total }}</td>
                             </tr>
                         @empty
-                            <tr><td colspan="5" class="text-muted">Aun no hay tarjetas registradas.</td></tr>
+                            <tr><td colspan="4" class="text-muted">Aun no hay tarjetas registradas.</td></tr>
                         @endforelse
                     </tbody>
                 </table>
             </div>
         </div>
         @if($groups->hasPages())
-            <div class="card-footer bg-white">{{ $groups->links() }}</div>
+            <div class="card-footer">{{ $groups->links() }}</div>
         @endif
     </div>
 </x-app-layout>

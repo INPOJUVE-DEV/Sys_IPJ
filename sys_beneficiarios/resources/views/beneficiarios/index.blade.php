@@ -76,7 +76,7 @@
             <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-3">
                 @forelse($beneficiarios as $b)
                     <div class="col">
-                        <div class="card bg-dark border border-white text-white h-100 shadow-sm">
+                        <div class="card bg-dark border border-secondary border-opacity-25 text-white h-100 shadow-sm">
                             <div class="card-body d-flex flex-column gap-3">
                                 <div>
                                     <div class="d-flex justify-content-between align-items-start gap-2">

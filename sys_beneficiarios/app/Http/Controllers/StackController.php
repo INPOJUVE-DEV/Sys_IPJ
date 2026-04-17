@@ -38,38 +38,16 @@ class StackController extends Controller
             'region' => (clone $baseCards)->whereIn('estatus', [Tarjeta::STATUS_ASIGNADA_OFICINA, Tarjeta::STATUS_DEVUELTA])->count(),
             'capturistas' => (clone $baseCards)->where('estatus', Tarjeta::STATUS_ASIGNADA_USUARIO)->count(),
             'capturadas' => (clone $baseCards)->where('estatus', Tarjeta::STATUS_CONSUMIDA)->count(),
-            'incidencias' => (clone $baseCards)->whereIn('estatus', [Tarjeta::STATUS_BLOQUEADA, Tarjeta::STATUS_EXTRAVIADA])->count(),
         ];
-
-        $officeStatus = (clone $baseCards)
-            ->select(['oficina_id', 'estatus', DB::raw('COUNT(*) as total')])
-            ->groupBy('oficina_id', 'estatus')
-            ->get()
-            ->groupBy('oficina_id');
-
-        $officeRows = $offices->map(function (Oficina $office) use ($officeStatus) {
-            $counts = $officeStatus->get($office->id, collect())->pluck('total', 'estatus');
-
-            return [
-                'office' => $office,
-                'region' => (int) ($counts[Tarjeta::STATUS_ASIGNADA_OFICINA] ?? 0) + (int) ($counts[Tarjeta::STATUS_DEVUELTA] ?? 0),
-                'capturistas' => (int) ($counts[Tarjeta::STATUS_ASIGNADA_USUARIO] ?? 0),
-                'capturadas' => (int) ($counts[Tarjeta::STATUS_CONSUMIDA] ?? 0),
-                'incidencias' => (int) ($counts[Tarjeta::STATUS_BLOQUEADA] ?? 0) + (int) ($counts[Tarjeta::STATUS_EXTRAVIADA] ?? 0),
-                'total' => (int) $counts->sum(),
-            ];
-        });
 
         $municipioRows = (clone $baseCards)
             ->select([
                 'oficina_id',
                 'municipio_id',
             ])
-            ->selectRaw('SUM(CASE WHEN estatus IN (?, ?) THEN 1 ELSE 0 END) as en_region', [Tarjeta::STATUS_ASIGNADA_OFICINA, Tarjeta::STATUS_DEVUELTA])
-            ->selectRaw('SUM(CASE WHEN estatus = ? THEN 1 ELSE 0 END) as con_capturistas', [Tarjeta::STATUS_ASIGNADA_USUARIO])
+            ->selectRaw('COUNT(*) as asignadas')
             ->selectRaw('SUM(CASE WHEN estatus = ? THEN 1 ELSE 0 END) as capturadas', [Tarjeta::STATUS_CONSUMIDA])
-            ->selectRaw('SUM(CASE WHEN estatus IN (?, ?) THEN 1 ELSE 0 END) as incidencias', [Tarjeta::STATUS_BLOQUEADA, Tarjeta::STATUS_EXTRAVIADA])
-            ->selectRaw('COUNT(*) as total')
+            ->whereNotNull('municipio_id')
             ->groupBy('oficina_id', 'municipio_id')
             ->orderBy('oficina_id')
             ->orderBy('municipio_id')
@@ -83,9 +61,6 @@ class StackController extends Controller
         $cardsRoute = $isAdmin
             ? route('admin.inventario.tarjetas.index')
             : route('delegacion.inventario.tarjetas.index');
-        $valesRoute = $isAdmin
-            ? route('admin.inventario.vales.index')
-            : route('delegacion.inventario.vales.index');
         $usersRoute = $isAdmin
             ? route('admin.usuarios.index')
             : route('delegacion.usuarios.index');
@@ -93,12 +68,10 @@ class StackController extends Controller
         return view('stack.index', compact(
             'isAdmin',
             'global',
-            'officeRows',
             'municipioRows',
             'officesById',
             'municipiosById',
             'cardsRoute',
-            'valesRoute',
             'usersRoute'
         ));
     }

@@ -42,6 +42,12 @@
             'icon' => 'bi-stack',
             'active' => request()->routeIs('stack.*') || request()->routeIs('admin.inventario.tarjetas.*') || request()->routeIs('delegacion.inventario.tarjetas.*'),
         ];
+        $primaryLinks[] = [
+            'label' => 'Eventos',
+            'route' => route('eventos.index'),
+            'icon' => 'bi-calendar-event',
+            'active' => request()->routeIs('eventos.*'),
+        ];
     }
 
     if ($isAdmin) {
@@ -111,11 +117,6 @@
                 'pattern' => 'admin.inventario.tarjetas.*',
             ],
             [
-                'label' => 'Vales',
-                'route' => route('admin.inventario.vales.index'),
-                'pattern' => 'admin.inventario.vales.*',
-            ],
-            [
                 'label' => 'Protecciones',
                 'route' => route('admin.inventario.protecciones.index'),
                 'pattern' => 'admin.inventario.protecciones.*',
@@ -136,6 +137,11 @@
                 'pattern' => 'admin.components.*',
             ],
             [
+                'label' => 'Tipos de evento',
+                'route' => route('admin.evento-tipos.index'),
+                'pattern' => 'admin.evento-tipos.*',
+            ],
+            [
                 'label' => 'Themes',
                 'route' => route('admin.themes.current.show'),
                 'pattern' => 'admin.themes.*',
@@ -152,7 +158,7 @@
 <nav class="navbar navbar-expand-lg navbar-dark bg-primary border-bottom sticky-top shadow-sm">
     <div class="container-fluid">
         <a class="navbar-brand d-flex align-items-center gap-2" href="{{ $homeRoute }}">
-            <span class="badge bg-light text-primary fw-bold">IPJ</span>
+            <span class="badge bg-dark text-white border border-secondary fw-bold">IPJ</span>
             <span class="fw-semibold">Sys Beneficiarios</span>
         </a>
 
@@ -219,13 +225,13 @@
 </nav>
 
 @if(!empty($quickLinks))
-    <div class="bg-dark border-bottom border-1 border-white border-opacity-10">
+    <div class="bg-dark border-bottom border-1 border-secondary border-opacity-25">
         <div class="container py-2">
             <div class="d-flex flex-wrap gap-2 align-items-center">
                 <span class="text-white-50 text-uppercase small">Atajos</span>
                 @foreach($quickLinks as $link)
                     <a
-                        class="btn btn-sm {{ ($link['disabled'] ?? false) ? 'btn-outline-secondary disabled' : 'btn-outline-light' }}"
+                        class="btn btn-sm {{ ($link['disabled'] ?? false) ? 'btn-outline-secondary disabled' : 'btn-outline-secondary' }}"
                         href="{{ $link['disabled'] ?? false ? '#' : $link['route'] }}">
                         {{ __($link['label']) }}
                     </a>

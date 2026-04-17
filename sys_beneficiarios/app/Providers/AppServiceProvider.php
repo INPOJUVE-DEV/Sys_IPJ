@@ -3,9 +3,11 @@
 namespace App\Providers;
 
 use App\Models\ComponentCatalog;
+use App\Models\Evento;
 use App\Models\Page;
 use App\Models\Theme;
 use App\Policies\ComponentCatalogPolicy;
+use App\Policies\EventoPolicy;
 use App\Policies\PagePolicy;
 use App\Policies\ThemePolicy;
 use Illuminate\Cache\RateLimiting\Limit;
@@ -37,5 +39,6 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(Page::class, PagePolicy::class);
         Gate::policy(ComponentCatalog::class, ComponentCatalogPolicy::class);
         Gate::policy(Theme::class, ThemePolicy::class);
+        Gate::policy(Evento::class, EventoPolicy::class);
     }
 }

@@ -3,10 +3,10 @@
 use App\Http\Controllers\Admin\BeneficiariosController as AdminBeneficiariosController;
 use App\Http\Controllers\Admin\CatalogosController;
 use App\Http\Controllers\Admin\ComponentCatalogController;
+use App\Http\Controllers\Admin\EventoTipoController as AdminEventoTipoController;
 use App\Http\Controllers\Admin\InventarioMovimientoController;
 use App\Http\Controllers\Admin\InventarioProteccionController as AdminInventarioProteccionController;
 use App\Http\Controllers\Admin\InventarioTarjetaController as AdminInventarioTarjetaController;
-use App\Http\Controllers\Admin\InventarioValeController as AdminInventarioValeController;
 use App\Http\Controllers\Admin\OficinaController;
 use App\Http\Controllers\Admin\PageController as AdminPageController;
 use App\Http\Controllers\Admin\ThemeController;
@@ -14,9 +14,9 @@ use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\BeneficiarioController;
 use App\Http\Controllers\Delegacion\DashboardController as DelegacionDashboardController;
 use App\Http\Controllers\Delegacion\InventarioTarjetaController as DelegacionInventarioTarjetaController;
-use App\Http\Controllers\Delegacion\InventarioValeController as DelegacionInventarioValeController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DomicilioController;
+use App\Http\Controllers\EventoController;
 use App\Http\Controllers\InscripcionController;
 use App\Http\Controllers\InscripcionDashboardController;
 use App\Http\Controllers\MisRegistrosController;
@@ -93,6 +93,10 @@ Route::middleware(['auth','role:admin|delegado|capturista'])->group(function () 
     Route::resource('domicilios', DomicilioController::class)->except(['show']);
 });
 
+Route::middleware(['auth','role:admin|delegado'])->group(function () {
+    Route::resource('eventos', EventoController::class)->except(['show']);
+});
+
 Route::middleware(['auth','role:admin'])->group(function () {
     Route::resource('programas', ProgramaController::class)->except(['show']);
 });
@@ -126,11 +130,6 @@ Route::middleware(['auth', 'role:delegado'])->prefix('delegacion')->name('delega
         Route::post('assign-range', [DelegacionInventarioTarjetaController::class, 'assignRange'])->name('assignRange');
         Route::post('{tarjeta}/status', [DelegacionInventarioTarjetaController::class, 'updateStatus'])->name('status');
     });
-    Route::prefix('inventario/vales')->name('inventario.vales.')->group(function () {
-        Route::get('/', [DelegacionInventarioValeController::class, 'index'])->name('index');
-        Route::post('{valeBloc}/assign', [DelegacionInventarioValeController::class, 'assign'])->name('assign');
-        Route::post('{valeBloc}/status', [DelegacionInventarioValeController::class, 'updateStatus'])->name('status');
-    });
 });
 
 Route::middleware(['auth', 'role:skate_plaza'])->prefix('skate-plaza')->name('skate-plaza.')->group(function () {
@@ -151,13 +150,6 @@ Route::middleware(['auth','role:admin'])->prefix('admin')->name('admin.')->group
         Route::post('transfer-range', [AdminInventarioTarjetaController::class, 'transferRange'])->name('transferRange');
         Route::post('assign-range', [AdminInventarioTarjetaController::class, 'assignRange'])->name('assignRange');
         Route::post('{tarjeta}/status', [AdminInventarioTarjetaController::class, 'updateStatus'])->name('status');
-    });
-    Route::prefix('inventario/vales')->name('inventario.vales.')->group(function () {
-        Route::get('/', [AdminInventarioValeController::class, 'index'])->name('index');
-        Route::post('/', [AdminInventarioValeController::class, 'store'])->name('store');
-        Route::post('{valeBloc}/transfer', [AdminInventarioValeController::class, 'transfer'])->name('transfer');
-        Route::post('{valeBloc}/assign', [AdminInventarioValeController::class, 'assign'])->name('assign');
-        Route::post('{valeBloc}/status', [AdminInventarioValeController::class, 'updateStatus'])->name('status');
     });
     Route::prefix('inventario/protecciones')->name('inventario.protecciones.')->group(function () {
         Route::get('/', [AdminInventarioProteccionController::class, 'index'])->name('index');
@@ -180,6 +172,9 @@ Route::middleware(['auth','role:admin'])->prefix('admin')->name('admin.')->group
     Route::get('catalogos', [CatalogosController::class, 'index'])->name('catalogos.index');
     Route::get('components', [ComponentCatalogController::class, 'index'])->name('components.index');
     Route::post('components', [ComponentCatalogController::class, 'upsert'])->name('components.upsert');
+    Route::resource('evento-tipos', AdminEventoTipoController::class)
+        ->except(['show'])
+        ->parameters(['evento-tipos' => 'eventoTipo']);
 
     Route::get('themes/current', [ThemeController::class, 'show'])->name('themes.current.show');
     Route::put('themes/current', [ThemeController::class, 'update'])->name('themes.current.update');

@@ -22,7 +22,7 @@
             <form method="POST" action="{{ route('inscripciones.store') }}" novalidate>
                 @csrf
 
-                <div class="card border border-white border-opacity-10 mb-4">
+                <div class="card border border-secondary border-opacity-25 mb-4">
                     <div class="card-body">
                         <div class="row g-3 align-items-end">
                             <div class="col-md-5">

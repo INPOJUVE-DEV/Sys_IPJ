@@ -66,7 +66,7 @@
                     @if(!empty($t['actions']))
                         <div class="mt-2 d-flex flex-wrap gap-2">
                             @foreach($t['actions'] as $action)
-                                <a href="{{ $action['url'] }}" class="btn btn-sm btn-light">{{ $action['label'] }}</a>
+                                <a href="{{ $action['url'] }}" class="btn btn-sm btn-outline-secondary">{{ $action['label'] }}</a>
                             @endforeach
                         </div>
                     @endif

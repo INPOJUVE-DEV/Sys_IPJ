@@ -53,7 +53,7 @@
     <div class="wizard-step active" data-step="1">
         <div class="row g-3">
             <div class="col-md-4">
-                <div class="border rounded-3 p-3 bg-light h-100">
+                <div class="border rounded-3 p-3 h-100">
                     <div class="fw-semibold">Tarjeta</div>
                     <div class="small text-muted">No se capturan folios. El control de tarjetas se lleva desde Stack.</div>
                 </div>
@@ -165,7 +165,7 @@
             {{--
             <div class="col-md-4">
                 <label class="form-label">Distritos detectados</label>
-                <div class="bg-dark border border-white border-opacity-25 rounded-3 p-3 h-100" id="dom-seccional-summary">
+                <div class="bg-dark border border-secondary border-opacity-25 rounded-3 p-3 h-100" id="dom-seccional-summary">
                     <div class="small text-white-50">Municipio</div>
                     <div class="fw-semibold" id="dom-seccional-muni">-</div>
                     <div class="small text-white-50 mt-2">DL / DF</div>
@@ -322,7 +322,7 @@ document.addEventListener('DOMContentLoaded', function() {
         };
         const toggleSummaryState = (hasData) => {
             seccCard?.classList.toggle('border-success', !!hasData);
-            seccCard?.classList.toggle('border-white', !hasData);
+            seccCard?.classList.toggle('border-secondary', !hasData);
         };
         const applyData = (data) => {
             if (!data) return;

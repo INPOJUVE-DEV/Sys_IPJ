@@ -10,7 +10,6 @@
     <div class="row g-3 mb-4">
         @foreach($offices as $office)
             @php($cardStats = collect($cardsByOffice->get($office->id, []))->pluck('total', 'estatus'))
-            @php($valeStats = collect($valesByOffice->get($office->id, []))->pluck('total', 'estatus'))
             <div class="col-12 col-lg-6">
                 <div class="card shadow-sm h-100">
                     <div class="card-body">
@@ -26,13 +25,10 @@
                             <div class="col-6"><strong>Usuarios:</strong> {{ $office->users_count }}</div>
                             <div class="col-6"><strong>Municipios:</strong> {{ $office->municipios_count }}</div>
                             <div class="col-6"><strong>Tarjetas:</strong> {{ $office->tarjetas_count }}</div>
-                            <div class="col-6"><strong>Blocs vales:</strong> {{ $office->vale_blocs_count }}</div>
                             <div class="col-6"><strong>Disponibles:</strong> {{ $cardStats[\App\Models\Tarjeta::STATUS_DISPONIBLE] ?? 0 }}</div>
                             <div class="col-6"><strong>Asignadas oficina:</strong> {{ $cardStats[\App\Models\Tarjeta::STATUS_ASIGNADA_OFICINA] ?? 0 }}</div>
                             <div class="col-6"><strong>Asignadas usuario:</strong> {{ $cardStats[\App\Models\Tarjeta::STATUS_ASIGNADA_USUARIO] ?? 0 }}</div>
                             <div class="col-6"><strong>Consumidas:</strong> {{ $cardStats[\App\Models\Tarjeta::STATUS_CONSUMIDA] ?? 0 }}</div>
-                            <div class="col-6"><strong>Vales oficina:</strong> {{ $valeStats[\App\Models\ValeBloc::STATUS_ASIGNADO_OFICINA] ?? 0 }}</div>
-                            <div class="col-6"><strong>Vales usuario:</strong> {{ $valeStats[\App\Models\ValeBloc::STATUS_ASIGNADO_USUARIO] ?? 0 }}</div>
                         </div>
                     </div>
                 </div>

@@ -60,7 +60,7 @@
     </div>
     <div class="col-md-3">
         <label class="form-label">Distritos detectados</label>
-        <div class="bg-dark border border-white border-opacity-25 rounded-3 p-3" id="domicilio-form-seccion-summary">
+        <div class="bg-dark border border-secondary border-opacity-25 rounded-3 p-3" id="domicilio-form-seccion-summary">
             <div class="small text-white-50">Municipio</div>
             <div class="fw-semibold" id="domicilio-form-seccional-muni">-</div>
             <div class="small text-white-50 mt-2">DL / DF</div>
@@ -85,7 +85,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const toggleSummary = (active) => {
         summaryCard?.classList.toggle('border-success', !!active);
-        summaryCard?.classList.toggle('border-white', !active);
+        summaryCard?.classList.toggle('border-secondary', !active);
     };
 
     const applyData = (data) => {

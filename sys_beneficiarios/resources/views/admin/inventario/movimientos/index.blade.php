@@ -24,7 +24,6 @@
                                     <span class="badge {{
                                         match ($movimiento['tipo_recurso']) {
                                             'tarjeta' => 'bg-primary',
-                                            'vale' => 'bg-secondary',
                                             default => 'bg-success',
                                         }
                                     }}">
