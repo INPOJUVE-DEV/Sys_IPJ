@@ -58,8 +58,15 @@ if [ -f artisan ]; then
   if [ "$RUN_MIGRATIONS" = "1" ]; then
     echo "== RUN_MIGRATIONS=1: running migrations =="
     php artisan migrate --force
-    echo "== RUN_MIGRATIONS=1: seeding roles only =="
+    echo "== RUN_MIGRATIONS=1: seeding base roles/offices/catalogs =="
     php artisan db:seed --class=RoleSeeder --force
+    php artisan db:seed --class=OficinaSeeder --force
+    CATALOGOS_ARGS=""
+    if [ "$CATALOGOS_PRUNE" = "1" ]; then
+      CATALOGOS_ARGS="--prune"
+    fi
+    php artisan catalogos:import $CATALOGOS_ARGS
+    php artisan db:seed --class=EventoTipoSeeder --force
     php artisan permission:cache-reset || true
   fi
 fi

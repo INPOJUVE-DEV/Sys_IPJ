@@ -45,6 +45,25 @@ docker compose exec app php artisan migrate --force
 docker compose exec app php artisan db:seed --force
 ```
 
+## Render
+
+En Render, define `RUN_MIGRATIONS=1` para que el contenedor ejecute migraciones al arrancar. Ese mismo paso sincroniza roles base, oficinas/regiones, municipios/secciones desde `database/seeders/data` y tipos de evento.
+
+Si necesitas aplicar el cambio sin esperar otro despliegue, abre una Shell del servicio web en Render y ejecuta:
+
+```
+php artisan db:seed --class=OficinaSeeder --force
+php artisan catalogos:import
+php artisan db:seed --class=EventoTipoSeeder --force
+php artisan permission:cache-reset
+```
+
+Por seguridad, `catalogos:import` solo inserta y actualiza. Para eliminar municipios o secciones que ya no esten en los CSV, define `CATALOGOS_PRUNE=1` o ejecuta:
+
+```
+php artisan catalogos:import --prune
+```
+
 ## Salud del sistema
 
 - Nginx `access.log`/`error.log`
