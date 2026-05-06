@@ -3,17 +3,21 @@
         <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
             <div>
                 <h2 class="h3 m-0">Stack</h2>
-                <div class="text-muted">Distribucion de tarjetas por region y municipio.</div>
+                <div class="text-muted">Distribucion de tarjetas por delegacion y municipio.</div>
             </div>
             <div class="d-flex flex-wrap gap-2">
                 @if($isAdmin)
                     <a href="{{ $cardsRoute }}#agregar-tarjetas" class="btn btn-primary">
                         <i class="bi bi-plus-circle me-1"></i> Agregar tarjetas
                     </a>
+                    <a href="{{ $cardsRoute }}#mover-tarjetas" class="btn btn-outline-primary">
+                        <i class="bi bi-arrow-left-right me-1"></i> Distribuir a delegacion
+                    </a>
+                @else
+                    <a href="{{ $cardsRoute }}#entregar-tarjetas" class="btn btn-outline-primary">
+                        <i class="bi bi-geo-alt me-1"></i> Asignar a municipio
+                    </a>
                 @endif
-                <a href="{{ $cardsRoute }}#entregar-tarjetas" class="btn btn-outline-primary">
-                    <i class="bi bi-geo-alt me-1"></i> Asignar a municipio
-                </a>
             </div>
         </div>
     </x-slot>
@@ -30,7 +34,7 @@
         <div class="col-sm-6 col-xl">
             <div class="card border-0 shadow-sm h-100">
                 <div class="card-body">
-                    <div class="text-muted small">En oficina</div>
+                    <div class="text-muted small">En delegaciones</div>
                     <div class="display-6 fw-bold">{{ $global['region'] }}</div>
                 </div>
             </div>
@@ -56,7 +60,7 @@
         <div class="col-sm-6 col-xl">
             <div class="card border-0 shadow-sm h-100">
                 <div class="card-body">
-                    <div class="text-muted small">Capturadas</div>
+                    <div class="text-muted small">Beneficiarios capturados</div>
                     <div class="display-6 fw-bold">{{ $global['capturadas'] }}</div>
                 </div>
             </div>
@@ -76,12 +80,13 @@
                             <i class="bi bi-box-seam me-2"></i> Agregar tarjetas al stock
                         </a>
                         <a href="{{ $cardsRoute }}#mover-tarjetas" class="btn btn-outline-primary btn-lg text-start">
-                            <i class="bi bi-arrow-left-right me-2"></i> Mover tarjetas a region
+                            <i class="bi bi-arrow-left-right me-2"></i> Distribuir tarjetas a delegacion
+                        </a>
+                    @else
+                        <a href="{{ $cardsRoute }}#entregar-tarjetas" class="btn btn-outline-primary btn-lg text-start">
+                            <i class="bi bi-geo-alt me-2"></i> Asignar tarjetas a municipio
                         </a>
                     @endif
-                    <a href="{{ $cardsRoute }}#entregar-tarjetas" class="btn btn-outline-primary btn-lg text-start">
-                        <i class="bi bi-geo-alt me-2"></i> Asignar tarjetas a municipio
-                    </a>
                     <a href="{{ $usersRoute }}" class="btn btn-outline-secondary btn-lg text-start">
                         <i class="bi bi-people me-2"></i> Usuarios de la region
                     </a>
@@ -93,16 +98,16 @@
     <div class="card shadow-sm">
         <div class="card-header">
             <div class="fw-semibold">Distribucion por municipio</div>
-            <div class="small text-muted">Municipios con tarjetas asignadas y cuantas ya fueron capturadas.</div>
+            <div class="small text-muted">Municipios con tarjetas asignadas y beneficiarios ya capturados.</div>
         </div>
         <div class="card-body table-responsive">
             <table class="table align-middle">
                 <thead>
                     <tr>
-                        <th>Region</th>
+                        <th>Delegacion</th>
                         <th>Municipio</th>
                         <th class="text-end">Tarjetas Asignadas</th>
-                        <th class="text-end">Tarjetas capturadas</th>
+                        <th class="text-end">Beneficiarios capturados</th>
                     </tr>
                 </thead>
                 <tbody>

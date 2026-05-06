@@ -82,7 +82,7 @@
                                     <div class="d-flex justify-content-between align-items-start gap-2">
                                         <div>
                                             <span class="text-white-50 small text-uppercase">Tarjeta</span>
-                                            <div class="h6 text-white mb-0">{{ $b->tarjeta_id ? 'Asignada' : 'Sin tarjeta' }}</div>
+                                            <div class="h6 text-white mb-0">{{ $b->folio_tarjeta ?: 'Sin numero capturado' }}</div>
                                         </div>
                                         <span class="badge bg-secondary text-white">{{ $b->curp }}</span>
                                     </div>

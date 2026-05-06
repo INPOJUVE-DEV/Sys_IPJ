@@ -3,7 +3,7 @@
         <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
             <div>
                 <h2 class="h4 m-0">Tarjetas de mi region</h2>
-                <div class="text-muted small">Asigna tarjetas por municipio, sin capturar folios.</div>
+                <div class="text-muted small">Distribuye cantidades por municipio y sigue el avance de captura.</div>
             </div>
             <a href="{{ route('stack.index') }}" class="btn btn-outline-primary">
                 <i class="bi bi-bar-chart-line me-1"></i> Ver Stack
@@ -24,10 +24,9 @@
 
     <div class="row g-3 mb-4">
         <div class="col-sm-6 col-xl"><div class="card border-0 shadow-sm"><div class="card-body"><div class="text-muted small">Total region</div><div class="h3 mb-0">{{ $summary['oficina'] }}</div></div></div></div>
-        <div class="col-sm-6 col-xl"><div class="card border-0 shadow-sm"><div class="card-body"><div class="text-muted small">Listas para asignar</div><div class="h3 mb-0">{{ $summary['pendientes'] }}</div></div></div></div>
+        <div class="col-sm-6 col-xl"><div class="card border-0 shadow-sm"><div class="card-body"><div class="text-muted small">Listas para distribuir</div><div class="h3 mb-0">{{ $summary['pendientes'] }}</div></div></div></div>
         <div class="col-sm-6 col-xl"><div class="card border-0 shadow-sm"><div class="card-body"><div class="text-muted small">Asignadas a municipio</div><div class="h3 mb-0">{{ $summary['usuario'] }}</div></div></div></div>
-        <div class="col-sm-6 col-xl"><div class="card border-0 shadow-sm"><div class="card-body"><div class="text-muted small">Capturadas</div><div class="h3 mb-0">{{ $summary['consumida'] }}</div></div></div></div>
-        <div class="col-sm-6 col-xl"><div class="card border-0 shadow-sm"><div class="card-body"><div class="text-muted small">Incidencias</div><div class="h3 mb-0">{{ $summary['incidencias'] }}</div></div></div></div>
+        <div class="col-sm-6 col-xl"><div class="card border-0 shadow-sm"><div class="card-body"><div class="text-muted small">Beneficiarios capturados</div><div class="h3 mb-0">{{ $summary['consumida'] }}</div></div></div></div>
     </div>
 
     <div class="row g-3 mb-4">
@@ -35,7 +34,7 @@
             <div class="card shadow-sm h-100">
                 <div class="card-header">
                     <div class="fw-semibold">Asignar tarjetas a municipio</div>
-                    <div class="small text-muted">Elige cantidad y municipio. No necesitas escribir folios.</div>
+                    <div class="small text-muted">Elige cantidad y municipio. La captura del numero fisico se hace despues en beneficiarios.</div>
                 </div>
                 <div class="card-body">
                     <form method="POST" action="{{ route('delegacion.inventario.tarjetas.assignRange') }}" class="row g-3">
@@ -91,33 +90,76 @@
 
     <div class="card shadow-sm">
         <div class="card-header">
-            <div class="fw-semibold">Resumen de tarjetas</div>
-            <div class="small text-muted">Municipios con tarjetas asignadas y cuantas ya fueron capturadas.</div>
+            <div class="fw-semibold">Resumen del stock</div>
+            <div class="small text-muted">Tu delegacion y el detalle por municipio en un solo dashboard.</div>
         </div>
-        <div class="card-body table-responsive">
-            <table class="table align-middle">
-                <thead>
-                    <tr>
-                        <th>Municipio</th>
-                        <th class="text-end">Tarjetas Asignadas</th>
-                        <th class="text-end">Tarjetas capturadas</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse($groups as $group)
-                        <tr>
-                            <td>{{ $group->municipio?->nombre ?? 'Sin municipio especifico' }}</td>
-                            <td class="text-end h5 mb-0">{{ (int) $group->asignadas }}</td>
-                            <td class="text-end h5 mb-0">{{ (int) $group->capturadas }}</td>
-                        </tr>
-                    @empty
-                        <tr><td colspan="3" class="text-muted">Aun no hay tarjetas en esta region.</td></tr>
-                    @endforelse
-                </tbody>
-            </table>
+        <div class="card-body">
+            <div class="accordion" id="stock-dashboard-delegacion">
+                <div class="accordion-item border rounded-3 overflow-hidden">
+                    <h2 class="accordion-header" id="heading-oficina-{{ $officeDashboard->id }}">
+                        <button
+                            class="accordion-button"
+                            type="button"
+                            data-bs-toggle="collapse"
+                            data-bs-target="#oficina-{{ $officeDashboard->id }}"
+                            aria-expanded="true"
+                            aria-controls="oficina-{{ $officeDashboard->id }}"
+                        >
+                            <div class="w-100 pe-3">
+                                <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3">
+                                    <div>
+                                        <div class="fw-semibold">{{ $officeDashboard->nombre }}</div>
+                                        <div class="small text-muted">{{ $officeDashboard->region ?: 'Sin region' }}</div>
+                                    </div>
+                                    <div class="d-flex flex-wrap gap-3 small">
+                                        <span><strong>{{ $officeDashboard->asignadas }}</strong> asignadas</span>
+                                        <span><strong>{{ $officeDashboard->capturadas }}</strong> capturadas</span>
+                                        <span><strong>{{ $officeDashboard->pendientes }}</strong> pendientes</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </button>
+                    </h2>
+                    <div
+                        id="oficina-{{ $officeDashboard->id }}"
+                        class="accordion-collapse collapse show"
+                        aria-labelledby="heading-oficina-{{ $officeDashboard->id }}"
+                        data-bs-parent="#stock-dashboard-delegacion"
+                    >
+                        <div class="accordion-body">
+                            <div class="table-responsive">
+                                <table class="table align-middle mb-0">
+                                    <thead>
+                                        <tr>
+                                            <th>Municipio</th>
+                                            <th class="text-end">Tarjetas asignadas</th>
+                                            <th class="text-end">Capturadas</th>
+                                            <th class="text-end">Pendientes</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @forelse($officeDashboard->municipios as $municipio)
+                                            <tr>
+                                                <td>
+                                                    <div class="fw-semibold">{{ $municipio->nombre }}</div>
+                                                    <div class="small text-muted">{{ $municipio->region ?: 'Sin region' }}</div>
+                                                </td>
+                                                <td class="text-end">{{ $municipio->asignadas }}</td>
+                                                <td class="text-end">{{ $municipio->capturadas }}</td>
+                                                <td class="text-end">{{ $municipio->pendientes }}</td>
+                                            </tr>
+                                        @empty
+                                            <tr>
+                                                <td colspan="4" class="text-muted">Aun no hay municipios con tarjetas o capturas en esta delegacion.</td>
+                                            </tr>
+                                        @endforelse
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
-        @if($groups->hasPages())
-            <div class="card-footer">{{ $groups->links() }}</div>
-        @endif
     </div>
 </x-app-layout>

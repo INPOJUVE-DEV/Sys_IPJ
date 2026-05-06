@@ -189,7 +189,7 @@
         <div class="d-flex align-items-center justify-content-between gap-3 mb-3">
             <div>
                 <h3 class="h5 fw-semibold mb-0">Inventario actual de tarjetas</h3>
-                <div class="small text-muted">Resumen rapido del stock regional y su avance de captura.</div>
+                <div class="small text-muted">Resumen rapido del stock regional y su distribucion por municipio.</div>
             </div>
         </div>
 
@@ -205,7 +205,7 @@
             <div class="col-sm-6 col-xl">
                 <div class="card border-0 shadow-sm h-100">
                     <div class="card-body">
-                        <div class="text-muted small">Listas para asignar</div>
+                        <div class="text-muted small">Listas para distribuir</div>
                         <div class="h3 mb-0">{{ number_format($tarjetasSummary['listas']) }}</div>
                     </div>
                 </div>
@@ -221,16 +221,8 @@
             <div class="col-sm-6 col-xl">
                 <div class="card border-0 shadow-sm h-100">
                     <div class="card-body">
-                        <div class="text-muted small">Capturadas</div>
+                        <div class="text-muted small">Beneficiarios capturados</div>
                         <div class="h3 mb-0">{{ number_format($tarjetasSummary['capturadas']) }}</div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-sm-6 col-xl">
-                <div class="card border-0 shadow-sm h-100">
-                    <div class="card-body">
-                        <div class="text-muted small">Incidencias</div>
-                        <div class="h3 mb-0">{{ number_format($tarjetasSummary['incidencias']) }}</div>
                     </div>
                 </div>
             </div>
@@ -239,8 +231,8 @@
         <div class="mt-4">
             <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-2 mb-3">
                 <div>
-                    <h4 class="h5 fw-semibold mb-0">Tarjetas capturadas de sus municipios</h4>
-                    <div class="small text-muted">Capturas consumidas en municipios asignados a esta delegacion.</div>
+                    <h4 class="h5 fw-semibold mb-0">Beneficiarios capturados de sus municipios</h4>
+                    <div class="small text-muted">Capturas registradas en municipios asignados a esta delegacion.</div>
                 </div>
                 <span class="badge bg-primary text-white">Edad objetivo {{ $edadObjetivoMin }}-{{ $edadObjetivoMax }}</span>
             </div>
@@ -317,8 +309,8 @@
                                 </div>
                                 <div class="col-6">
                                     <div class="border rounded-3 p-3 h-100">
-                                        <div class="small text-muted">Sin beneficiario</div>
-                                        <div class="h4 mb-0">{{ number_format($capturadasSummary['sin_beneficiario']) }}</div>
+                                        <div class="small text-muted">Total capturados</div>
+                                        <div class="h4 mb-0">{{ number_format($capturadasSummary['total']) }}</div>
                                     </div>
                                 </div>
                             </div>
@@ -343,7 +335,7 @@
                 <div class="col-12 col-xl-7">
                     <div class="card shadow-sm h-100">
                         <div class="card-header">
-                            <div class="fw-semibold">Capturadas por municipio</div>
+                            <div class="fw-semibold">Capturas por municipio</div>
                             <div class="small text-muted">Municipios con mayor captura y su avance en edad objetivo.</div>
                         </div>
                         <div class="card-body table-responsive">
@@ -352,7 +344,7 @@
                                     <tr>
                                         <th>Municipio</th>
                                         <th class="text-end">Tarjetas asignadas</th>
-                                        <th class="text-end">Capturadas</th>
+                                        <th class="text-end">Beneficiarios capturados</th>
                                         <th class="text-end">Edad objetivo</th>
                                         <th class="text-end">Fuera de rango</th>
                                     </tr>
@@ -360,7 +352,7 @@
                                 <tbody>
                                     @forelse($capturadasPorMunicipio as $row)
                                         <tr>
-                                            <td class="fw-semibold">{{ $row->municipio?->nombre ?? 'Sin municipio especifico' }}</td>
+                                            <td class="fw-semibold">{{ $row->nombre ?? 'Sin municipio especifico' }}</td>
                                             <td class="text-end">{{ number_format((int) $row->asignadas) }}</td>
                                             <td class="text-end">{{ number_format((int) $row->capturadas) }}</td>
                                             <td class="text-end">{{ number_format((int) $row->edad_objetivo) }}</td>
@@ -368,7 +360,7 @@
                                         </tr>
                                     @empty
                                         <tr>
-                                            <td colspan="5" class="text-muted">Aun no hay tarjetas capturadas en los municipios de esta delegacion.</td>
+                                            <td colspan="5" class="text-muted">Aun no hay beneficiarios capturados en los municipios de esta delegacion.</td>
                                         </tr>
                                     @endforelse
                                 </tbody>

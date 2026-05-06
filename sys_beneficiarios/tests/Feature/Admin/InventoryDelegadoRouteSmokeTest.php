@@ -163,7 +163,7 @@ class InventoryDelegadoRouteSmokeTest extends TestCase
         $this->actingAs($delegado)
             ->get(route('delegacion.home'))
             ->assertOk()
-            ->assertSee('Tarjetas capturadas de sus municipios')
+            ->assertSee('Beneficiarios capturados de sus municipios')
             ->assertSee('Tablero de edad objetivo')
             ->assertSee('Municipio QA')
             ->assertSeeInOrder(['Municipio QA', '2', '1', '1', '0']);

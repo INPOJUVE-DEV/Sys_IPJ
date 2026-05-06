@@ -10,7 +10,6 @@ use App\Models\Inscripcion;
 use App\Models\Municipio;
 use App\Models\Programa;
 use App\Models\Seccion;
-use App\Services\TarjetaService;
 use App\Support\SeccionResolver;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -85,19 +84,20 @@ class InscripcionController extends Controller
         return view('inscripciones.create', compact('programas', 'municipios', 'periodo', 'dailyCount', 'dailyCountStart'));
     }
 
-    public function store(StoreInscripcionRequest $request, TarjetaService $tarjetaService)
+    public function store(StoreInscripcionRequest $request)
     {
         $data = $request->validated();
 
         try {
-            $inscripcion = DB::transaction(function () use ($request, $data, $tarjetaService) {
+            $inscripcion = DB::transaction(function () use ($request, $data) {
                 $dom = $request->input('domicilio', []);
-                $seccion = $this->resolveSeccionFromInput($dom);
+                $seccion = $this->resolveSeccionFromInput($dom, $data['id_ine'] ?? null);
                 $seccion?->loadMissing('municipio');
                 $this->ensureUserCanCaptureSeccion($seccion);
                 $inputMunicipioId = $dom['municipio_id'] ?? null;
 
                 $beneficiario = Beneficiario::where('curp', $data['curp'])->lockForUpdate()->first();
+                $requestedFolio = trim((string) ($data['folio_tarjeta'] ?? ''));
                 $payload = [
                     'nombre' => $data['nombre'],
                     'apellido_paterno' => $data['apellido_paterno'],
@@ -109,7 +109,9 @@ class InscripcionController extends Controller
                     'id_ine' => $data['id_ine'],
                     'telefono' => $data['telefono'],
                 ];
-                $requestedFolio = trim((string) ($data['folio_tarjeta'] ?? ''));
+                if ($requestedFolio !== '') {
+                    $payload['folio_tarjeta'] = $requestedFolio;
+                }
 
                 if ($beneficiario) {
                     $beneficiario->fill($payload);
@@ -119,32 +121,12 @@ class InscripcionController extends Controller
                     $beneficiario->created_by = Auth::user()->uuid;
                 }
 
-                if ($requestedFolio !== '' && $beneficiario->folio_tarjeta && $beneficiario->folio_tarjeta !== $requestedFolio) {
-                    throw ValidationException::withMessages([
-                        'folio_tarjeta' => 'El beneficiario ya cuenta con una tarjeta asignada y no puede cambiarse desde este flujo.',
-                    ]);
-                }
-
                 $beneficiario->seccion()->associate($seccion);
                 $beneficiario->municipio_id = $seccion?->municipio_id ?? $inputMunicipioId;
+                $beneficiario->tarjeta_id = null;
                 $beneficiario->save();
 
                 $this->saveDomicilio($request, $beneficiario, $seccion);
-
-                if ($requestedFolio !== '' && ! $beneficiario->tarjeta_id) {
-                    $tarjeta = $tarjetaService->findConsumableByFolio($requestedFolio, Auth::user());
-                    if (! $tarjeta) {
-                        throw ValidationException::withMessages([
-                            'folio_tarjeta' => 'El folio indicado no esta disponible en inventario.',
-                        ]);
-                    }
-
-                    $tarjetaService->consume(Auth::user(), $tarjeta, $beneficiario);
-                    $beneficiario->forceFill([
-                        'tarjeta_id' => $tarjeta->id,
-                        'folio_tarjeta' => $tarjeta->folio,
-                    ])->save();
-                }
 
                 $programa = Programa::findOrFail($data['programa_id']);
                 $periodo = $data['periodo'];
@@ -249,12 +231,13 @@ class InscripcionController extends Controller
         $domicilio->save();
     }
 
-    private function resolveSeccionFromInput(array $domicilio): ?Seccion
+    private function resolveSeccionFromInput(array $domicilio, ?string $idIne = null): ?Seccion
     {
-        $seccion = SeccionResolver::resolve($domicilio['seccional'] ?? null);
+        $seccion = SeccionResolver::resolveFromIne($idIne)
+            ?: SeccionResolver::resolve($domicilio['seccional'] ?? null);
         if (! $seccion) {
             throw ValidationException::withMessages([
-                'domicilio.seccional' => 'La seccional no se encuentra en el catalogo.',
+                'id_ine' => 'No fue posible detectar una seccional valida a partir del ID INE.',
             ]);
         }
 
@@ -290,7 +273,7 @@ class InscripcionController extends Controller
         $officeId = $seccion->municipio?->oficina_id;
         if ($officeId && (int) $officeId !== (int) $user->oficina_id) {
             throw ValidationException::withMessages([
-                'domicilio.seccional' => 'La seccional seleccionada no pertenece a tu oficina.',
+                'id_ine' => 'La seccional detectada no pertenece a tu oficina.',
             ]);
         }
     }

@@ -27,7 +27,7 @@ class DashboardController extends Controller
 
         $eventosBase = $this->officeEventosQuery($officeId);
         $inscripcionesBase = $this->officeInscripcionesQuery($officeId);
-        $tarjetasCapturadasBase = $this->officeCapturedTarjetasQuery($officeId);
+        $beneficiariosBase = $this->officeBeneficiariosQuery($officeId);
 
         $eventosSummary = [
             'total' => (clone $eventosBase)->count(),
@@ -72,47 +72,28 @@ class DashboardController extends Controller
         $tarjetasSummary = [
             'total' => $this->officeTarjetasQuery($officeId)->count(),
             'listas' => $this->officeTarjetasQuery($officeId)
-                ->whereIn('estatus', [Tarjeta::STATUS_ASIGNADA_OFICINA, Tarjeta::STATUS_DEVUELTA])
+                ->whereNull('municipio_id')
                 ->count(),
             'municipio' => $this->officeTarjetasQuery($officeId)
                 ->whereNotNull('municipio_id')
-                ->whereNotIn('estatus', [
-                    Tarjeta::STATUS_CONSUMIDA,
-                    Tarjeta::STATUS_BLOQUEADA,
-                    Tarjeta::STATUS_EXTRAVIADA,
-                ])
                 ->count(),
-            'capturadas' => $this->officeTarjetasQuery($officeId)
-                ->where('estatus', Tarjeta::STATUS_CONSUMIDA)
-                ->count(),
-            'incidencias' => $this->officeTarjetasQuery($officeId)
-                ->whereIn('estatus', [Tarjeta::STATUS_BLOQUEADA, Tarjeta::STATUS_EXTRAVIADA])
-                ->count(),
+            'capturadas' => (clone $beneficiariosBase)->count(),
         ];
 
-        $capturadasConBeneficiario = (clone $tarjetasCapturadasBase)
-            ->whereNotNull('beneficiario_id')
-            ->count();
-
-        $capturadasEdadObjetivo = (clone $tarjetasCapturadasBase)
-            ->whereHas('beneficiario', fn (Builder $query) => $query->whereBetween('edad', [$edadObjetivoMin, $edadObjetivoMax]))
-            ->count();
-
-        $capturadasMenores = (clone $tarjetasCapturadasBase)
-            ->whereHas('beneficiario', fn (Builder $query) => $query->where('edad', '<', $edadObjetivoMin))
-            ->count();
-
-        $capturadasMayores = (clone $tarjetasCapturadasBase)
-            ->whereHas('beneficiario', fn (Builder $query) => $query->where('edad', '>', $edadObjetivoMax))
-            ->count();
-
-        $capturadasPorSexo = Beneficiario::query()
+        $capturadasEdadObjetivo = (clone $beneficiariosBase)
             ->whereBetween('edad', [$edadObjetivoMin, $edadObjetivoMax])
-            ->whereHas('tarjeta', function (Builder $query) use ($officeId) {
-                $query->where('estatus', Tarjeta::STATUS_CONSUMIDA)
-                    ->where('oficina_id', $officeId)
-                    ->whereHas('municipio', fn (Builder $municipio) => $municipio->where('oficina_id', $officeId));
-            })
+            ->count();
+
+        $capturadasMenores = (clone $beneficiariosBase)
+            ->where('edad', '<', $edadObjetivoMin)
+            ->count();
+
+        $capturadasMayores = (clone $beneficiariosBase)
+            ->where('edad', '>', $edadObjetivoMax)
+            ->count();
+
+        $capturadasPorSexo = (clone $beneficiariosBase)
+            ->whereBetween('edad', [$edadObjetivoMin, $edadObjetivoMax])
             ->select([
                 'sexo',
                 DB::raw('COUNT(*) as total'),
@@ -121,45 +102,52 @@ class DashboardController extends Controller
             ->pluck('total', 'sexo');
 
         $capturadasSummary = [
-            'total' => (clone $tarjetasCapturadasBase)->count(),
-            'mes' => (clone $tarjetasCapturadasBase)->whereBetween('updated_at', [$monthStart, $now])->count(),
-            'hoy' => (clone $tarjetasCapturadasBase)->whereBetween('updated_at', [$todayStart, $now])->count(),
-            'con_beneficiario' => $capturadasConBeneficiario,
+            'total' => (clone $beneficiariosBase)->count(),
+            'mes' => (clone $beneficiariosBase)->whereBetween('created_at', [$monthStart, $now])->count(),
+            'hoy' => (clone $beneficiariosBase)->whereBetween('created_at', [$todayStart, $now])->count(),
             'edad_objetivo' => $capturadasEdadObjetivo,
             'menores' => $capturadasMenores,
             'mayores' => $capturadasMayores,
-            'sin_beneficiario' => (clone $tarjetasCapturadasBase)->count() - $capturadasConBeneficiario,
             'mujeres_objetivo' => (int) ($capturadasPorSexo['F'] ?? 0),
             'hombres_objetivo' => (int) ($capturadasPorSexo['M'] ?? 0),
             'otro_objetivo' => (int) ($capturadasPorSexo['X'] ?? 0),
         ];
 
-        $capturadasPorMunicipio = Tarjeta::query()
-            ->with('municipio:id,nombre')
-            ->leftJoin('beneficiarios', 'tarjetas.beneficiario_id', '=', 'beneficiarios.id')
-            ->select([
-                'tarjetas.municipio_id',
-                DB::raw('COUNT(*) as capturadas'),
-                DB::raw('(
-                    SELECT COUNT(*)
-                    FROM tarjetas as tarjetas_asignadas
-                    WHERE tarjetas_asignadas.oficina_id = tarjetas.oficina_id
-                        AND tarjetas_asignadas.municipio_id = tarjetas.municipio_id
-                ) as asignadas'),
-            ])
-            ->selectRaw('SUM(CASE WHEN beneficiarios.edad BETWEEN ? AND ? THEN 1 ELSE 0 END) as edad_objetivo', [$edadObjetivoMin, $edadObjetivoMax])
-            ->selectRaw('SUM(CASE WHEN beneficiarios.edad < ? THEN 1 ELSE 0 END) as menores', [$edadObjetivoMin])
-            ->selectRaw('SUM(CASE WHEN beneficiarios.edad > ? THEN 1 ELSE 0 END) as mayores', [$edadObjetivoMax])
-            ->where('tarjetas.estatus', Tarjeta::STATUS_CONSUMIDA)
-            ->where('tarjetas.oficina_id', $officeId)
-            ->whereNotNull('tarjetas.municipio_id')
-            ->whereExists(function ($query) use ($officeId) {
-                $query->selectRaw('1')
-                    ->from('municipios')
-                    ->whereColumn('municipios.id', 'tarjetas.municipio_id')
-                    ->where('municipios.oficina_id', $officeId);
+        $tarjetasAsignadasPorMunicipio = Tarjeta::query()
+            ->select('municipio_id', DB::raw('COUNT(*) as asignadas'))
+            ->where('oficina_id', $officeId)
+            ->whereNotNull('municipio_id')
+            ->groupBy('municipio_id');
+
+        $beneficiariosPorMunicipio = Beneficiario::query()
+            ->select('municipio_id')
+            ->selectRaw('COUNT(*) as capturadas')
+            ->selectRaw('SUM(CASE WHEN edad BETWEEN ? AND ? THEN 1 ELSE 0 END) as edad_objetivo', [$edadObjetivoMin, $edadObjetivoMax])
+            ->selectRaw('SUM(CASE WHEN edad < ? THEN 1 ELSE 0 END) as menores', [$edadObjetivoMin])
+            ->selectRaw('SUM(CASE WHEN edad > ? THEN 1 ELSE 0 END) as mayores', [$edadObjetivoMax])
+            ->groupBy('municipio_id');
+
+        $capturadasPorMunicipio = \App\Models\Municipio::query()
+            ->leftJoinSub($tarjetasAsignadasPorMunicipio, 'tarjetas_asignadas', function ($join) {
+                $join->on('tarjetas_asignadas.municipio_id', '=', 'municipios.id');
             })
-            ->groupBy('tarjetas.municipio_id', 'tarjetas.oficina_id')
+            ->leftJoinSub($beneficiariosPorMunicipio, 'beneficiarios_resumen', function ($join) {
+                $join->on('beneficiarios_resumen.municipio_id', '=', 'municipios.id');
+            })
+            ->where('municipios.oficina_id', $officeId)
+            ->where(function ($query) {
+                $query->whereNotNull('tarjetas_asignadas.asignadas')
+                    ->orWhereNotNull('beneficiarios_resumen.capturadas');
+            })
+            ->select([
+                'municipios.id',
+                'municipios.nombre',
+                DB::raw('COALESCE(tarjetas_asignadas.asignadas, 0) as asignadas'),
+                DB::raw('COALESCE(beneficiarios_resumen.capturadas, 0) as capturadas'),
+                DB::raw('COALESCE(beneficiarios_resumen.edad_objetivo, 0) as edad_objetivo'),
+                DB::raw('COALESCE(beneficiarios_resumen.menores, 0) as menores'),
+                DB::raw('COALESCE(beneficiarios_resumen.mayores, 0) as mayores'),
+            ])
             ->orderByDesc('capturadas')
             ->limit(10)
             ->get();
@@ -198,13 +186,11 @@ class DashboardController extends Controller
             ->when($officeId, fn (Builder $query) => $query->where('oficina_id', $officeId), fn (Builder $query) => $query->whereRaw('1 = 0'));
     }
 
-    protected function officeCapturedTarjetasQuery(?int $officeId): Builder
+    protected function officeBeneficiariosQuery(?int $officeId): Builder
     {
-        return Tarjeta::query()
-            ->where('estatus', Tarjeta::STATUS_CONSUMIDA)
+        return Beneficiario::query()
             ->when($officeId, function (Builder $query) use ($officeId) {
-                $query->where('oficina_id', $officeId)
-                    ->whereHas('municipio', fn (Builder $municipio) => $municipio->where('oficina_id', $officeId));
+                $query->whereHas('municipio', fn (Builder $municipio) => $municipio->where('oficina_id', $officeId));
             }, fn (Builder $query) => $query->whereRaw('1 = 0'));
     }
 }

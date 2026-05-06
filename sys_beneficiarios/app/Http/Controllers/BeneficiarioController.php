@@ -2,20 +2,19 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreBeneficiarioRequest;
+use App\Http\Requests\UpdateBeneficiarioRequest;
 use App\Models\Beneficiario;
 use App\Models\Domicilio;
 use App\Models\Municipio;
 use App\Models\Seccion;
-use App\Http\Requests\StoreBeneficiarioRequest;
-use App\Http\Requests\UpdateBeneficiarioRequest;
-use App\Services\TarjetaService;
+use App\Support\SeccionResolver;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
-use App\Support\SeccionResolver;
 
 class BeneficiarioController extends Controller
 {
@@ -24,10 +23,10 @@ class BeneficiarioController extends Controller
         $this->authorize('viewAny', Beneficiario::class);
         $q = $request->get('q');
         $filters = $request->only([
-            'municipio_id','seccional','distrito_local','distrito_federal','sexo','discapacidad','edad_min','edad_max'
+            'municipio_id', 'seccional', 'distrito_local', 'distrito_federal', 'sexo', 'discapacidad', 'edad_min', 'edad_max',
         ]);
 
-        $baseQuery = Beneficiario::with(['municipio','creador','seccion'])
+        $baseQuery = Beneficiario::with(['municipio', 'creador', 'seccion'])
             ->when($q, function ($query) use ($q) {
                 $query->where(function ($sub) use ($q) {
                     $sub->where('folio_tarjeta', 'like', "%$q%")
@@ -37,14 +36,14 @@ class BeneficiarioController extends Controller
                         ->orWhere('apellido_materno', 'like', "%$q%");
                 });
             })
-            ->when($filters['municipio_id'] ?? null, fn($q2,$v)=>$q2->where('municipio_id',$v))
-            ->when($filters['seccional'] ?? null, fn($q2,$v)=>$q2->whereHas('seccion', fn($sq) => $sq->where('seccional','like',"%$v%")))
-            ->when($filters['distrito_local'] ?? null, fn($q2,$v)=>$q2->whereHas('seccion', fn($sq) => $sq->where('distrito_local','like',"%$v%")))
-            ->when($filters['distrito_federal'] ?? null, fn($q2,$v)=>$q2->whereHas('seccion', fn($sq) => $sq->where('distrito_federal','like',"%$v%")))
-            ->when(($filters['sexo'] ?? '') !== '', fn($q2,$v)=>$q2->where('sexo',$v))
-            ->when(($filters['discapacidad'] ?? '') !== '', fn($q2,$v)=>$q2->where('discapacidad',(bool)$v))
-            ->when($filters['edad_min'] ?? null, fn($q2,$v)=>$q2->where('edad','>=',(int)$v))
-            ->when($filters['edad_max'] ?? null, fn($q2,$v)=>$q2->where('edad','<=',(int)$v))
+            ->when($filters['municipio_id'] ?? null, fn ($q2, $v) => $q2->where('municipio_id', $v))
+            ->when($filters['seccional'] ?? null, fn ($q2, $v) => $q2->whereHas('seccion', fn ($sq) => $sq->where('seccional', 'like', "%$v%")))
+            ->when($filters['distrito_local'] ?? null, fn ($q2, $v) => $q2->whereHas('seccion', fn ($sq) => $sq->where('distrito_local', 'like', "%$v%")))
+            ->when($filters['distrito_federal'] ?? null, fn ($q2, $v) => $q2->whereHas('seccion', fn ($sq) => $sq->where('distrito_federal', 'like', "%$v%")))
+            ->when(($filters['sexo'] ?? '') !== '', fn ($q2, $v) => $q2->where('sexo', $v))
+            ->when(($filters['discapacidad'] ?? '') !== '', fn ($q2, $v) => $q2->where('discapacidad', (bool) $v))
+            ->when($filters['edad_min'] ?? null, fn ($q2, $v) => $q2->where('edad', '>=', (int) $v))
+            ->when($filters['edad_max'] ?? null, fn ($q2, $v) => $q2->where('edad', '<=', (int) $v))
             ->when(auth()->user()?->hasRole('capturista'), function ($q2) {
                 $q2->where('created_by', auth()->user()->uuid);
             })
@@ -59,7 +58,7 @@ class BeneficiarioController extends Controller
         if ($request->wantsJson()) {
             $limit = max(1, min($request->integer('limit', 20), 50));
             $items = (clone $baseQuery)
-                ->with(['municipio:id,nombre','seccion:id,seccional'])
+                ->with(['municipio:id,nombre', 'seccion:id,seccional'])
                 ->orderBy('created_at', 'desc')
                 ->limit($limit)
                 ->get();
@@ -77,7 +76,7 @@ class BeneficiarioController extends Controller
         }
 
         $beneficiarios = (clone $baseQuery)
-            ->orderBy('created_at','desc')
+            ->orderBy('created_at', 'desc')
             ->paginate(15)
             ->withQueryString();
 
@@ -94,42 +93,41 @@ class BeneficiarioController extends Controller
     public function create()
     {
         $municipios = $this->availableMunicipios();
+
         return view('beneficiarios.create', compact('municipios'));
     }
 
-    public function store(StoreBeneficiarioRequest $request, TarjetaService $tarjetaService)
+    public function store(StoreBeneficiarioRequest $request)
     {
         $data = $request->validated();
+        $data['folio_tarjeta'] = trim((string) ($data['folio_tarjeta'] ?? '')) ?: null;
 
         try {
-            $beneficiario = DB::transaction(function () use ($request, $data, $tarjetaService) {
-                $beneficiario = new Beneficiario(collect($data)->except('folio_tarjeta')->all());
+            $beneficiario = DB::transaction(function () use ($request, $data) {
+                $beneficiario = new Beneficiario($data);
                 $dom = $request->input('domicilio', []);
-                $seccion = $this->resolveSeccionFromInput($dom);
+                $seccion = $this->resolveSeccionFromInput($dom, $data['id_ine'] ?? null);
                 $seccion?->loadMissing('municipio');
                 $this->ensureUserCanCaptureSeccion($seccion);
+
                 $inputMunicipioId = $dom['municipio_id'] ?? null;
                 if ($inputMunicipioId && $seccion && (string) $inputMunicipioId !== (string) $seccion->municipio_id) {
                     throw ValidationException::withMessages([
-                        'domicilio.municipio_id' => 'El municipio no coincide con la seccional seleccionada.',
+                        'domicilio.municipio_id' => 'El municipio no coincide con la seccional detectada.',
                     ]);
                 }
+
                 $beneficiario->seccion()->associate($seccion);
                 $beneficiario->municipio_id = $seccion?->municipio_id;
+                $beneficiario->tarjeta_id = null;
                 $beneficiario->id = (string) Str::uuid();
                 $beneficiario->created_by = Auth::user()->uuid;
 
-                if (!$beneficiario->save()) {
+                if (! $beneficiario->save()) {
                     throw new \RuntimeException('No se pudo guardar el beneficiario');
                 }
 
                 $this->saveDomicilio($request, $beneficiario, $seccion);
-
-                $tarjeta = $tarjetaService->consumeNextAvailable(Auth::user(), $beneficiario, $beneficiario->municipio_id);
-                $beneficiario->forceFill([
-                    'tarjeta_id' => $tarjeta->id,
-                    'folio_tarjeta' => null,
-                ])->save();
 
                 return $beneficiario;
             });
@@ -157,25 +155,29 @@ class BeneficiarioController extends Controller
         $this->authorize('view', $beneficiario);
         $municipios = $this->availableMunicipios();
         $domicilio = $beneficiario->domicilio;
-        return view('beneficiarios.edit', compact('beneficiario','municipios','domicilio'));
+
+        return view('beneficiarios.edit', compact('beneficiario', 'municipios', 'domicilio'));
     }
 
     public function update(UpdateBeneficiarioRequest $request, Beneficiario $beneficiario)
     {
         $this->authorize('update', $beneficiario);
         $data = $request->validated();
+        $data['folio_tarjeta'] = trim((string) ($data['folio_tarjeta'] ?? '')) ?: null;
 
-        $beneficiario->fill(collect($data)->except('folio_tarjeta')->all());
+        $beneficiario->fill($data);
         $dom = $request->input('domicilio', []);
-        $seccion = $this->resolveSeccionFromInput($dom, $beneficiario->seccion);
+        $seccion = $this->resolveSeccionFromInput($dom, $data['id_ine'] ?? null, $beneficiario->seccion);
         $seccion?->loadMissing('municipio');
         $this->ensureUserCanCaptureSeccion($seccion);
+
         $inputMunicipioId = $dom['municipio_id'] ?? null;
         if ($inputMunicipioId && $seccion && (string) $inputMunicipioId !== (string) $seccion->municipio_id) {
             throw ValidationException::withMessages([
-                'domicilio.municipio_id' => 'El municipio no coincide con la seccional seleccionada.',
+                'domicilio.municipio_id' => 'El municipio no coincide con la seccional detectada.',
             ]);
         }
+
         $beneficiario->seccion()->associate($seccion);
         $beneficiario->municipio_id = $seccion?->municipio_id ?? $beneficiario->municipio_id;
         $beneficiario->save();
@@ -189,15 +191,17 @@ class BeneficiarioController extends Controller
     {
         $this->authorize('delete', $beneficiario);
         $beneficiario->delete();
+
         return redirect()->route('beneficiarios.index')->with('status', 'Beneficiario eliminado');
     }
 
     protected function saveDomicilio(Request $request, Beneficiario $beneficiario, ?Seccion $seccion = null): void
     {
         $dom = $request->input('domicilio');
-        if (!$dom) {
+        if (! $dom) {
             return;
         }
+
         $municipioId = $seccion?->municipio_id ?? $beneficiario->municipio_id;
         $payload = array_filter([
             'calle' => $dom['calle'] ?? null,
@@ -207,21 +211,31 @@ class BeneficiarioController extends Controller
             'municipio_id' => $municipioId,
             'codigo_postal' => $dom['codigo_postal'] ?? null,
             'seccion_id' => $seccion?->id,
-        ], fn ($v) => !is_null($v));
+        ], fn ($v) => ! is_null($v));
+
         if (empty($payload)) {
             return;
         }
-        $domicilio = $beneficiario->domicilio ?: new Domicilio(['id' => (string) Str::uuid(), 'beneficiario_id' => $beneficiario->id]);
+
+        $domicilio = $beneficiario->domicilio ?: new Domicilio([
+            'id' => (string) Str::uuid(),
+            'beneficiario_id' => $beneficiario->id,
+        ]);
+
         $domicilio->fill($payload);
         $domicilio->beneficiario_id = $beneficiario->id;
         $domicilio->save();
     }
-    private function resolveSeccionFromInput(array $domicilio, ?Seccion $fallback = null): ?Seccion
+
+    private function resolveSeccionFromInput(array $domicilio, ?string $idIne = null, ?Seccion $fallback = null): ?Seccion
     {
-        $seccion = SeccionResolver::resolve($domicilio['seccional'] ?? null) ?: $fallback;
+        $seccion = SeccionResolver::resolveFromIne($idIne)
+            ?: SeccionResolver::resolve($domicilio['seccional'] ?? null)
+            ?: $fallback;
+
         if (! $seccion) {
             throw ValidationException::withMessages([
-                'domicilio.seccional' => 'La seccional no se encuentra en el catálogo.',
+                'id_ine' => 'No fue posible detectar una seccional valida a partir del ID INE.',
             ]);
         }
 
@@ -250,7 +264,7 @@ class BeneficiarioController extends Controller
         $officeId = $seccion->municipio?->oficina_id;
         if ($officeId && (int) $officeId !== (int) $user->oficina_id) {
             throw ValidationException::withMessages([
-                'domicilio.seccional' => 'La seccional seleccionada no pertenece a tu oficina.',
+                'id_ine' => 'La seccional detectada no pertenece a tu oficina.',
             ]);
         }
     }

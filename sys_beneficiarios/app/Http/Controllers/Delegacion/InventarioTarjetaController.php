@@ -3,11 +3,12 @@
 namespace App\Http\Controllers\Delegacion;
 
 use App\Http\Controllers\Controller;
+use App\Models\Beneficiario;
 use App\Models\Municipio;
+use App\Models\Oficina;
 use App\Models\Tarjeta;
 use App\Services\TarjetaService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 
 class InventarioTarjetaController extends Controller
 {
@@ -15,48 +16,86 @@ class InventarioTarjetaController extends Controller
     {
         $user = $request->user();
         $filters = $request->only(['municipio_id']);
-
-        $groups = Tarjeta::query()
-            ->with('municipio:id,nombre')
-            ->select([
-                'municipio_id',
-                DB::raw('COUNT(*) as asignadas'),
-            ])
-            ->selectRaw('SUM(CASE WHEN estatus = ? THEN 1 ELSE 0 END) as capturadas', [Tarjeta::STATUS_CONSUMIDA])
-            ->accessibleTo($user)
+        $office = Oficina::findOrFail($user->oficina_id);
+        $municipioIds = Tarjeta::query()
+            ->where('oficina_id', $user->oficina_id)
             ->whereNotNull('municipio_id')
-            ->when($filters['municipio_id'] ?? null, fn ($q, $value) => $q->where('municipio_id', $value))
-            ->groupBy('municipio_id')
-            ->orderBy('municipio_id')
-            ->paginate(25)
-            ->withQueryString();
+            ->distinct()
+            ->pluck('municipio_id');
 
-        $municipios = Municipio::where('oficina_id', $user->oficina_id)
+        $municipios = Municipio::whereIn('id', $municipioIds)
             ->orderBy('nombre')
             ->get(['id', 'nombre', 'region']);
-        $municipiosById = $municipios->keyBy('id');
+        $dashboardMunicipios = $municipios
+            ->when($filters['municipio_id'] ?? null, fn ($collection, $value) => $collection->where('id', (int) $value))
+            ->values();
+
+        $capturadasPorMunicipio = Beneficiario::query()
+            ->when(
+                $dashboardMunicipios->isNotEmpty(),
+                fn ($query) => $query->whereIn('municipio_id', $dashboardMunicipios->pluck('id')->all()),
+                fn ($query) => $query->whereRaw('1 = 0')
+            )
+            ->selectRaw('municipio_id, COUNT(*) as total')
+            ->groupBy('municipio_id')
+            ->pluck('total', 'municipio_id');
+
+        $asignadasPorMunicipio = Tarjeta::query()
+            ->where('oficina_id', $user->oficina_id)
+            ->when(
+                $dashboardMunicipios->isNotEmpty(),
+                fn ($query) => $query->whereIn('municipio_id', $dashboardMunicipios->pluck('id')->all()),
+                fn ($query) => $query->whereRaw('1 = 0')
+            )
+            ->selectRaw('municipio_id, COUNT(*) as total')
+            ->groupBy('municipio_id')
+            ->pluck('total', 'municipio_id');
+
+        $municipioDashboard = $dashboardMunicipios
+            ->map(function ($municipio) use ($asignadasPorMunicipio, $capturadasPorMunicipio) {
+                $asignadas = (int) ($asignadasPorMunicipio[$municipio->id] ?? 0);
+                $capturadas = (int) ($capturadasPorMunicipio[$municipio->id] ?? 0);
+
+                return (object) [
+                    'id' => $municipio->id,
+                    'nombre' => $municipio->nombre,
+                    'region' => $municipio->region,
+                    'asignadas' => $asignadas,
+                    'capturadas' => $capturadas,
+                    'pendientes' => max($asignadas - $capturadas, 0),
+                ];
+            })
+            ->filter(fn ($municipio) => $municipio->asignadas > 0 || $municipio->capturadas > 0 || ($filters['municipio_id'] ?? null))
+            ->values();
+
         $summary = [
             'oficina' => Tarjeta::where('oficina_id', $user->oficina_id)->count(),
             'pendientes' => Tarjeta::where('oficina_id', $user->oficina_id)
-                ->whereIn('estatus', [Tarjeta::STATUS_ASIGNADA_OFICINA, Tarjeta::STATUS_DEVUELTA])
+                ->whereNull('municipio_id')
                 ->count(),
             'usuario' => Tarjeta::where('oficina_id', $user->oficina_id)
                 ->whereNotNull('municipio_id')
-                ->whereNotIn('estatus', [
-                    Tarjeta::STATUS_CONSUMIDA,
-                    Tarjeta::STATUS_BLOQUEADA,
-                    Tarjeta::STATUS_EXTRAVIADA,
-                ])
                 ->count(),
-            'consumida' => Tarjeta::where('oficina_id', $user->oficina_id)
-                ->where('estatus', Tarjeta::STATUS_CONSUMIDA)
-                ->count(),
-            'incidencias' => Tarjeta::where('oficina_id', $user->oficina_id)
-                ->whereIn('estatus', [Tarjeta::STATUS_BLOQUEADA, Tarjeta::STATUS_EXTRAVIADA])
+            'consumida' => Beneficiario::query()
+                ->when(
+                    $municipioIds->isNotEmpty(),
+                    fn ($query) => $query->whereIn('municipio_id', $municipioIds),
+                    fn ($query) => $query->whereRaw('1 = 0')
+                )
                 ->count(),
         ];
 
-        return view('delegacion.inventario.tarjetas.index', compact('groups', 'municipios', 'municipiosById', 'filters', 'summary'));
+        $officeDashboard = (object) [
+            'id' => $office->id,
+            'nombre' => $office->nombre,
+            'region' => $office->region,
+            'asignadas' => (int) $summary['oficina'],
+            'capturadas' => (int) $summary['consumida'],
+            'pendientes' => max((int) $summary['oficina'] - (int) $summary['consumida'], 0),
+            'municipios' => $municipioDashboard,
+        ];
+
+        return view('delegacion.inventario.tarjetas.index', compact('municipios', 'filters', 'summary', 'officeDashboard'));
     }
 
     public function assignRange(Request $request, TarjetaService $tarjetaService)

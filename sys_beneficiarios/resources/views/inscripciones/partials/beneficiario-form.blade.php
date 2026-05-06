@@ -53,10 +53,10 @@
     <div class="wizard-step active" data-step="1">
         <div class="row g-3">
             <div class="col-md-4">
-                <div class="border rounded-3 p-3 h-100">
-                    <div class="fw-semibold">Tarjeta</div>
-                    <div class="small text-muted">No se capturan folios. El control de tarjetas se lleva desde Stack.</div>
-                </div>
+                <label for="folio_tarjeta" class="form-label">Numero de tarjeta</label>
+                <input id="folio_tarjeta" name="folio_tarjeta" value="{{ old('folio_tarjeta', $b->folio_tarjeta ?? '') }}" class="form-control @error('folio_tarjeta') is-invalid @enderror" placeholder="Opcional">
+                <div class="form-text">Si ya fue entregada, captura manualmente el numero fisico.</div>
+                @error('folio_tarjeta')<div class="invalid-feedback">{{ $message }}</div>@enderror
             </div>
             <div class="col-md-4">
                 <label for="nombre" class="form-label">Nombre</label>
@@ -107,6 +107,7 @@
             <div class="col-md-3">
                 <label for="id_ine" class="form-label">ID INE</label>
                 <input id="id_ine" name="id_ine" value="{{ old('id_ine', $b->id_ine ?? '') }}" class="form-control @error('id_ine') is-invalid @enderror" required>
+                <div class="form-text">Los primeros 5 digitos se usan para detectar la seccional automaticamente.</div>
                 @error('id_ine')<div class="invalid-feedback">{{ $message }}</div>@enderror
             </div>
             <div class="col-md-3">
@@ -145,12 +146,7 @@
                 <input id="domicilio_codigo_postal" name="domicilio[codigo_postal]" value="{{ old('domicilio.codigo_postal', $domicilio->codigo_postal ?? '') }}" class="form-control @error('domicilio.codigo_postal') is-invalid @enderror">
                 @error('domicilio.codigo_postal')<div class="invalid-feedback">{{ $message }}</div>@enderror
             </div>
-            <div class="col-md-4">
-                <label for="dom-seccional" class="form-label">Seccional</label>
-                <input id="dom-seccional" name="domicilio[seccional]" value="{{ old('domicilio.seccional', $domicilio?->seccion?->seccional ?? '') }}" class="form-control @error('domicilio.seccional') is-invalid @enderror" placeholder="Ej. 0001">
-                <div class="form-text">Al validar la seccional completamos municipio y distritos.</div>
-                @error('domicilio.seccional')<div class="invalid-feedback">{{ $message }}</div>@enderror
-            </div>
+            <input id="dom-seccional" type="hidden" name="domicilio[seccional]" value="{{ old('domicilio.seccional', $domicilio?->seccion?->seccional ?? '') }}">
             <div class="col-md-4">
                 <label for="dom-municipio-id" class="form-label">Municipio (autocompletado)</label>
                 <select id="dom-municipio-id" name="domicilio[municipio_id]" class="form-select @error('domicilio.municipio_id') is-invalid @enderror">
@@ -162,17 +158,17 @@
                 <div class="form-text">Se rellena de acuerdo a la seccional detectada.</div>
                 @error('domicilio.municipio_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
             </div>
-            {{--
             <div class="col-md-4">
                 <label class="form-label">Distritos detectados</label>
                 <div class="bg-dark border border-secondary border-opacity-25 rounded-3 p-3 h-100" id="dom-seccional-summary">
+                    <div class="small text-white-50">Seccional detectada</div>
+                    <div class="fw-semibold" id="dom-seccional-value">-</div>
                     <div class="small text-white-50">Municipio</div>
                     <div class="fw-semibold" id="dom-seccional-muni">-</div>
                     <div class="small text-white-50 mt-2">DL / DF</div>
                     <div class="fw-semibold" id="dom-seccional-distritos">-</div>
                 </div>
             </div>
-            --}}
         </div>
     </div>
 
@@ -311,12 +307,26 @@ document.addEventListener('DOMContentLoaded', function() {
     fechaInput?.addEventListener('change', (e) => updateAge(e.target.value));
 
     const secc = document.getElementById('dom-seccional');
+    const idIne = document.getElementById('id_ine');
     const munSel = document.getElementById('dom-municipio-id');
     const seccCard = document.getElementById('dom-seccional-summary');
+    const seccValue = document.getElementById('dom-seccional-value');
     const seccMunicipio = document.getElementById('dom-seccional-muni');
     const seccDistritos = document.getElementById('dom-seccional-distritos');
     if (secc) {
-        const renderSummary = (municipio = '-', dl = '-', df = '-') => {
+        const detectSeccionalFromIdIne = (value) => {
+            const digits = (value || '').replace(/\D/g, '');
+            if (digits.length >= 5) return digits.slice(0, 5);
+            if (digits.length >= 4) return digits.slice(0, 4);
+            return '';
+        };
+        const syncSeccionalFromIdIne = () => {
+            const detected = detectSeccionalFromIdIne(idIne?.value);
+            secc.value = detected;
+            return detected;
+        };
+        const renderSummary = (seccional = '-', municipio = '-', dl = '-', df = '-') => {
+            if (seccValue) seccValue.textContent = seccional || '-';
             if (seccMunicipio) seccMunicipio.textContent = municipio || '-';
             if (seccDistritos) seccDistritos.textContent = `DL: ${dl || '--'} - DF: ${df || '--'}`;
         };
@@ -327,12 +337,12 @@ document.addEventListener('DOMContentLoaded', function() {
         const applyData = (data) => {
             if (!data) return;
             if (munSel) munSel.value = data.municipio_id ? String(data.municipio_id) : '';
-            renderSummary(data.municipio || '-', data.distrito_local || '-', data.distrito_federal || '-');
+            renderSummary(data.seccional || secc.value || '-', data.municipio || '-', data.distrito_local || '-', data.distrito_federal || '-');
             toggleSummaryState(true);
         };
         const clearData = () => {
             if (munSel) munSel.value = '';
-            renderSummary('-', '-', '-');
+            renderSummary(secc.value || '-', '-', '-', '-');
             toggleSummaryState(false);
         };
         let timer = null;
@@ -348,10 +358,21 @@ document.addEventListener('DOMContentLoaded', function() {
             } catch (_) { clearData(); }
         };
         const debouncedFetch = debounced(fetchDistritos, 400);
-        secc.addEventListener('input', (e) => debouncedFetch(e.target.value));
-        secc.addEventListener('change', (e) => fetchDistritos(e.target.value));
-        secc.addEventListener('blur', (e) => fetchDistritos(e.target.value));
-        if (secc.value) {
+        const refreshDetectedSeccional = () => {
+            const detected = syncSeccionalFromIdIne();
+            if (!detected) {
+                clearData();
+                return;
+            }
+            renderSummary(detected, seccMunicipio?.textContent || '-', '-', '-');
+            debouncedFetch(detected);
+        };
+        idIne?.addEventListener('input', refreshDetectedSeccional);
+        idIne?.addEventListener('change', refreshDetectedSeccional);
+        idIne?.addEventListener('blur', refreshDetectedSeccional);
+        if (idIne?.value) {
+            refreshDetectedSeccional();
+        } else if (secc.value) {
             fetchDistritos(secc.value);
         } else {
             clearData();

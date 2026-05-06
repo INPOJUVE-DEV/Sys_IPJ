@@ -5,10 +5,8 @@ namespace Tests\Feature;
 use App\Models\Municipio;
 use App\Models\Oficina;
 use App\Models\Seccion;
-use App\Models\Tarjeta;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Str;
 use Tests\TestCase;
 
 class ValidationTest extends TestCase
@@ -30,7 +28,7 @@ class ValidationTest extends TestCase
             ['nombre' => 'Test', 'oficina_id' => $office->id]
         );
         $seccion = Seccion::updateOrCreate(
-            ['seccional' => '0001'],
+            ['seccional' => '12345'],
             ['municipio_id' => $mun->id, 'distrito_local' => 'DL', 'distrito_federal' => 'DF']
         );
 
@@ -45,16 +43,6 @@ class ValidationTest extends TestCase
         return $user;
     }
 
-    protected function createCard(Oficina $office, string $folio): Tarjeta
-    {
-        return Tarjeta::create([
-            'id' => (string) Str::uuid(),
-            'folio' => $folio,
-            'estatus' => Tarjeta::STATUS_ASIGNADA_OFICINA,
-            'oficina_id' => $office->id,
-        ]);
-    }
-
     protected function validPayload(array $overrides = []): array
     {
         [, $mun, $seccion] = $this->officeAndSeccion();
@@ -66,7 +54,7 @@ class ValidationTest extends TestCase
             'fecha_nacimiento' => '2000-01-01',
             'sexo' => 'M',
             'discapacidad' => '0',
-            'id_ine' => 'INE123',
+            'id_ine' => '123450001122334455',
             'telefono' => '5512345678',
             'domicilio' => [
                 'calle' => 'Calle',
@@ -95,25 +83,36 @@ class ValidationTest extends TestCase
         $this->actingAs($u)->post(route('beneficiarios.store'), $payload)->assertSessionHasErrors('telefono');
     }
 
-    public function test_card_inventory_cannot_be_consumed_twice(): void
+    public function test_seccional_is_resolved_from_id_ine_without_visible_field(): void
     {
         [$office] = $this->officeAndSeccion();
         $u = $this->capturistaForOffice($office);
-        $this->createCard($office, 'FT-1');
-        $p1 = $this->validPayload();
-        $p2 = $this->validPayload([
-            'curp' => 'PEPJ000101HDFLRNB2',
-            'id_ine' => 'INE999',
+        $payload = $this->validPayload([
+            'domicilio' => [
+                'calle' => 'Calle',
+                'numero_ext' => '1',
+                'colonia' => 'Centro',
+                'municipio_id' => Municipio::firstOrFail()->id,
+                'codigo_postal' => '01234',
+            ],
         ]);
-        $this->actingAs($u)->post(route('beneficiarios.store'), $p1);
-        $this->actingAs($u)->post(route('beneficiarios.store'), $p2)->assertSessionHasErrors('tarjetas');
+
+        $response = $this->actingAs($u)->post(route('beneficiarios.store'), $payload);
+
+        $response->assertRedirect(route('beneficiarios.create'));
+        $this->assertDatabaseHas('beneficiarios', [
+            'curp' => 'PEPJ000101HDFLRNA1',
+        ]);
+
+        $benef = \App\Models\Beneficiario::where('curp', 'PEPJ000101HDFLRNA1')->first();
+        $this->assertNotNull($benef);
+        $this->assertSame('12345', optional($benef->seccion)->seccional);
     }
 
     public function test_beneficiario_can_be_created_without_is_draft(): void
     {
         [$office] = $this->officeAndSeccion();
         $u = $this->capturistaForOffice($office);
-        $this->createCard($office, 'FT-CREATE');
         $payload = $this->validPayload();
 
         $response = $this->actingAs($u)->post(route('beneficiarios.store'), $payload);
@@ -128,8 +127,8 @@ class ValidationTest extends TestCase
 
         $benef = \App\Models\Beneficiario::where('curp', 'PEPJ000101HDFLRNA1')->first();
         $this->assertNotNull($benef);
-        $this->assertNotNull($benef->tarjeta_id);
-        $this->assertSame('0001', optional($benef->seccion)->seccional);
+        $this->assertNull($benef->tarjeta_id);
+        $this->assertSame('12345', optional($benef->seccion)->seccional);
         $this->assertNotNull($benef->municipio_id);
 
         $this->assertDatabaseHas('domicilios', [

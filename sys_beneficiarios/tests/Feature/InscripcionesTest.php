@@ -8,7 +8,6 @@ use App\Models\Municipio;
 use App\Models\Oficina;
 use App\Models\Programa;
 use App\Models\Seccion;
-use App\Models\Tarjeta;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
@@ -25,7 +24,7 @@ class InscripcionesTest extends TestCase
         $this->seed(\Database\Seeders\OficinaSeeder::class);
     }
 
-    protected function makeOfficeAndSeccion(int $clave = 1, string $seccional = '0001'): array
+    protected function makeOfficeAndSeccion(int $clave = 1, string $seccional = '12345'): array
     {
         $office = Oficina::where('tipo', Oficina::TIPO_DELEGACION)->orderBy('id')->firstOrFail();
         $mun = Municipio::updateOrCreate(
@@ -48,16 +47,6 @@ class InscripcionesTest extends TestCase
         return $user;
     }
 
-    protected function createCard(Oficina $office, string $folio): Tarjeta
-    {
-        return Tarjeta::create([
-            'id' => (string) Str::uuid(),
-            'folio' => $folio,
-            'estatus' => Tarjeta::STATUS_ASIGNADA_OFICINA,
-            'oficina_id' => $office->id,
-        ]);
-    }
-
     protected function basePayload(Programa $programa, Seccion $seccion, array $overrides = []): array
     {
         return array_merge([
@@ -72,7 +61,7 @@ class InscripcionesTest extends TestCase
             'fecha_nacimiento' => '2000-01-01',
             'sexo' => 'F',
             'discapacidad' => '0',
-            'id_ine' => 'INE123',
+            'id_ine' => $seccion->seccional.'0001122334455',
             'telefono' => '5512345678',
             'domicilio' => [
                 'calle' => 'Calle',
@@ -139,11 +128,10 @@ class InscripcionesTest extends TestCase
             ->assertSessionHasErrors('periodo');
     }
 
-    public function test_capturista_can_consume_inventory_card_during_inscripcion(): void
+    public function test_capturista_can_store_manual_card_number_during_inscripcion(): void
     {
-        [$office, $seccion] = $this->makeOfficeAndSeccion(2, '0002');
+        [$office, $seccion] = $this->makeOfficeAndSeccion(2, '23456');
         $user = $this->makeCapturista($office);
-        $this->createCard($office, 'TAR-0002');
 
         $programa = Programa::create([
             'nombre' => 'Laboratorio creativo',
@@ -156,7 +144,7 @@ class InscripcionesTest extends TestCase
         $payload = $this->basePayload($programa, $seccion, [
             'folio_tarjeta' => 'TAR-0002',
             'curp' => 'LODA000101MDFLRNB3',
-            'id_ine' => 'INE789',
+            'id_ine' => '23456000999888777',
         ]);
 
         $this->actingAs($user)
@@ -167,14 +155,7 @@ class InscripcionesTest extends TestCase
         $beneficiario = Beneficiario::where('curp', 'LODA000101MDFLRNB3')->first();
         $this->assertNotNull($beneficiario);
         $this->assertSame('TAR-0002', $beneficiario->folio_tarjeta);
-        $this->assertNotNull($beneficiario->tarjeta_id);
-
-        $this->assertDatabaseHas('tarjetas', [
-            'id' => $beneficiario->tarjeta_id,
-            'folio' => 'TAR-0002',
-            'estatus' => Tarjeta::STATUS_CONSUMIDA,
-            'beneficiario_id' => $beneficiario->id,
-        ]);
+        $this->assertNull($beneficiario->tarjeta_id);
     }
 
     public function test_dashboard_kpis_use_periodo(): void

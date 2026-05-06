@@ -2,11 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Beneficiario;
 use App\Models\Municipio;
 use App\Models\Oficina;
 use App\Models\Tarjeta;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 
 class StackController extends Controller
 {
@@ -35,9 +35,15 @@ class StackController extends Controller
         $global = [
             'total' => (clone $baseCards)->count() + $centralCount,
             'central' => $centralCount,
-            'region' => (clone $baseCards)->whereIn('estatus', [Tarjeta::STATUS_ASIGNADA_OFICINA, Tarjeta::STATUS_DEVUELTA])->count(),
-            'capturistas' => (clone $baseCards)->where('estatus', Tarjeta::STATUS_ASIGNADA_USUARIO)->count(),
-            'capturadas' => (clone $baseCards)->where('estatus', Tarjeta::STATUS_CONSUMIDA)->count(),
+            'region' => (clone $baseCards)->whereNull('municipio_id')->count(),
+            'capturistas' => (clone $baseCards)->whereNotNull('municipio_id')->count(),
+            'capturadas' => Beneficiario::query()
+                ->when(
+                    $officeIds !== [],
+                    fn ($query) => $query->whereHas('municipio', fn ($municipio) => $municipio->whereIn('oficina_id', $officeIds)),
+                    fn ($query) => $query->whereRaw('1 = 0')
+                )
+                ->count(),
         ];
 
         $municipioRows = (clone $baseCards)
@@ -52,6 +58,22 @@ class StackController extends Controller
             ->orderBy('oficina_id')
             ->orderBy('municipio_id')
             ->get();
+
+        $capturadasPorMunicipio = Beneficiario::query()
+            ->when(
+                $municipioRows->pluck('municipio_id')->filter()->isNotEmpty(),
+                fn ($query) => $query->whereIn('municipio_id', $municipioRows->pluck('municipio_id')->filter()->unique()->values()),
+                fn ($query) => $query->whereRaw('1 = 0')
+            )
+            ->selectRaw('municipio_id, COUNT(*) as total')
+            ->groupBy('municipio_id')
+            ->pluck('total', 'municipio_id');
+
+        $municipioRows->transform(function ($row) use ($capturadasPorMunicipio) {
+            $row->capturadas = (int) ($capturadasPorMunicipio[$row->municipio_id] ?? 0);
+
+            return $row;
+        });
 
         $municipiosById = Municipio::query()
             ->whereIn('id', $municipioRows->pluck('municipio_id')->filter()->unique()->values())
