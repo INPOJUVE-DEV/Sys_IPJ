@@ -5,9 +5,17 @@
                 <h2 class="h4 m-0">Tarjetas de mi region</h2>
                 <div class="text-muted small">Distribuye cantidades por municipio y sigue el avance de captura.</div>
             </div>
-            <a href="{{ route('stack.index') }}" class="btn btn-outline-primary">
-                <i class="bi bi-bar-chart-line me-1"></i> Ver Stack
-            </a>
+            <div class="d-flex flex-wrap gap-2">
+                <form method="POST" action="{{ route('delegacion.api-tj.sync') }}">
+                    @csrf
+                    <button type="submit" class="btn btn-primary" onclick="return confirm('Se enviara el padron minimo a API_TJ. ¿Deseas continuar?')">
+                        <i class="bi bi-arrow-repeat me-1"></i> Sincronizar con app
+                    </button>
+                </form>
+                <a href="{{ route('stack.index') }}" class="btn btn-outline-primary">
+                    <i class="bi bi-bar-chart-line me-1"></i> Ver Stack
+                </a>
+            </div>
         </div>
     </x-slot>
 

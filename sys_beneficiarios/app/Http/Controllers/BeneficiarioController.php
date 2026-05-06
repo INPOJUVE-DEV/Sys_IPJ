@@ -21,29 +21,16 @@ class BeneficiarioController extends Controller
     public function index(Request $request)
     {
         $this->authorize('viewAny', Beneficiario::class);
-        $q = $request->get('q');
-        $filters = $request->only([
-            'municipio_id', 'seccional', 'distrito_local', 'distrito_federal', 'sexo', 'discapacidad', 'edad_min', 'edad_max',
-        ]);
+        $q = trim((string) $request->get('q'));
+        $q = $q !== '' ? $q : null;
 
         $baseQuery = Beneficiario::with(['municipio', 'creador', 'seccion'])
             ->when($q, function ($query) use ($q) {
                 $query->where(function ($sub) use ($q) {
                     $sub->where('folio_tarjeta', 'like', "%$q%")
-                        ->orWhere('curp', 'like', "%$q%")
-                        ->orWhere('nombre', 'like', "%$q%")
-                        ->orWhere('apellido_paterno', 'like', "%$q%")
-                        ->orWhere('apellido_materno', 'like', "%$q%");
+                        ->orWhere('curp', 'like', "%$q%");
                 });
             })
-            ->when($filters['municipio_id'] ?? null, fn ($q2, $v) => $q2->where('municipio_id', $v))
-            ->when($filters['seccional'] ?? null, fn ($q2, $v) => $q2->whereHas('seccion', fn ($sq) => $sq->where('seccional', 'like', "%$v%")))
-            ->when($filters['distrito_local'] ?? null, fn ($q2, $v) => $q2->whereHas('seccion', fn ($sq) => $sq->where('distrito_local', 'like', "%$v%")))
-            ->when($filters['distrito_federal'] ?? null, fn ($q2, $v) => $q2->whereHas('seccion', fn ($sq) => $sq->where('distrito_federal', 'like', "%$v%")))
-            ->when(($filters['sexo'] ?? '') !== '', fn ($q2, $v) => $q2->where('sexo', $v))
-            ->when(($filters['discapacidad'] ?? '') !== '', fn ($q2, $v) => $q2->where('discapacidad', (bool) $v))
-            ->when($filters['edad_min'] ?? null, fn ($q2, $v) => $q2->where('edad', '>=', (int) $v))
-            ->when($filters['edad_max'] ?? null, fn ($q2, $v) => $q2->where('edad', '<=', (int) $v))
             ->when(auth()->user()?->hasRole('capturista'), function ($q2) {
                 $q2->where('created_by', auth()->user()->uuid);
             })
@@ -80,13 +67,9 @@ class BeneficiarioController extends Controller
             ->paginate(15)
             ->withQueryString();
 
-        $municipios = $this->availableMunicipios();
-
         return view('beneficiarios.index', [
             'beneficiarios' => $beneficiarios,
             'q' => $q,
-            'filters' => $filters,
-            'municipios' => $municipios,
         ]);
     }
 

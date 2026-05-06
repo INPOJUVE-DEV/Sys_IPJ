@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Beneficiario;
+use App\Models\Evento;
+use App\Models\Inscripcion;
 use App\Models\Municipio;
 use App\Models\ProteccionMovimiento;
 use App\Models\User;
@@ -17,6 +19,11 @@ class DashboardController extends Controller
         $municipios = Municipio::orderBy('nombre')->pluck('nombre','id');
         $capturistas = User::role(['capturista', 'capturista_programas'])->orderBy('name')->get(['uuid','name']);
         return view('roles.admin', compact('municipios','capturistas'));
+    }
+
+    public function indicadores()
+    {
+        return view('admin.indicadores');
     }
 
     public function capturista()
@@ -71,6 +78,36 @@ class DashboardController extends Controller
             ],
             'ultimos' => $lastTen,
             'series' => $series,
+        ]);
+    }
+
+    public function indicadoresData(Request $request)
+    {
+        $month = $this->parseMonth($request->input('month')) ?? Carbon::now();
+        $start = (clone $month)->startOfMonth();
+        $end = (clone $month)->endOfMonth();
+
+        $beneficiarios = $this->dailySeriesForModel(Beneficiario::query(), $start, $end);
+        $inscripciones = $this->dailySeriesForModel(Inscripcion::query(), $start, $end);
+        $eventos = $this->dailySeriesForModel(Evento::query(), $start, $end);
+
+        return response()->json([
+            'range' => [
+                'month' => $start->format('Y-m'),
+                'from' => $start->toDateString(),
+                'to' => $end->toDateString(),
+            ],
+            'totals' => [
+                'beneficiarios' => $beneficiarios['total'],
+                'inscripciones' => $inscripciones['total'],
+                'eventos' => $eventos['total'],
+            ],
+            'daily' => [
+                'labels' => $beneficiarios['labels'],
+                'beneficiarios' => $beneficiarios['data'],
+                'inscripciones' => $inscripciones['data'],
+                'eventos' => $eventos['data'],
+            ],
         ]);
     }
 
@@ -133,7 +170,7 @@ class DashboardController extends Controller
             ->get();
         $names = User::whereIn('uuid', $byCap->pluck('created_by'))->pluck('name', 'uuid');
         $byCapturista = [
-            'labels' => $byCap->pluck('created_by')->map(fn($u) => $names[$u] ?? $u)->all(),
+            'labels' => $byCap->pluck('created_by')->map(fn($u) => $u ? ($names[$u] ?? $u) : 'Integracion API_TJ')->all(),
             'data' => $byCap->pluck('c')->all(),
         ];
 
@@ -188,6 +225,28 @@ class DashboardController extends Controller
             'data' => $data,
             'total' => array_sum($data),
         ];
+    }
+
+    protected function dailySeriesForModel($query, Carbon $start, Carbon $end): array
+    {
+        return $this->dailySeries(
+            $query->whereBetween('created_at', [$start->copy()->startOfDay(), $end->copy()->endOfDay()]),
+            $start,
+            $end
+        );
+    }
+
+    protected function parseMonth(?string $value): ?Carbon
+    {
+        if (! $value) {
+            return null;
+        }
+
+        try {
+            return Carbon::createFromFormat('Y-m', $value);
+        } catch (\Throwable $exception) {
+            return null;
+        }
     }
 
     protected function weeklyCapturistaBoard(Request $request): array

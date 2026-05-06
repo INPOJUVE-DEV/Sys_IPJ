@@ -62,7 +62,12 @@ class InventoryDelegadoRouteSmokeTest extends TestCase
 
         foreach ([
             route('admin.home'),
+            route('admin.indicadores'),
             route('stack.index'),
+            route('inventario.index'),
+            route('eventos.index'),
+            route('eventos.create'),
+            route('admin.evento-tipos.index'),
             route('admin.inventario.tarjetas.index'),
             route('admin.inventario.movimientos.index'),
             route('admin.usuarios.index'),
@@ -77,10 +82,14 @@ class InventoryDelegadoRouteSmokeTest extends TestCase
         foreach ([
             route('delegacion.home'),
             route('stack.index'),
+            route('inventario.index'),
+            route('eventos.index'),
+            route('eventos.create'),
             route('delegacion.inventario.tarjetas.index'),
             route('delegacion.usuarios.index'),
             route('delegacion.usuarios.create'),
             route('beneficiarios.create'),
+            route('beneficiarios.index'),
             route('inscripciones.index'),
         ] as $route) {
             $this->actingAs($delegado)->get($route)->assertOk();
@@ -89,9 +98,11 @@ class InventoryDelegadoRouteSmokeTest extends TestCase
         $this->actingAs($delegado)->get(route('admin.home'))->assertForbidden();
         $this->actingAs($delegado)->get(route('admin.inventario.tarjetas.index'))->assertForbidden();
         $this->actingAs($delegado)->get(route('admin.usuarios.index'))->assertForbidden();
+        $this->actingAs($delegado)->get(route('admin.evento-tipos.index'))->assertForbidden();
         $this->actingAs($delegado)->get(route('programas.index'))->assertForbidden();
 
         $this->actingAs($capturista)->get(route('beneficiarios.create'))->assertOk();
+        $this->actingAs($capturista)->get(route('beneficiarios.index'))->assertOk();
         $this->actingAs($capturista)->get(route('mis-registros.index'))->assertOk();
         $this->actingAs($capturista)->get(route('stack.index'))->assertForbidden();
         $this->actingAs($capturista)->get(route('delegacion.home'))->assertForbidden();
@@ -114,6 +125,26 @@ class InventoryDelegadoRouteSmokeTest extends TestCase
         $this->actingAs($delegado)
             ->get('/delegacion/inventario/vales')
             ->assertNotFound();
+    }
+
+    public function test_domicilios_routes_are_not_exposed_anymore(): void
+    {
+        $admin = $this->userWithRole('admin');
+
+        $this->actingAs($admin)
+            ->get('/domicilios')
+            ->assertNotFound();
+    }
+
+    public function test_beneficiarios_create_view_no_longer_shows_ocr_actions(): void
+    {
+        $capturista = $this->userWithRole('capturista', $this->delegacion);
+
+        $this->actingAs($capturista)
+            ->get(route('beneficiarios.create'))
+            ->assertOk()
+            ->assertDontSee('Escanear INE')
+            ->assertDontSee('/api/ocr/ine/extract');
     }
 
     public function test_delegacion_dashboard_shows_captured_cards_age_target_board(): void

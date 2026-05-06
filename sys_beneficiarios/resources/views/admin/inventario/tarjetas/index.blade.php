@@ -5,9 +5,20 @@
                 <h2 class="h4 m-0">Inventario de tarjetas</h2>
                 <div class="text-muted small">Control de cantidades por central, delegacion y municipio.</div>
             </div>
-            <a href="{{ route('stack.index') }}" class="btn btn-outline-primary">
-                <i class="bi bi-bar-chart-line me-1"></i> Ver Stack
-            </a>
+            <div class="d-flex flex-wrap gap-2">
+                <form method="POST" action="{{ route('admin.api-tj.sync') }}">
+                    @csrf
+                    <button type="submit" class="btn btn-primary" onclick="return confirm('Se enviara el padron minimo a API_TJ. ¿Deseas continuar?')">
+                        <i class="bi bi-arrow-repeat me-1"></i> Sincronizar con app
+                    </button>
+                </form>
+                <a href="{{ route('admin.api-tj.requests.index') }}" class="btn btn-outline-secondary">
+                    <i class="bi bi-inbox me-1"></i> Solicitudes API_TJ
+                </a>
+                <a href="{{ route('stack.index') }}" class="btn btn-outline-primary">
+                    <i class="bi bi-bar-chart-line me-1"></i> Ver Stack
+                </a>
+            </div>
         </div>
     </x-slot>
 

@@ -1,6 +1,8 @@
 # API externa
 
-## GET /api/secciones/{seccional}
+Ruta canónica pública: `/api/v1/...`
+
+## GET /api/v1/secciones/{seccional}
 
 - Límites: `throttle:30,1` (30 solicitudes por minuto)
 - Path param: `seccional` (string exacto)
@@ -18,7 +20,7 @@
 
 Implementación: `sys_beneficiarios/app/Http/Controllers/Api/SeccionesController.php`
 
-## POST /api/beneficiarios/cache
+## POST /api/v1/beneficiarios/cache
 
 - Auth: `auth:sanctum` (token via `/api/auth/login`)
 - Limites: `throttle:30,1`
@@ -64,4 +66,52 @@ Implementación: `sys_beneficiarios/app/Http/Controllers/Api/SeccionesController
 ```
 
 Implementacion: `sys_beneficiarios/app/Http/Controllers/Api/BeneficiariosImportController.php`
+
+## POST /api/v1/integrations/api-tj/beneficiarios
+
+- Auth: `Bearer JWT RS256` firmado por `API_TJ`
+- Limites: `throttle:30,1`
+- Body JSON (ejemplo):
+
+```
+{
+  "external_request_id": "INF-20260426-0001",
+  "beneficiario": {
+    "curp": "PEPJ800101HDFRRN09",
+    "nombre": "JUAN",
+    "apellido_paterno": "PEREZ",
+    "apellido_materno": "LOPEZ",
+    "fecha_nacimiento": "1980-01-01",
+    "sexo": "M",
+    "discapacidad": false,
+    "id_ine": "ABC123",
+    "telefono": "5512345678",
+    "domicilio": {
+      "calle": "CALLE 1",
+      "numero_ext": "10",
+      "numero_int": "2",
+      "colonia": "CENTRO",
+      "municipio_id": 12,
+      "codigo_postal": "01000",
+      "seccional": "0001"
+    }
+  }
+}
+```
+
+- Respuesta 201:
+
+```
+{
+  "accepted": true,
+  "status": "created",
+  "beneficiario_id": "uuid",
+  "external_request_id": "INF-20260426-0001"
+}
+```
+
+- Respuesta 200: `already_processed`
+- Respuesta 409: `conflict`
+- Respuesta 422: `validation_error`
+- Respuesta 500: `error`
 

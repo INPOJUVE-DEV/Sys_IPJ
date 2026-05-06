@@ -8,14 +8,15 @@ use App\Http\Controllers\Admin\InventarioMovimientoController;
 use App\Http\Controllers\Admin\InventarioProteccionController as AdminInventarioProteccionController;
 use App\Http\Controllers\Admin\InventarioTarjetaController as AdminInventarioTarjetaController;
 use App\Http\Controllers\Admin\OficinaController;
+use App\Http\Controllers\Admin\ApiTjInboundRequestController as AdminApiTjInboundRequestController;
 use App\Http\Controllers\Admin\PageController as AdminPageController;
 use App\Http\Controllers\Admin\ThemeController;
 use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\ApiTjSyncController;
 use App\Http\Controllers\BeneficiarioController;
 use App\Http\Controllers\Delegacion\DashboardController as DelegacionDashboardController;
 use App\Http\Controllers\Delegacion\InventarioTarjetaController as DelegacionInventarioTarjetaController;
 use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\DomicilioController;
 use App\Http\Controllers\EventoController;
 use App\Http\Controllers\InscripcionController;
 use App\Http\Controllers\InscripcionDashboardController;
@@ -66,10 +67,16 @@ Route::get('/stack', [StackController::class, 'index'])
     ->middleware(['auth', 'role:admin|delegado'])
     ->name('stack.index');
 
+Route::get('/inventario', [StackController::class, 'index'])
+    ->middleware(['auth', 'role:admin|delegado'])
+    ->name('inventario.index');
+
 // Secciones por rol
 Route::middleware(['auth','role:admin'])->group(function () {
     Route::get('/admin', [DashboardController::class, 'admin'])->name('admin.home');
     Route::get('/admin/kpis', [DashboardController::class, 'adminKpis'])->name('admin.kpis');
+    Route::get('/admin/indicadores', [DashboardController::class, 'indicadores'])->name('admin.indicadores');
+    Route::get('/admin/indicadores/data', [DashboardController::class, 'indicadoresData'])->name('admin.indicadores.data');
 });
 Route::middleware(['auth','role:capturista'])->group(function () {
     Route::get('/capturista', [DashboardController::class, 'capturista'])->name('capturista.home');
@@ -90,7 +97,6 @@ Route::middleware(['auth','role:capturista'])->group(function () {
 // Beneficiarios y Domicilios (admin, delegado, capturista)
 Route::middleware(['auth','role:admin|delegado|capturista'])->group(function () {
     Route::resource('beneficiarios', BeneficiarioController::class)->except(['show']);
-    Route::resource('domicilios', DomicilioController::class)->except(['show']);
 });
 
 Route::middleware(['auth','role:admin|delegado'])->group(function () {
@@ -130,6 +136,7 @@ Route::middleware(['auth', 'role:delegado'])->prefix('delegacion')->name('delega
         Route::post('assign-range', [DelegacionInventarioTarjetaController::class, 'assignRange'])->name('assignRange');
         Route::post('{tarjeta}/status', [DelegacionInventarioTarjetaController::class, 'updateStatus'])->name('status');
     });
+    Route::post('api-tj/sync', [ApiTjSyncController::class, 'store'])->name('api-tj.sync');
 });
 
 Route::middleware(['auth', 'role:skate_plaza'])->prefix('skate-plaza')->name('skate-plaza.')->group(function () {
@@ -150,6 +157,12 @@ Route::middleware(['auth','role:admin'])->prefix('admin')->name('admin.')->group
         Route::post('transfer-range', [AdminInventarioTarjetaController::class, 'transferRange'])->name('transferRange');
         Route::post('assign-range', [AdminInventarioTarjetaController::class, 'assignRange'])->name('assignRange');
         Route::post('{tarjeta}/status', [AdminInventarioTarjetaController::class, 'updateStatus'])->name('status');
+    });
+    Route::prefix('api-tj')->name('api-tj.')->group(function () {
+        Route::get('requests', [AdminApiTjInboundRequestController::class, 'index'])->name('requests.index');
+        Route::get('requests/{requestRecord}', [AdminApiTjInboundRequestController::class, 'show'])->name('requests.show');
+        Route::post('requests/{requestRecord}/reprocess', [AdminApiTjInboundRequestController::class, 'reprocess'])->name('requests.reprocess');
+        Route::post('sync', [ApiTjSyncController::class, 'store'])->name('sync');
     });
     Route::prefix('inventario/protecciones')->name('inventario.protecciones.')->group(function () {
         Route::get('/', [AdminInventarioProteccionController::class, 'index'])->name('index');
