@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\ApiTjInboundRequest;
 use App\Services\ApiTjInboundService;
+use Illuminate\Support\Facades\Schema;
 
 class ApiTjInboundRequestController extends Controller
 {
@@ -14,6 +15,8 @@ class ApiTjInboundRequestController extends Controller
 
     public function index()
     {
+        abort_unless(Schema::hasTable('api_tj_inbound_requests'), 503, 'Faltan migraciones de API_TJ para consultar solicitudes inbound.');
+
         $requests = ApiTjInboundRequest::with('beneficiario')
             ->latest('received_at')
             ->paginate(25);
@@ -30,13 +33,16 @@ class ApiTjInboundRequestController extends Controller
 
     public function reprocess(ApiTjInboundRequest $requestRecord)
     {
-        abort_unless($requestRecord->status === ApiTjInboundRequest::STATUS_ERROR, 422);
+        abort_unless(in_array($requestRecord->status, [
+            ApiTjInboundRequest::STATUS_FAILED,
+            ApiTjInboundRequest::STATUS_ERROR,
+        ], true), 422);
 
         $payload = $requestRecord->payload_json ?? [];
-        $result = $this->service->process($payload, $requestRecord, true);
+        $result = $this->service->processBatch($payload, $requestRecord, true);
 
         return redirect()
             ->route('admin.api-tj.requests.show', $requestRecord)
-            ->with('status', 'Solicitud reprocesada con resultado: '.$result['body']['status']);
+            ->with('status', 'Solicitud reprocesada. Aceptados: '.($result['body']['accepted_count'] ?? 0).', rechazados: '.($result['body']['rejected_count'] ?? 0).'.');
     }
 }

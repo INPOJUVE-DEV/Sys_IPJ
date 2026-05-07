@@ -70,6 +70,9 @@ class InventoryDelegadoRouteSmokeTest extends TestCase
             route('admin.evento-tipos.index'),
             route('admin.inventario.tarjetas.index'),
             route('admin.inventario.movimientos.index'),
+            route('admin.api-tj.index'),
+            route('admin.api-tj.requests.index'),
+            route('admin.api-tj.sync-runs.index'),
             route('admin.usuarios.index'),
             route('admin.usuarios.create'),
         ] as $route) {
@@ -136,15 +139,15 @@ class InventoryDelegadoRouteSmokeTest extends TestCase
             ->assertNotFound();
     }
 
-    public function test_beneficiarios_create_view_no_longer_shows_ocr_actions(): void
+    public function test_beneficiarios_create_view_renders_email_field(): void
     {
         $capturista = $this->userWithRole('capturista', $this->delegacion);
 
         $this->actingAs($capturista)
             ->get(route('beneficiarios.create'))
             ->assertOk()
-            ->assertDontSee('Escanear INE')
-            ->assertDontSee('/api/ocr/ine/extract');
+            ->assertSee('Correo electronico')
+            ->assertSee('name="email"', false);
     }
 
     public function test_delegacion_dashboard_shows_captured_cards_age_target_board(): void

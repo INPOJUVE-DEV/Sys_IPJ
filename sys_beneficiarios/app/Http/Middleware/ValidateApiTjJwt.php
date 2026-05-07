@@ -25,9 +25,10 @@ class ValidateApiTjJwt
         }
 
         try {
+            // Toda la seguridad de la integración se resuelve desde config/api_tj.php.
             $verified = $this->jwtService->verify($token, [
-                'public_key' => config('services.api_tj.public_key'),
-                'kid' => config('services.api_tj.jwt_kid'),
+                'public_key' => config('api_tj.inbound.public_key'),
+                'kid' => config('api_tj.inbound.jwt_kid'),
             ]);
 
             $payload = $verified['payload'];
@@ -35,13 +36,13 @@ class ValidateApiTjJwt
             $expiresAt = (int) ($payload['exp'] ?? 0);
             $scope = $payload['scope'] ?? null;
             $scopeValues = is_string($scope) ? preg_split('/\s+/', trim($scope)) : (array) $scope;
-            $expectedScope = config('services.api_tj.allowed_scope', 'beneficiarios.create');
+            $expectedScope = config('api_tj.inbound.allowed_scope', 'beneficiarios.create');
 
-            if (($payload['iss'] ?? null) !== 'api_tj') {
+            if (($payload['iss'] ?? null) !== config('api_tj.inbound.issuer', 'api_tj')) {
                 throw new \RuntimeException('Invalid issuer.');
             }
 
-            if (($payload['aud'] ?? null) !== config('services.api_tj.audience')) {
+            if (($payload['aud'] ?? null) !== config('api_tj.inbound.audience')) {
                 throw new \RuntimeException('Invalid audience.');
             }
 

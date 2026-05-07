@@ -12,6 +12,7 @@
         'discapacidad' => 'Discapacidad',
         'id_ine' => 'ID INE',
         'telefono' => 'Telefono',
+        'email' => 'Correo electronico',
         'domicilio.calle' => 'Calle',
         'domicilio.numero_ext' => 'Numero exterior',
         'domicilio.numero_int' => 'Numero interior',
@@ -82,11 +83,24 @@
                 <div class="form-text">Captura manualmente el numero fisico de la tarjeta si ya fue entregada.</div>
                 @error('folio_tarjeta')<div class="invalid-feedback">{{ $message }}</div>@enderror
             </div>
-            <div class="col-md-4">
+            <div class="col-12">
+                <div class="border rounded-3 p-3 bg-light">
+                    <div class="fw-semibold mb-1">Datos de contacto</div>
+                    <div class="small text-muted">Telefono y correo ayudan al seguimiento del beneficiario. El correo es opcional y no bloquea el padron minimo de sincronizacion.</div>
+                </div>
+            </div>
+            <div class="col-md-6">
                 <label for="telefono" class="form-label">Telefono (10 digitos)</label>
                 <input id="telefono" name="telefono" value="{{ old('telefono', $b->telefono ?? '') }}"
-                    class="form-control @error('telefono') is-invalid @enderror" required>
+                    class="form-control @error('telefono') is-invalid @enderror" required autocomplete="tel">
                 @error('telefono')<div class="invalid-feedback">{{ $message }}</div>@enderror
+            </div>
+            <div class="col-md-6">
+                <label for="email" class="form-label">Correo electronico</label>
+                <input id="email" name="email" type="email" value="{{ old('email', $b->email ?? '') }}"
+                    class="form-control @error('email') is-invalid @enderror" placeholder="nombre@ejemplo.com" autocomplete="email">
+                <div class="form-text">Opcional. Si no se captura, el beneficiario sigue siendo elegible para el padron minimo cuando tenga CURP, nombre y tarjeta/folio.</div>
+                @error('email')<div class="invalid-feedback">{{ $message }}</div>@enderror
             </div>
             <div class="col-md-4">
                 <label for="nombre" class="form-label">Nombre</label>

@@ -29,6 +29,8 @@ class Tarjeta extends Model
         'usuario_uuid',
         'municipio_id',
         'beneficiario_id',
+        'source_system',
+        'is_digital',
         'observaciones',
     ];
 

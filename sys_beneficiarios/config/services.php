@@ -35,12 +35,6 @@ return [
         ],
     ],
 
-    'ocr_ine' => [
-        'url'     => env('OCR_INE_SERVICE_URL', 'http://localhost:8001'),
-        'api_key' => env('OCR_INE_API_KEY', ''),
-        'timeout' => 15,
-    ],
-
     'api_tj' => [
         'base_url' => env('API_TJ_BASE_URL', 'https://apitj-production.up.railway.app'),
         'audience' => env('API_TJ_AUDIENCE', 'sys_ipj'),
@@ -53,6 +47,7 @@ return [
     'sys_ipj' => [
         'audience' => env('SYS_IPJ_AUDIENCE', 'api_tj'),
         'scope' => env('SYS_IPJ_SCOPE', 'cardholders.sync'),
+        'cardholders_scope' => env('SYS_IPJ_CARDHOLDERS_SCOPE', 'cardholders.write'),
         'client_code' => env('API_TJ_CLIENT_CODE', 'sys_ipj'),
         'jwt_kid' => env('SYS_IPJ_JWT_KID', 'sys_ipj-current'),
         'private_key_path' => env('API_TJ_PRIVATE_KEY_PATH', storage_path('app/keys/sys_ipj_private.pem')),

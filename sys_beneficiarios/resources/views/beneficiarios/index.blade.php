@@ -18,6 +18,11 @@
                             <i class="bi bi-arrow-repeat me-1"></i>Sincronizar con app
                         </button>
                     </form>
+                    @if(auth()->user()?->hasRole('admin'))
+                        <a href="{{ route('admin.api-tj.index') }}" class="btn btn-outline-secondary">
+                            <i class="bi bi-window-sidebar me-1"></i>API TJ
+                        </a>
+                    @endif
                 @endif
                 <a href="{{ route('beneficiarios.create') }}" class="btn btn-primary">
                     <i class="bi bi-plus-circle me-1"></i>Nuevo
@@ -66,13 +71,20 @@
                                     <div class="fw-semibold">{{ $b->nombre }} {{ $b->apellido_paterno }} {{ $b->apellido_materno }}</div>
                                     <div class="text-muted small">{{ $b->curp }}</div>
                                 </div>
-                                <span class="badge text-bg-light border">Tarjeta: {{ $b->folio_tarjeta ?: 'Sin captura' }}</span>
+                                <div class="d-flex flex-column align-items-end gap-1">
+                                    <span class="badge text-bg-light border">Tarjeta: {{ $b->folio_tarjeta ?: 'Sin captura' }}</span>
+                                    <span class="badge {{ $b->api_tj_sync_status === 'pending_sync' ? 'text-bg-primary' : ($b->api_tj_sync_status === 'synced' ? 'text-bg-success' : ($b->api_tj_sync_status === 'sync_failed' ? 'text-bg-danger' : 'text-bg-warning')) }}">
+                                        API_TJ: {{ $b->api_tj_sync_status ?: 'sin_estado' }}
+                                    </span>
+                                </div>
                             </div>
                             <div class="row g-2 small text-muted">
                                 <div class="col-sm-6"><i class="bi bi-geo-alt me-1"></i>{{ optional($b->municipio)->nombre ?? 'Sin municipio' }}</div>
                                 <div class="col-sm-6"><i class="bi bi-diagram-3 me-1"></i>Seccional {{ optional($b->seccion)->seccional ?? 'N/D' }}</div>
                                 <div class="col-sm-6"><i class="bi bi-telephone me-1"></i>{{ $b->telefono ?: 'Sin telefono' }}</div>
                                 <div class="col-sm-6"><i class="bi bi-person-badge me-1"></i>{{ optional($b->creador)->name ?? 'Integracion API_TJ' }}</div>
+                                <div class="col-sm-6"><i class="bi bi-envelope me-1"></i>{{ $b->email ?: 'Sin email' }}</div>
+                                <div class="col-sm-6"><i class="bi bi-check2-square me-1"></i>{{ $b->api_tj_last_synced_at ? 'Ultimo sync '.optional($b->api_tj_last_synced_at)->format('Y-m-d H:i') : 'Sin sync exitoso' }}</div>
                             </div>
                             <div class="mt-auto d-flex flex-wrap gap-2">
                                 <a class="btn btn-outline-primary btn-sm" href="{{ route('beneficiarios.edit', $b) }}">

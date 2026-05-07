@@ -124,7 +124,7 @@
             ['label' => 'Tarjetas', 'route' => route('admin.inventario.tarjetas.index'), 'pattern' => 'admin.inventario.tarjetas.*'],
             ['label' => 'Protecciones', 'route' => route('admin.inventario.protecciones.index'), 'pattern' => 'admin.inventario.protecciones.*'],
             ['label' => 'Movimientos', 'route' => route('admin.inventario.movimientos.index'), 'pattern' => 'admin.inventario.movimientos.*'],
-            ['label' => 'API TJ', 'route' => route('admin.api-tj.requests.index'), 'pattern' => 'admin.api-tj.*'],
+            ['label' => 'API TJ', 'route' => route('admin.api-tj.index'), 'pattern' => 'admin.api-tj.*'],
             ['label' => 'Catalogos', 'route' => route('admin.catalogos.index'), 'pattern' => 'admin.catalogos.*'],
             ['label' => 'Componentes', 'route' => route('admin.components.index'), 'pattern' => 'admin.components.*'],
             ['label' => 'Themes', 'route' => route('admin.themes.current.show'), 'pattern' => 'admin.themes.*'],

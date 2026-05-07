@@ -9,8 +9,9 @@ class ApiTjSyncRun extends Model
 {
     public const STATUS_RUNNING = 'running';
     public const STATUS_SUCCESS = 'success';
+    public const STATUS_FAILED = 'failed';
     public const STATUS_PARTIAL = 'partial';
-    public const STATUS_ERROR = 'error';
+    public const STATUS_ERROR = self::STATUS_FAILED;
 
     public $incrementing = false;
     protected $keyType = 'string';
@@ -23,6 +24,7 @@ class ApiTjSyncRun extends Model
         'started_at',
         'finished_at',
         'request_count',
+        'request_payload_json',
         'success_count',
         'failed_count',
         'api_status_code',
@@ -34,6 +36,7 @@ class ApiTjSyncRun extends Model
     protected $casts = [
         'started_at' => 'datetime',
         'finished_at' => 'datetime',
+        'request_payload_json' => 'encrypted:array',
     ];
 
     public function actor(): BelongsTo

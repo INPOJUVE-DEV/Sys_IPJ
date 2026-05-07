@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\BeneficiariosController as AdminBeneficiariosController;
+use App\Http\Controllers\Admin\ApiTjDashboardController as AdminApiTjDashboardController;
 use App\Http\Controllers\Admin\CatalogosController;
 use App\Http\Controllers\Admin\ComponentCatalogController;
 use App\Http\Controllers\Admin\EventoTipoController as AdminEventoTipoController;
@@ -159,9 +160,13 @@ Route::middleware(['auth','role:admin'])->prefix('admin')->name('admin.')->group
         Route::post('{tarjeta}/status', [AdminInventarioTarjetaController::class, 'updateStatus'])->name('status');
     });
     Route::prefix('api-tj')->name('api-tj.')->group(function () {
+        Route::get('/', [AdminApiTjDashboardController::class, 'index'])->name('index');
+        Route::post('qa/inbound', [AdminApiTjDashboardController::class, 'simulateInbound'])->name('qa.inbound');
         Route::get('requests', [AdminApiTjInboundRequestController::class, 'index'])->name('requests.index');
         Route::get('requests/{requestRecord}', [AdminApiTjInboundRequestController::class, 'show'])->name('requests.show');
         Route::post('requests/{requestRecord}/reprocess', [AdminApiTjInboundRequestController::class, 'reprocess'])->name('requests.reprocess');
+        Route::get('sync-runs', [AdminApiTjDashboardController::class, 'syncRunsIndex'])->name('sync-runs.index');
+        Route::get('sync-runs/{syncRun}', [AdminApiTjDashboardController::class, 'syncRunsShow'])->name('sync-runs.show');
         Route::post('sync', [ApiTjSyncController::class, 'store'])->name('sync');
     });
     Route::prefix('inventario/protecciones')->name('inventario.protecciones.')->group(function () {

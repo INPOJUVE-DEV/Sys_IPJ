@@ -7,7 +7,7 @@ use App\Models\ApiTjInboundRequest;
 use App\Services\ApiTjInboundService;
 use Illuminate\Http\Request;
 
-class ApiTjBeneficiarioController extends Controller
+class ApiTjInboundRequestController extends Controller
 {
     public function __construct(private readonly ApiTjInboundService $service)
     {

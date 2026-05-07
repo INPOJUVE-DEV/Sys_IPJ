@@ -5,7 +5,10 @@
                 <h2 class="h4 m-0">Solicitudes recibidas de API_TJ</h2>
                 <div class="text-muted small">Auditoria de expedientes entrantes y errores de procesamiento.</div>
             </div>
-            <a href="{{ route('admin.inventario.tarjetas.index') }}" class="btn btn-outline-primary">Volver a tarjetas</a>
+            <div class="d-flex flex-wrap gap-2">
+                <a href="{{ route('admin.api-tj.index') }}" class="btn btn-outline-primary">Centro de control</a>
+                <a href="{{ route('admin.inventario.tarjetas.index') }}" class="btn btn-outline-secondary">Volver a tarjetas</a>
+            </div>
         </div>
     </x-slot>
 
@@ -29,7 +32,10 @@
                 </thead>
                 <tbody>
                     @forelse($requests as $requestRecord)
-                        @php $payload = $requestRecord->payload_json ?? []; @endphp
+                        @php
+                            $payload = $requestRecord->payload_json ?? [];
+                            $firstRecord = data_get($payload, 'records.0', []);
+                        @endphp
                         <tr>
                             <td class="font-monospace">{{ $requestRecord->external_request_id }}</td>
                             <td class="font-monospace">{{ $requestRecord->curp_masked ?: 'N/D' }}</td>
@@ -38,10 +44,10 @@
                             <td>
                                 @if($requestRecord->beneficiario_id)
                                     <a href="{{ route('admin.beneficiarios.show', $requestRecord->beneficiario_id) }}">
-                                        {{ data_get($payload, 'beneficiario.nombre', 'Ver beneficiario') }}
+                                        {{ data_get($firstRecord, 'nombre', 'Ver beneficiario') }}
                                     </a>
                                 @else
-                                    {{ trim(data_get($payload, 'beneficiario.nombre', '').' '.data_get($payload, 'beneficiario.apellido_paterno', '')) ?: 'N/D' }}
+                                    {{ trim(data_get($firstRecord, 'nombre', '').' '.data_get($firstRecord, 'apellido_paterno', '')) ?: 'N/D' }}
                                 @endif
                             </td>
                             <td class="small text-muted">{{ \Illuminate\Support\Str::limit($requestRecord->error_message, 120) }}</td>
@@ -50,9 +56,7 @@
                             </td>
                         </tr>
                     @empty
-                        <tr>
-                            <td colspan="7" class="text-muted">Aun no hay solicitudes registradas.</td>
-                        </tr>
+                        <tr><td colspan="7" class="text-muted">Aun no hay solicitudes registradas.</td></tr>
                     @endforelse
                 </tbody>
             </table>

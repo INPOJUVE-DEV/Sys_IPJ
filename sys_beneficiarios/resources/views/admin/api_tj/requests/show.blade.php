@@ -13,7 +13,10 @@
         <div class="alert alert-success">{{ session('status') }}</div>
     @endif
 
-    @php $payload = $requestRecord->payload_json ?? []; @endphp
+    @php
+        $payload = $requestRecord->payload_json ?? [];
+        $result = $requestRecord->result_json ?? [];
+    @endphp
 
     <div class="row g-3">
         <div class="col-12 col-xl-5">
@@ -27,6 +30,9 @@
                         <dt class="col-sm-5">HTTP</dt><dd class="col-sm-7">{{ $requestRecord->response_code ?: 'N/D' }}</dd>
                         <dt class="col-sm-5">Recepcion</dt><dd class="col-sm-7">{{ optional($requestRecord->received_at)->format('Y-m-d H:i:s') ?: 'N/D' }}</dd>
                         <dt class="col-sm-5">Procesado</dt><dd class="col-sm-7">{{ optional($requestRecord->processed_at)->format('Y-m-d H:i:s') ?: 'N/D' }}</dd>
+                        <dt class="col-sm-5">Total</dt><dd class="col-sm-7">{{ $requestRecord->total_count }}</dd>
+                        <dt class="col-sm-5">Aceptados</dt><dd class="col-sm-7">{{ $requestRecord->accepted_count }}</dd>
+                        <dt class="col-sm-5">Rechazados</dt><dd class="col-sm-7">{{ $requestRecord->rejected_count }}</dd>
                         <dt class="col-sm-5">Beneficiario</dt>
                         <dd class="col-sm-7">
                             @if($requestRecord->beneficiario_id)
@@ -38,7 +44,7 @@
                         <dt class="col-sm-5">Error</dt><dd class="col-sm-7">{{ $requestRecord->error_message ?: 'Ninguno' }}</dd>
                     </dl>
                 </div>
-                @if($requestRecord->status === \App\Models\ApiTjInboundRequest::STATUS_ERROR)
+                @if(in_array($requestRecord->status, [\App\Models\ApiTjInboundRequest::STATUS_FAILED, \App\Models\ApiTjInboundRequest::STATUS_ERROR], true))
                     <div class="card-footer">
                         <form method="POST" action="{{ route('admin.api-tj.requests.reprocess', $requestRecord) }}">
                             @csrf
@@ -53,6 +59,12 @@
                 <div class="card-header fw-semibold">Payload recibido</div>
                 <div class="card-body">
                     <pre class="small mb-0">{{ json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) }}</pre>
+                </div>
+            </div>
+            <div class="card shadow-sm mt-3">
+                <div class="card-header fw-semibold">Resultado procesado</div>
+                <div class="card-body">
+                    <pre class="small mb-0">{{ json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) }}</pre>
                 </div>
             </div>
         </div>

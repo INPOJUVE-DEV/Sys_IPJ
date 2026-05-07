@@ -7,6 +7,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ApiTjInboundRequest extends Model
 {
+    public const STATUS_PENDING = 'pending';
+    public const STATUS_PROCESSED = 'processed';
+    public const STATUS_FAILED = 'failed';
     public const STATUS_RECEIVED = 'received';
     public const STATUS_CREATED = 'created';
     public const STATUS_ALREADY_PROCESSED = 'already_processed';
@@ -31,12 +34,17 @@ class ApiTjInboundRequest extends Model
         'processed_at',
         'created_by_system',
         'payload_json',
+        'total_count',
+        'accepted_count',
+        'rejected_count',
+        'result_json',
     ];
 
     protected $casts = [
         'received_at' => 'datetime',
         'processed_at' => 'datetime',
         'payload_json' => 'encrypted:array',
+        'result_json' => 'encrypted:array',
     ];
 
     public function beneficiario(): BelongsTo

@@ -1,5 +1,7 @@
 <?php
 
+use App\Services\ApiTjCardholderService;
+use App\Services\ApiTjSyncService;
 use App\Services\CatalogoCsvSyncService;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
@@ -7,6 +9,67 @@ use Illuminate\Support\Facades\Artisan;
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
+
+Artisan::command('api-tj:sync-beneficiarios {--user=} {--mode=sync} {--beneficiario=} ', function (ApiTjSyncService $syncService, ApiTjCardholderService $cardholderService) {
+    $userId = $this->option('user');
+    $mode = strtolower((string) $this->option('mode'));
+    $beneficiarioId = $this->option('beneficiario');
+
+    $actor = $userId
+        ? \App\Models\User::where('uuid', $userId)->orWhere('id', $userId)->first()
+        : \App\Models\User::role('admin')->first();
+
+    if (! $actor) {
+        $this->error('No existe usuario actor para ejecutar la sincronizacion.');
+
+        return 1;
+    }
+
+    if ($mode === 'cardholder') {
+        $query = \App\Models\Beneficiario::query()->with('tarjeta');
+        if ($beneficiarioId) {
+            $query->where('id', $beneficiarioId);
+        }
+
+        $items = $query->get();
+
+        if ($items->isEmpty()) {
+            $this->warn('No hay beneficiarios elegibles para enviar a /api/v1/cardholders.');
+
+            return 0;
+        }
+
+        foreach ($items as $item) {
+            $run = $cardholderService->pushBeneficiario($item, $actor);
+            $this->line(sprintf(
+                '[%s] %s',
+                $run->api_status_code ?? $run->status,
+                $item['id']
+            ));
+            if ($run->status === \App\Models\ApiTjSyncRun::STATUS_ERROR) {
+                $this->warn($run->error_message ?? 'Error sin cuerpo');
+            }
+        }
+
+        return 0;
+    }
+
+    $run = $syncService->sync($actor);
+    $this->info(sprintf(
+        'sync_id=%s status=%s enviados=%d exitosos=%d fallidos=%d',
+        $run->sync_id,
+        $run->status,
+        $run->request_count,
+        $run->success_count,
+        $run->failed_count
+    ));
+
+    if ($run->error_message) {
+        $this->warn($run->error_message);
+    }
+
+    return $run->status === \App\Models\ApiTjSyncRun::STATUS_ERROR ? 1 : 0;
+})->purpose('Sincroniza beneficiarios oficiales hacia API_TJ en lote o como cardholders individuales');
 
 // Utilidad para detectar artefactos de codificacion sospechosos en el codigo fuente
 Artisan::command('scan:encoding {--path= : Ruta base a escanear (por defecto, base_path())} {--all : Incluir vendor/node_modules/storage/etc}', function () {

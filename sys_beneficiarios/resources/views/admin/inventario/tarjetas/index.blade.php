@@ -12,8 +12,8 @@
                         <i class="bi bi-arrow-repeat me-1"></i> Sincronizar con app
                     </button>
                 </form>
-                <a href="{{ route('admin.api-tj.requests.index') }}" class="btn btn-outline-secondary">
-                    <i class="bi bi-inbox me-1"></i> Solicitudes API_TJ
+                <a href="{{ route('admin.api-tj.index') }}" class="btn btn-outline-secondary">
+                    <i class="bi bi-window-sidebar me-1"></i> Centro API_TJ
                 </a>
                 <a href="{{ route('stack.index') }}" class="btn btn-outline-primary">
                     <i class="bi bi-bar-chart-line me-1"></i> Ver Stack
