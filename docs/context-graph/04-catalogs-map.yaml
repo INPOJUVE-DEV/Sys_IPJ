@@ -1,0 +1,29 @@
+catalogs:
+  municipios:
+    source:
+      - municipios.csv
+    columns:
+      - clave
+      - nombre
+
+  secciones:
+    source:
+      - secciones.csv
+    columns:
+      - seccional
+      - distrito_local
+      - distrito_federal
+      - municipio_id_or_clave
+
+import_process:
+  artisan_command: catalogos:import
+  path: database/seeders/data
+  options:
+    - --fresh
+    - --sql
+
+business_rules:
+  - seccional_maps_to_municipio
+  - seccional_maps_to_distritos
+  - catalogs_are_required_for_beneficiary_assignment
+  - imports_should_support_external_sql_preprocessing

@@ -1,0 +1,43 @@
+roles:
+  admin:
+    capabilities:
+      - full_admin_access
+      - kpi_access
+      - user_management
+      - beneficiary_exports
+      - catalog_management
+      - assignment_visibility
+
+  capturista:
+    capabilities:
+      - create_beneficiaries
+      - update_assigned_records
+      - personal_kpis
+      - manage_domicilios
+
+  encargado_360:
+    capabilities:
+      - supervise_assignments
+      - assignment_distribution
+      - operational_dashboard
+
+  encargado_bienestar:
+    capabilities:
+      - bienestar_operations
+
+  psicologo:
+    capabilities:
+      - psychology_related_operations
+
+auth_stack:
+  authentication:
+    - Laravel Breeze
+  authorization:
+    - Spatie Permission
+  audit:
+    - Spatie Activitylog
+
+security_requirements:
+  - role_middleware_must_protect_private_routes
+  - audit_logs_should_track_sensitive_changes
+  - public_api_routes_should_be_rate_limited
