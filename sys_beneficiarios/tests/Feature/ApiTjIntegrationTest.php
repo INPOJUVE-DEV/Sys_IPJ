@@ -9,6 +9,7 @@ use App\Models\Municipio;
 use App\Models\Oficina;
 use App\Models\Seccion;
 use App\Models\User;
+use App\Services\ApiTjClient;
 use App\Services\ApiTjJwtService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
@@ -50,6 +51,12 @@ class ApiTjIntegrationTest extends TestCase
             'api_tj.outbound.scope' => 'cardholders.sync',
             'api_tj.outbound.sync_path' => '/api/v1/cardholders/sync',
         ]);
+
+        Http::fake([
+            '*api/v1/cardholders/sync' => Http::response([
+                'status' => 'success',
+            ], 200),
+        ]);
     }
 
     public function test_inbound_batch_creates_beneficiario_and_audit_request(): void
@@ -72,7 +79,8 @@ class ApiTjIntegrationTest extends TestCase
             'id' => $beneficiarioId,
             'curp' => 'PEPJ800101HDFRRN09',
             'email' => 'juan@example.com',
-            'api_tj_sync_status' => Beneficiario::API_TJ_SYNC_STATUS_PENDING_SYNC,
+            'folio_tarjeta' => 'TJ-000123',
+            'api_tj_sync_status' => Beneficiario::API_TJ_SYNC_STATUS_SYNCED,
         ]);
         $this->assertDatabaseHas('api_tj_inbound_requests', [
             'external_request_id' => 'INF-20260506-0001',
@@ -154,7 +162,7 @@ class ApiTjIntegrationTest extends TestCase
             'telefono' => '5512345678',
             'email' => 'juan.actualizado@example.com',
             'folio_tarjeta' => 'TJ-000124',
-            'api_tj_sync_status' => Beneficiario::API_TJ_SYNC_STATUS_PENDING_SYNC,
+            'api_tj_sync_status' => Beneficiario::API_TJ_SYNC_STATUS_SYNCED,
         ]);
     }
 
@@ -177,9 +185,84 @@ class ApiTjIntegrationTest extends TestCase
         $beneficiarioId = $response->json('results.0.beneficiario_id');
         $this->assertDatabaseHas('beneficiarios', [
             'id' => $beneficiarioId,
-            'api_tj_sync_status' => Beneficiario::API_TJ_SYNC_STATUS_PENDING_SYNC,
+            'api_tj_sync_status' => Beneficiario::API_TJ_SYNC_STATUS_SYNCED,
             'folio_tarjeta' => 'TJ-000123',
             'email' => null,
+        ]);
+    }
+
+    public function test_inbound_without_folio_generates_digital_card_and_auto_syncs(): void
+    {
+        [$municipio, $seccion] = $this->municipioAndSeccion();
+        $payload = $this->validBatchPayload($municipio->id, $seccion->seccional, [
+            'external_request_id' => 'INF-20260506-0003',
+            'records' => [[
+                'folio_tarjeta' => null,
+            ]],
+        ]);
+
+        $response = $this->withHeader('Authorization', 'Bearer '.$this->makeInboundToken())
+            ->postJson('/api/api-tj/inbound', $payload);
+
+        $response->assertCreated()
+            ->assertJsonPath('results.0.status', 'created')
+            ->assertJsonPath('accepted_count', 1);
+
+        $beneficiarioId = $response->json('results.0.beneficiario_id');
+        $beneficiario = Beneficiario::with('tarjeta')->findOrFail($beneficiarioId);
+
+        $this->assertNotNull($beneficiario->folio_tarjeta);
+        $this->assertMatchesRegularExpression('/^TD-\d{5}$/', $beneficiario->folio_tarjeta);
+        $this->assertSame($beneficiario->folio_tarjeta, $beneficiario->tarjeta?->folio);
+        $this->assertSame(Beneficiario::API_TJ_SYNC_STATUS_SYNCED, $beneficiario->api_tj_sync_status);
+
+        Http::assertSent(function ($request) use ($beneficiario, $municipio) {
+            $items = $request['items'] ?? [];
+
+            return $request->url() === 'https://apitj-production.up.railway.app/api/v1/cardholders/sync'
+                && count($items) === 1
+                && ($items[0]['tarjeta_numero'] ?? null) === $beneficiario->folio_tarjeta
+                && ($items[0]['nombres'] ?? null) === 'JUAN'
+                && ($items[0]['apellido'] ?? null) === 'PEREZ'
+                && ($items[0]['municipio_id'] ?? null) === $municipio->id;
+        });
+    }
+
+    public function test_outbound_client_rewrites_localhost_to_host_alias_inside_docker(): void
+    {
+        config([
+            'api_tj.base_url' => 'http://localhost:8081',
+            'api_tj.docker_host_alias' => 'host.docker.internal',
+        ]);
+
+        app(ApiTjClient::class)->syncBeneficiarios([
+            'items' => [],
+        ]);
+
+        Http::assertSent(function ($request) {
+            return $request->url() === 'http://host.docker.internal:8081/api/v1/cardholders/sync';
+        });
+    }
+
+    public function test_inbound_keeps_beneficiario_when_auto_sync_fails(): void
+    {
+        config([
+            'api_tj.outbound.private_key_path' => storage_path('framework/testing/missing-private-key.pem'),
+        ]);
+
+        [$municipio, $seccion] = $this->municipioAndSeccion();
+
+        $response = $this->withHeader('Authorization', 'Bearer '.$this->makeInboundToken())
+            ->postJson('/api/api-tj/inbound', $this->validBatchPayload($municipio->id, $seccion->seccional));
+
+        $response->assertCreated()
+            ->assertJsonPath('accepted_count', 1);
+
+        $beneficiarioId = $response->json('results.0.beneficiario_id');
+        $this->assertDatabaseHas('beneficiarios', [
+            'id' => $beneficiarioId,
+            'api_tj_sync_status' => Beneficiario::API_TJ_SYNC_STATUS_SYNC_FAILED,
+            'api_tj_sync_attempts' => 1,
         ]);
     }
 
@@ -244,16 +327,18 @@ class ApiTjIntegrationTest extends TestCase
             ->assertJsonPath('success_count', 1)
             ->assertJsonPath('failed_count', 0);
 
-        Http::assertSent(function ($request) use ($eligible) {
+        Http::assertSent(function ($request) use ($eligible, $municipio) {
             $items = $request['items'] ?? [];
 
             return $request->url() === 'https://apitj-production.up.railway.app/api/v1/cardholders/sync'
                 && count($items) === 1
                 && $items[0]['curp_hash'] === $eligible->fresh()->curp_hash
                 && $items[0]['curp_masked'] === 'PEPJ**********09'
+                && $items[0]['nombres'] === 'Digital'
+                && $items[0]['apellido'] === 'Prueba'
+                && $items[0]['municipio_id'] === $municipio->id
                 && $items[0]['tarjeta_numero'] === 'TJ-000456'
-                && $items[0]['status'] === 'active'
-                && ! isset($items[0]['email']);
+                && $items[0]['status'] === 'active';
         });
 
         $this->assertDatabaseHas('api_tj_sync_runs', [
@@ -270,10 +355,8 @@ class ApiTjIntegrationTest extends TestCase
 
     public function test_sync_failure_marks_beneficiario_for_retry(): void
     {
-        Http::fake([
-            'https://apitj-production.up.railway.app/api/v1/cardholders/sync' => Http::response([
-                'message' => 'upstream down',
-            ], 500),
+        config([
+            'api_tj.outbound.private_key_path' => storage_path('framework/testing/missing-private-key.pem'),
         ]);
 
         $admin = User::factory()->create();

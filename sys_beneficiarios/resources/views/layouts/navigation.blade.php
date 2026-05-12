@@ -116,6 +116,30 @@
         ];
     }
 
+    $apiLinks = [];
+    if ($isAdmin) {
+        $apiLinks = [
+            [
+                'label' => 'Resumen general',
+                'route' => route('admin.api-tj.index'),
+                'icon' => 'bi-broadcast-pin',
+                'active' => request()->routeIs('admin.api-tj.index'),
+            ],
+            [
+                'label' => 'Registros recibidos',
+                'route' => route('admin.api-tj.requests.index'),
+                'icon' => 'bi-box-arrow-in-down-right',
+                'active' => request()->routeIs('admin.api-tj.requests.*'),
+            ],
+            [
+                'label' => 'Registros enviados',
+                'route' => route('admin.api-tj.sync-runs.index'),
+                'icon' => 'bi-arrow-left-right',
+                'active' => request()->routeIs('admin.api-tj.sync-runs.*'),
+            ],
+        ];
+    }
+
     $adminTools = [];
     if ($isAdmin) {
         $adminTools = [
@@ -124,7 +148,6 @@
             ['label' => 'Tarjetas', 'route' => route('admin.inventario.tarjetas.index'), 'pattern' => 'admin.inventario.tarjetas.*'],
             ['label' => 'Protecciones', 'route' => route('admin.inventario.protecciones.index'), 'pattern' => 'admin.inventario.protecciones.*'],
             ['label' => 'Movimientos', 'route' => route('admin.inventario.movimientos.index'), 'pattern' => 'admin.inventario.movimientos.*'],
-            ['label' => 'API TJ', 'route' => route('admin.api-tj.index'), 'pattern' => 'admin.api-tj.*'],
             ['label' => 'Catalogos', 'route' => route('admin.catalogos.index'), 'pattern' => 'admin.catalogos.*'],
             ['label' => 'Componentes', 'route' => route('admin.components.index'), 'pattern' => 'admin.components.*'],
             ['label' => 'Themes', 'route' => route('admin.themes.current.show'), 'pattern' => 'admin.themes.*'],
@@ -133,6 +156,7 @@
 
     $menuGroups = collect([
         ['label' => 'Dashboards', 'icon' => 'bi-grid-1x2', 'links' => $dashboardLinks],
+        ['label' => 'Seguimiento con API_TJ', 'icon' => 'bi-plug', 'links' => $apiLinks],
         ['label' => 'Tarjeta Joven', 'icon' => 'bi-person-vcard', 'links' => $tarjetaJovenLinks],
         ['label' => 'Eventos', 'icon' => 'bi-calendar-event', 'links' => $eventosLinks],
         ['label' => 'Programas', 'icon' => 'bi-folder2-open', 'links' => $programaLinks],

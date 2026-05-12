@@ -44,6 +44,8 @@ docker compose exec node npm install
 docker compose exec node npm run build
 ```
 
+`DemoDataSeeder` ya no corre por solo tener `APP_ENV=local`. Si necesitas datos demo, activa `SEED_DEMO_DATA=true` antes de ejecutar `migrate --seed`.
+
 4) Acceso web:
 
 - URL: `http://localhost`

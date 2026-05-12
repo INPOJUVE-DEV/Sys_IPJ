@@ -1,7 +1,21 @@
 <?php
 
+$apiTjPublicKey = env('API_TJ_PUBLIC_KEY', '');
+$apiTjPublicKeyPath = env('API_TJ_PUBLIC_KEY_PATH');
+
+if ((! is_string($apiTjPublicKey) || trim($apiTjPublicKey) === '') && is_string($apiTjPublicKeyPath) && trim($apiTjPublicKeyPath) !== '') {
+    $resolvedPublicKeyPath = str_starts_with($apiTjPublicKeyPath, DIRECTORY_SEPARATOR)
+        ? $apiTjPublicKeyPath
+        : base_path($apiTjPublicKeyPath);
+
+    if (is_file($resolvedPublicKeyPath) && is_readable($resolvedPublicKeyPath)) {
+        $apiTjPublicKey = file_get_contents($resolvedPublicKeyPath) ?: '';
+    }
+}
+
 return [
     'base_url' => env('API_TJ_BASE_URL', 'https://apitj-production.up.railway.app'),
+    'docker_host_alias' => env('API_TJ_DOCKER_HOST_ALIAS', 'host.docker.internal'),
     'timeout' => (int) env('API_TJ_TIMEOUT', 15),
 
     // Se conserva por compatibilidad, pero la firma oficial sigue siendo RS256.
@@ -12,7 +26,7 @@ return [
         'issuer' => env('API_TJ_ISSUER', 'api_tj'),
         'audience' => env('API_TJ_AUDIENCE', 'sys_ipj'),
         'allowed_scope' => env('API_TJ_ALLOWED_SCOPE', env('API_TJ_ALLOWED_SCOPES', 'beneficiarios.create')),
-        'public_key' => env('API_TJ_PUBLIC_KEY', ''),
+        'public_key' => $apiTjPublicKey,
         'jwt_kid' => env('API_TJ_JWT_KID', 'api_tj-current'),
     ],
 

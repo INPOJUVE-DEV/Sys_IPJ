@@ -18,6 +18,12 @@ use Illuminate\Validation\ValidationException;
 
 class ApiTjInboundService
 {
+    public function __construct(
+        private readonly ApiTjSyncService $syncService,
+    )
+    {
+    }
+
     public function processBatch(array $payload, ?ApiTjInboundRequest $existingRequest = null, bool $force = false): array
     {
         $externalRequestId = (string) ($payload['external_request_id'] ?? '');
@@ -176,7 +182,6 @@ class ApiTjInboundService
                 ]);
 
                 $beneficiario->fill([
-                    'folio_tarjeta' => trim((string) ($validated['folio_tarjeta'] ?? '')) ?: null,
                     'nombre' => $validated['nombre'],
                     'apellido_paterno' => $validated['apellido_paterno'],
                     'apellido_materno' => $validated['apellido_materno'],
@@ -202,11 +207,17 @@ class ApiTjInboundService
                 return $beneficiario->fresh(['domicilio', 'tarjeta']);
             });
 
+            if ($beneficiario->hasCompleteApiTjProfile()) {
+                $this->syncService->syncBeneficiario($beneficiario);
+                $beneficiario = $beneficiario->fresh(['domicilio', 'tarjeta']);
+            }
+
             return [
                 'index' => $index,
                 'curp' => $normalizedCurp,
                 'status' => $existing ? 'updated' : 'created',
                 'beneficiario_id' => $beneficiario->id,
+                'folio_tarjeta' => $beneficiario->apiTjTarjetaNumero(),
                 'sync_status' => $beneficiario->api_tj_sync_status,
             ];
         } catch (ValidationException $exception) {
@@ -332,7 +343,7 @@ class ApiTjInboundService
     {
         $folioTarjeta = trim((string) ($payload['folio_tarjeta'] ?? ''));
         if ($folioTarjeta === '') {
-            return;
+            $folioTarjeta = $beneficiario->apiTjTarjetaNumero() ?? $this->generateDigitalFolio();
         }
 
         $tarjeta = Tarjeta::firstOrNew(['folio' => $folioTarjeta]);
@@ -353,5 +364,39 @@ class ApiTjInboundService
             'tarjeta_id' => $tarjeta->id,
             'folio_tarjeta' => $tarjeta->folio,
         ])->save();
+    }
+
+    private function generateDigitalFolio(): string
+    {
+        $tarjetaFolio = Tarjeta::query()
+            ->where('folio', 'like', 'TD-%')
+            ->orderByDesc('folio')
+            ->value('folio');
+        $beneficiarioFolio = Beneficiario::query()
+            ->where('folio_tarjeta', 'like', 'TD-%')
+            ->orderByDesc('folio_tarjeta')
+            ->value('folio_tarjeta');
+
+        $currentMax = max(
+            $this->extractDigitalSequence($tarjetaFolio),
+            $this->extractDigitalSequence($beneficiarioFolio)
+        );
+
+        $next = $currentMax + 1;
+        if ($next > 99999) {
+            throw new \DomainException('Ya no hay folios digitales disponibles con el formato TD-XXXXX.');
+        }
+
+        return sprintf('TD-%05d', $next);
+    }
+
+    private function extractDigitalSequence(?string $folio): int
+    {
+        $folio = strtoupper(trim((string) $folio));
+        if (! preg_match('/^TD-(\d{5})$/', $folio, $matches)) {
+            return 0;
+        }
+
+        return (int) $matches[1];
     }
 }

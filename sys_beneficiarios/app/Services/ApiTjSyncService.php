@@ -13,6 +13,9 @@ use Illuminate\Support\Str;
 
 class ApiTjSyncService
 {
+    private const AUTO_SYNC_ROLE = 'api_tj';
+    private const AUTO_SYNC_PREFIX = 'AUTOAPI';
+
     public function __construct(
         private readonly ApiTjClient $client,
     )
@@ -21,12 +24,68 @@ class ApiTjSyncService
 
     public function sync(User $actor): ApiTjSyncRun
     {
-        $beneficiarios = $this->eligibleBeneficiarios();
+        return $this->runSync(
+            $this->eligibleBeneficiarios(),
+            $actor->uuid,
+            $actor->getRoleNames()->first(),
+            'SYSIPJ'
+        );
+    }
+
+    public function syncBeneficiario(Beneficiario $beneficiario): ApiTjSyncRun
+    {
+        return $this->runSync(
+            collect([$beneficiario->fresh(['tarjeta'])]),
+            null,
+            self::AUTO_SYNC_ROLE,
+            self::AUTO_SYNC_PREFIX
+        );
+    }
+
+    public function buildItems(?Collection $beneficiarios = null): Collection
+    {
+        $beneficiarios ??= $this->eligibleBeneficiarios();
+
+        return $beneficiarios->map(function (Beneficiario $beneficiario) {
+            return [
+                'curp_hash' => $beneficiario->curp_hash,
+                'curp_masked' => ApiTjHelper::maskCurp($beneficiario->curp),
+                'nombres' => trim((string) $beneficiario->nombre) ?: null,
+                'apellido' => $this->resolvePrimaryLastName($beneficiario),
+                'municipio_id' => $beneficiario->municipio_id ? (int) $beneficiario->municipio_id : null,
+                'tarjeta_numero' => $beneficiario->apiTjTarjetaNumero(),
+                'status' => $this->mapStatus($beneficiario),
+            ];
+        });
+    }
+
+    private function eligibleBeneficiarios(): Collection
+    {
+        return Beneficiario::query()
+            ->whereNull('deleted_at')
+            ->where('status', Beneficiario::STATUS_ACTIVE)
+            ->whereIn('api_tj_sync_status', [
+                Beneficiario::API_TJ_SYNC_STATUS_PENDING_SYNC,
+                Beneficiario::API_TJ_SYNC_STATUS_SYNC_FAILED,
+            ])
+            ->orderBy('created_at')
+            ->get()
+            ->filter(fn (Beneficiario $beneficiario) => $beneficiario->hasCompleteApiTjProfile())
+            ->values();
+    }
+
+    private function runSync(Collection $beneficiarios, ?string $executedBy, ?string $role, string $syncPrefix): ApiTjSyncRun
+    {
+        $beneficiarios = $beneficiarios
+            ->filter(fn ($beneficiario) => $beneficiario instanceof Beneficiario)
+            ->filter(fn (Beneficiario $beneficiario) => $beneficiario->hasCompleteApiTjProfile())
+            ->values();
+
         $run = ApiTjSyncRun::create([
             'id' => (string) Str::uuid(),
-            'sync_id' => 'SYSIPJ-'.now()->format('Ymd-His').'-'.Str::upper(Str::random(6)),
-            'executed_by' => $actor->uuid,
-            'role' => $actor->getRoleNames()->first(),
+            'sync_id' => $syncPrefix.'-'.now()->format('Ymd-His').'-'.Str::upper(Str::random(6)),
+            'executed_by' => $executedBy,
+            'role' => $role,
             'started_at' => now(),
             'request_count' => $beneficiarios->count(),
             'status' => ApiTjSyncRun::STATUS_RUNNING,
@@ -93,35 +152,6 @@ class ApiTjSyncService
         }
 
         return $run->fresh();
-    }
-
-    public function buildItems(?Collection $beneficiarios = null): Collection
-    {
-        $beneficiarios ??= $this->eligibleBeneficiarios();
-
-        return $beneficiarios->map(function (Beneficiario $beneficiario) {
-            return [
-                'curp_hash' => $beneficiario->curp_hash,
-                'curp_masked' => ApiTjHelper::maskCurp($beneficiario->curp),
-                'tarjeta_numero' => $beneficiario->apiTjTarjetaNumero(),
-                'status' => $this->mapStatus($beneficiario),
-            ];
-        });
-    }
-
-    private function eligibleBeneficiarios(): Collection
-    {
-        return Beneficiario::query()
-            ->whereNull('deleted_at')
-            ->where('status', Beneficiario::STATUS_ACTIVE)
-            ->whereIn('api_tj_sync_status', [
-                Beneficiario::API_TJ_SYNC_STATUS_PENDING_SYNC,
-                Beneficiario::API_TJ_SYNC_STATUS_SYNC_FAILED,
-            ])
-            ->orderBy('created_at')
-            ->get()
-            ->filter(fn (Beneficiario $beneficiario) => $beneficiario->hasCompleteApiTjProfile())
-            ->values();
     }
 
     private function sendPayload(array $payload): Response
@@ -232,5 +262,12 @@ class ApiTjSyncService
             Tarjeta::STATUS_DEVUELTA, Tarjeta::STATUS_ASIGNADA_OFICINA, Tarjeta::STATUS_DISPONIBLE => 'inactive',
             default => 'active',
         };
+    }
+
+    private function resolvePrimaryLastName(Beneficiario $beneficiario): ?string
+    {
+        $apellido = trim((string) ($beneficiario->apellido_paterno ?: $beneficiario->apellido_materno));
+
+        return $apellido !== '' ? $apellido : null;
     }
 }

@@ -9,6 +9,7 @@ use App\Models\Oficina;
 use App\Models\Seccion;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Tests\TestCase;
@@ -20,6 +21,7 @@ class ApiTjUiTest extends TestCase
     protected User $admin;
     protected Municipio $municipio;
     protected Seccion $seccion;
+    private string $privateKeyPath;
 
     protected function setUp(): void
     {
@@ -46,7 +48,30 @@ class ApiTjUiTest extends TestCase
             'distrito_federal' => 'DF-UI',
         ]);
 
-        config(['api_tj.curp_hash_secret' => 'secret-test']);
+        [, $privateKey] = $this->generateKeyPair();
+        $this->privateKeyPath = storage_path('framework/testing/api-tj-ui-private.pem');
+        if (! is_dir(dirname($this->privateKeyPath))) {
+            mkdir(dirname($this->privateKeyPath), 0777, true);
+        }
+        file_put_contents($this->privateKeyPath, $privateKey);
+
+        config([
+            'api_tj.base_url' => 'http://localhost:8081',
+            'api_tj.curp_hash_secret' => 'secret-test',
+            'api_tj.outbound.private_key_path' => $this->privateKeyPath,
+            'api_tj.outbound.jwt_kid' => 'sys_ipj-current',
+            'api_tj.outbound.issuer' => 'sys_ipj',
+            'api_tj.outbound.subject' => 'sys_ipj',
+            'api_tj.outbound.audience' => 'api_tj',
+            'api_tj.outbound.scope' => 'cardholders.sync',
+            'api_tj.outbound.sync_path' => '/api/v1/cardholders/sync',
+        ]);
+
+        Http::fake([
+            'http://host.docker.internal:8081/api/v1/cardholders/sync' => Http::response([
+                'status' => 'success',
+            ], 200),
+        ]);
     }
 
     public function test_admin_api_tj_dashboard_renders_graphical_console(): void
@@ -164,5 +189,18 @@ class ApiTjUiTest extends TestCase
             ->assertSee('Detalle de sincronizacion API_TJ')
             ->assertSee('Payload enviado')
             ->assertSee('Respuesta API_TJ');
+    }
+
+    private function generateKeyPair(): array
+    {
+        $resource = openssl_pkey_new([
+            'private_key_bits' => 2048,
+            'private_key_type' => OPENSSL_KEYTYPE_RSA,
+        ]);
+
+        openssl_pkey_export($resource, $privateKey);
+        $details = openssl_pkey_get_details($resource);
+
+        return [$details['key'], $privateKey];
     }
 }

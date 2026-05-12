@@ -4,6 +4,8 @@ services:
       context: ./sys_beneficiarios
       dockerfile: Dockerfile
     container_name: sys_beneficiarios_app
+    env_file:
+      - ./sys_beneficiarios/.env
     volumes:
       - ./sys_beneficiarios:/var/www/html
       # Isolar dirs de escritura a volúmenes nombrados

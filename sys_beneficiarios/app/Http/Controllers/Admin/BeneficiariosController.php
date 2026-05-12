@@ -15,11 +15,19 @@ class BeneficiariosController extends Controller
     {
         $this->authorize('viewAny', Beneficiario::class);
 
-        $filters = $request->only(['municipio_id','seccional','capturista','from','to']);
-        $q = Beneficiario::with(['municipio','creador','seccion'])
+        $filters = $request->only(['municipio_id','seccional','capturista','from','to','source_system']);
+        $q = Beneficiario::with(['municipio','creador','seccion', 'tarjeta'])
             ->when($filters['municipio_id'] ?? null, fn($b,$v)=>$b->where('municipio_id',$v))
             ->when($filters['seccional'] ?? null, fn($b,$v)=>$b->whereHas('seccion', fn($sq)=>$sq->where('seccional','like',"%$v%")))
             ->when($filters['capturista'] ?? null, fn($b,$v)=>$b->where('created_by',$v))
+            ->when($filters['source_system'] ?? null, function ($b, $v) {
+                if ($v === 'manual') {
+                    $b->whereNull('source_system');
+                    return;
+                }
+
+                $b->where('source_system', $v);
+            })
             ->when($filters['from'] ?? null, fn($b,$v)=>$b->whereDate('created_at','>=',$v))
             ->when($filters['to'] ?? null, fn($b,$v)=>$b->whereDate('created_at','<=',$v))
             ->orderByDesc('created_at');
@@ -41,17 +49,26 @@ class BeneficiariosController extends Controller
     public function export(Request $request)
     {
         $this->authorize('viewAny', Beneficiario::class);
-        $filters = $request->only(['municipio_id','seccional','capturista','from','to']);
+        $filters = $request->only(['municipio_id','seccional','capturista','from','to','source_system']);
         $q = Beneficiario::with([
                 'municipio',
                 'creador',
                 'seccion',
+                'tarjeta',
                 'domicilio.municipio',
                 'domicilio.seccion',
             ])
             ->when($filters['municipio_id'] ?? null, fn($b,$v)=>$b->where('municipio_id',$v))
             ->when($filters['seccional'] ?? null, fn($b,$v)=>$b->whereHas('seccion', fn($sq)=>$sq->where('seccional','like',"%$v%")))
             ->when($filters['capturista'] ?? null, fn($b,$v)=>$b->where('created_by',$v))
+            ->when($filters['source_system'] ?? null, function ($b, $v) {
+                if ($v === 'manual') {
+                    $b->whereNull('source_system');
+                    return;
+                }
+
+                $b->where('source_system', $v);
+            })
             
             ->when($filters['from'] ?? null, fn($b,$v)=>$b->whereDate('created_at','>=',$v))
             ->when($filters['to'] ?? null, fn($b,$v)=>$b->whereDate('created_at','<=',$v))

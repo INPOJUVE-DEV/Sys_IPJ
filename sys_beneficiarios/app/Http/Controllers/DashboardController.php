@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ApiTjInboundRequest;
+use App\Models\ApiTjSyncRun;
 use App\Models\Beneficiario;
 use App\Models\Evento;
 use App\Models\Inscripcion;
@@ -10,6 +12,7 @@ use App\Models\ProteccionMovimiento;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 
 class DashboardController extends Controller
 {
@@ -18,7 +21,9 @@ class DashboardController extends Controller
     {
         $municipios = Municipio::orderBy('nombre')->pluck('nombre','id');
         $capturistas = User::role(['capturista', 'capturista_programas'])->orderBy('name')->get(['uuid','name']);
-        return view('roles.admin', compact('municipios','capturistas'));
+        $apiTj = $this->buildApiTjSummary();
+
+        return view('roles.admin', compact('municipios','capturistas', 'apiTj'));
     }
 
     public function indicadores()
@@ -340,6 +345,74 @@ class DashboardController extends Controller
                 'data' => $data,
                 'total' => array_sum($data),
             ],
+        ];
+    }
+
+    protected function buildApiTjSummary(): array
+    {
+        $beneficiariosReady = Schema::hasTable('beneficiarios')
+            && Schema::hasColumn('beneficiarios', 'api_tj_sync_status');
+        $inboundReady = Schema::hasTable('api_tj_inbound_requests');
+        $syncRunsReady = Schema::hasTable('api_tj_sync_runs');
+
+        $todayStart = now()->startOfDay();
+
+        return [
+            'available' => $beneficiariosReady || $inboundReady || $syncRunsReady,
+            'beneficiarios_ready' => $beneficiariosReady,
+            'inbound_ready' => $inboundReady,
+            'sync_runs_ready' => $syncRunsReady,
+            'pending_sync' => $beneficiariosReady
+                ? Beneficiario::where('api_tj_sync_status', Beneficiario::API_TJ_SYNC_STATUS_PENDING_SYNC)->count()
+                : 0,
+            'pending_data' => $beneficiariosReady
+                ? Beneficiario::where('api_tj_sync_status', Beneficiario::API_TJ_SYNC_STATUS_PENDING_DATA)->count()
+                : 0,
+            'sync_failed' => $beneficiariosReady
+                ? Beneficiario::where('api_tj_sync_status', Beneficiario::API_TJ_SYNC_STATUS_SYNC_FAILED)->count()
+                : 0,
+            'synced' => $beneficiariosReady
+                ? Beneficiario::where('api_tj_sync_status', Beneficiario::API_TJ_SYNC_STATUS_SYNCED)->count()
+                : 0,
+            'inbound_total' => $inboundReady
+                ? ApiTjInboundRequest::count()
+                : 0,
+            'inbound_today' => $inboundReady
+                ? ApiTjInboundRequest::where('received_at', '>=', $todayStart)->count()
+                : 0,
+            'inbound_processed' => $inboundReady
+                ? ApiTjInboundRequest::where('status', ApiTjInboundRequest::STATUS_PROCESSED)->count()
+                : 0,
+            'inbound_failed' => $inboundReady
+                ? ApiTjInboundRequest::whereIn('status', [
+                    ApiTjInboundRequest::STATUS_FAILED,
+                    ApiTjInboundRequest::STATUS_REJECTED,
+                    ApiTjInboundRequest::STATUS_ERROR,
+                    ApiTjInboundRequest::STATUS_CONFLICT,
+                ])->count()
+                : 0,
+            'recent_requests' => $inboundReady
+                ? ApiTjInboundRequest::query()
+                    ->with('beneficiario.tarjeta')
+                    ->latest('received_at')
+                    ->limit(5)
+                    ->get()
+                : collect(),
+            'recent_sync_runs' => $syncRunsReady
+                ? ApiTjSyncRun::query()
+                    ->with('actor')
+                    ->latest('started_at')
+                    ->limit(5)
+                    ->get()
+                : collect(),
+            'recent_api_beneficiarios' => $beneficiariosReady
+                ? Beneficiario::query()
+                    ->with(['municipio', 'seccion', 'tarjeta'])
+                    ->where('source_system', 'api_tj')
+                    ->latest('created_at')
+                    ->limit(8)
+                    ->get()
+                : collect(),
         ];
     }
 }
