@@ -27,7 +27,6 @@ class StoreBeneficiarioRequest extends FormRequest
             'discapacidad' => ['required', 'boolean'],
             'id_ine' => ['required', 'string', 'max:255'],
             'telefono' => ['required', 'regex:/^\d{10}$/'],
-            'email' => ['nullable', 'email', 'max:255'],
 
             'domicilio.calle' => ['required', 'string', 'max:255'],
             'domicilio.numero_ext' => ['required', 'string', 'max:50'],

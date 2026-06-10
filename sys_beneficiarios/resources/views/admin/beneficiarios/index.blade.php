@@ -26,14 +26,6 @@
                         @endforeach
                     </select>
                 </div>
-                <div class="col-12 col-md-2">
-                    <label class="form-label">Forma de registro</label>
-                    <select name="source_system" class="form-select">
-                        <option value="">Todos</option>
-                        <option value="api_tj" @selected(($filters['source_system'] ?? '')==='api_tj')>Desde API_TJ</option>
-                        <option value="manual" @selected(($filters['source_system'] ?? '')==='manual')>Captura manual</option>
-                    </select>
-                </div>
                 <div class="col-6 col-md-2">
                     <label class="form-label">Desde</label>
                     <input type="date" name="from" value="{{ $filters['from'] ?? '' }}" class="form-control">
@@ -70,12 +62,8 @@
                             </div>
                         </div>
                         <div class="text-white text-md-end text-nowrap">
-                            <div class="text-white-50 text-uppercase small">Forma de registro</div>
-                            <div class="small">{{ $b->source_system === 'api_tj' ? 'Desde API_TJ' : 'Captura manual' }}</div>
-                        </div>
-                        <div class="text-white text-md-end text-nowrap">
                             <div class="text-white-50 text-uppercase small">Tarjeta</div>
-                            <div class="fs-6 fw-semibold">{{ data_get($b, 'tarjeta.folio') ?? $b->folio_tarjeta ?? 'Sin tarjeta' }}</div>
+                            <div class="fs-5 fw-semibold">{{ $b->tarjeta_id ? 'Asignada' : 'Sin tarjeta' }}</div>
                         </div>
                     </a>
                 @empty

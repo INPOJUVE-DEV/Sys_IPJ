@@ -1,33 +1,8 @@
 <x-app-layout>
     <x-slot name="header">
-        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
-            <div>
-                <h2 class="h4 m-0">Beneficiarios</h2>
-                <div class="text-muted small">Busca por CURP o numero de tarjeta y edita los registros encontrados.</div>
-            </div>
-            <div class="d-flex flex-wrap gap-2">
-                @php
-                    $syncRoute = auth()->user()?->hasRole('admin')
-                        ? route('admin.api-tj.sync')
-                        : (auth()->user()?->hasRole('delegado') ? route('delegacion.api-tj.sync') : null);
-                @endphp
-                @if($syncRoute)
-                    <form method="POST" action="{{ $syncRoute }}">
-                        @csrf
-                        <button class="btn btn-outline-primary" type="submit">
-                            <i class="bi bi-arrow-repeat me-1"></i>Sincronizar con app
-                        </button>
-                    </form>
-                    @if(auth()->user()?->hasRole('admin'))
-                        <a href="{{ route('admin.api-tj.index') }}" class="btn btn-outline-secondary">
-                            <i class="bi bi-window-sidebar me-1"></i>API TJ
-                        </a>
-                    @endif
-                @endif
-                <a href="{{ route('beneficiarios.create') }}" class="btn btn-primary">
-                    <i class="bi bi-plus-circle me-1"></i>Nuevo
-                </a>
-            </div>
+        <div class="d-flex align-items-center justify-content-between">
+            <h2 class="h4 m-0">Beneficiarios</h2>
+            <a href="{{ route('beneficiarios.create') }}" class="btn btn-primary">Nuevo</a>
         </div>
     </x-slot>
 
@@ -38,18 +13,59 @@
     <div class="card mb-3">
         <div class="card-body">
             <form class="row gy-2 gx-3 align-items-end" method="GET">
-                <div class="col-12 col-lg-8">
-                    <label class="form-label">Busqueda</label>
-                    <input type="text" name="q" value="{{ $q }}" class="form-control" placeholder="CURP o numero de tarjeta">
-                    <div class="form-text">La busqueda filtra coincidencias por CURP completa o numero de tarjeta.</div>
+                <div class="col-12 col-md-3">
+                    <label class="form-label">Búsqueda</label>
+                    <input type="text" name="q" value="{{ $q }}" class="form-control" placeholder="CURP o nombre">
                 </div>
-                <div class="col-12 col-lg-4 text-lg-end">
-                    <a href="{{ route('beneficiarios.index') }}" class="btn btn-outline-secondary me-2">
-                        <i class="bi bi-arrow-counterclockwise me-1"></i>Limpiar
-                    </a>
-                    <button class="btn btn-primary" type="submit">
-                        <i class="bi bi-search me-1"></i>Buscar
-                    </button>
+                <div class="col-12 col-md-3">
+                    <label class="form-label">Municipio</label>
+                    <select name="municipio_id" class="form-select">
+                        <option value="">—</option>
+                        @foreach($municipios as $id=>$nombre)
+                            <option value="{{ $id }}" @selected(($filters['municipio_id'] ?? '')==$id)>{{ $nombre }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="col-6 col-md-2">
+                    <label class="form-label">Seccional</label>
+                    <input name="seccional" value="{{ $filters['seccional'] ?? '' }}" class="form-control">
+                </div>
+                <div class="col-6 col-md-2">
+                    <label class="form-label">Distrito local</label>
+                    <input name="distrito_local" value="{{ $filters['distrito_local'] ?? '' }}" class="form-control">
+                </div>
+                <div class="col-6 col-md-2">
+                    <label class="form-label">Distrito federal</label>
+                    <input name="distrito_federal" value="{{ $filters['distrito_federal'] ?? '' }}" class="form-control">
+                </div>
+                <div class="col-6 col-md-2">
+                    <label class="form-label">Sexo</label>
+                    <select name="sexo" class="form-select">
+                        <option value="">—</option>
+                        @foreach(['M'=>'M','F'=>'F','X'=>'X'] as $key=>$val)
+                            <option value="{{ $key }}" @selected(($filters['sexo'] ?? '')===$key)>{{ $val }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="col-6 col-md-2">
+                    <label class="form-label">Discapacidad</label>
+                    <select name="discapacidad" class="form-select">
+                        <option value="">—</option>
+                        <option value="1" @selected(($filters['discapacidad'] ?? '')==='1')>Sí</option>
+                        <option value="0" @selected(($filters['discapacidad'] ?? '')==='0')>No</option>
+                    </select>
+                </div>
+                <div class="col-6 col-md-2">
+                    <label class="form-label">Edad mín</label>
+                    <input type="number" name="edad_min" value="{{ $filters['edad_min'] ?? '' }}" class="form-control">
+                </div>
+                <div class="col-6 col-md-2">
+                    <label class="form-label">Edad máx</label>
+                    <input type="number" name="edad_max" value="{{ $filters['edad_max'] ?? '' }}" class="form-control">
+                </div>
+                <div class="col-12 col-md-3 ms-auto text-end">
+                    <a href="{{ route('beneficiarios.index') }}" class="btn btn-outline-secondary me-2"><i class="bi bi-arrow-counterclockwise me-1"></i>Limpiar</a>
+                    <button class="btn btn-primary" type="submit"><i class="bi bi-funnel me-1"></i>Filtrar</button>
                 </div>
             </form>
         </div>
@@ -57,54 +73,44 @@
 
     <div class="card shadow-sm">
         <div class="card-body">
-            @if($beneficiarios->count())
-                <div class="text-muted small mb-3">
-                    Mostrando {{ $beneficiarios->firstItem() }} - {{ $beneficiarios->lastItem() }} de {{ $beneficiarios->total() }} beneficiarios.
-                </div>
-            @endif
-            <div class="row row-cols-1 row-cols-xl-2 g-3">
+            <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-3">
                 @forelse($beneficiarios as $b)
                     <div class="col">
-                        <div class="border rounded-3 p-3 h-100 d-flex flex-column gap-3">
-                            <div class="d-flex flex-wrap justify-content-between gap-2">
+                        <div class="card bg-dark border border-secondary border-opacity-25 text-white h-100 shadow-sm">
+                            <div class="card-body d-flex flex-column gap-3">
                                 <div>
+                                    <div class="d-flex justify-content-between align-items-start gap-2">
+                                        <div>
+                                            <span class="text-white-50 small text-uppercase">Tarjeta</span>
+                                            <div class="h6 text-white mb-0">{{ $b->folio_tarjeta ?: 'Sin numero capturado' }}</div>
+                                        </div>
+                                        <span class="badge bg-secondary text-white">{{ $b->curp }}</span>
+                                    </div>
                                     <div class="fw-semibold">{{ $b->nombre }} {{ $b->apellido_paterno }} {{ $b->apellido_materno }}</div>
-                                    <div class="text-muted small">{{ $b->curp }}</div>
                                 </div>
-                                <div class="d-flex flex-column align-items-end gap-1">
-                                    <span class="badge text-bg-light border">Tarjeta: {{ $b->folio_tarjeta ?: 'Sin captura' }}</span>
-                                    <span class="badge {{ $b->api_tj_sync_status === 'pending_sync' ? 'text-bg-primary' : ($b->api_tj_sync_status === 'synced' ? 'text-bg-success' : ($b->api_tj_sync_status === 'sync_failed' ? 'text-bg-danger' : 'text-bg-warning')) }}">
-                                        API_TJ: {{ $b->api_tj_sync_status ?: 'sin_estado' }}
-                                    </span>
+                                <div class="small text-white-50 d-flex flex-column gap-1">
+                                    <div><i class="bi bi-geo-alt me-1"></i>{{ optional($b->municipio)->nombre ?? 'Sin municipio' }}</div>
+                                    <div><i class="bi bi-diagram-3 me-1"></i>Seccional {{ optional($b->seccion)->seccional ?? 'N/D' }}</div>
+                                    <div><i class="bi bi-person-badge me-1"></i>{{ optional($b->creador)->name ?? 'Sin capturista' }}</div>
                                 </div>
-                            </div>
-                            <div class="row g-2 small text-muted">
-                                <div class="col-sm-6"><i class="bi bi-geo-alt me-1"></i>{{ optional($b->municipio)->nombre ?? 'Sin municipio' }}</div>
-                                <div class="col-sm-6"><i class="bi bi-diagram-3 me-1"></i>Seccional {{ optional($b->seccion)->seccional ?? 'N/D' }}</div>
-                                <div class="col-sm-6"><i class="bi bi-telephone me-1"></i>{{ $b->telefono ?: 'Sin telefono' }}</div>
-                                <div class="col-sm-6"><i class="bi bi-person-badge me-1"></i>{{ optional($b->creador)->name ?? 'Integracion API_TJ' }}</div>
-                                <div class="col-sm-6"><i class="bi bi-envelope me-1"></i>{{ $b->email ?: 'Sin email' }}</div>
-                                <div class="col-sm-6"><i class="bi bi-check2-square me-1"></i>{{ $b->api_tj_last_synced_at ? 'Ultimo sync '.optional($b->api_tj_last_synced_at)->format('Y-m-d H:i') : 'Sin sync exitoso' }}</div>
-                            </div>
-                            <div class="mt-auto d-flex flex-wrap gap-2">
-                                <a class="btn btn-outline-primary btn-sm" href="{{ route('beneficiarios.edit', $b) }}">
-                                    <i class="bi bi-pencil-square me-1"></i>Editar
-                                </a>
-                                @if(auth()->user()?->hasRole('admin'))
-                                    <form action="{{ route('beneficiarios.destroy', $b) }}" method="POST" class="m-0" onsubmit="return confirm('Eliminar beneficiario?');">
+                                <div class="mt-auto d-flex flex-column gap-2">
+                                    <a class="btn btn-outline-secondary btn-sm w-100" href="{{ route('beneficiarios.edit', $b) }}">
+                                        <i class="bi bi-pencil-square me-1"></i>Editar
+                                    </a>
+                                    <form action="{{ route('beneficiarios.destroy', $b) }}" method="POST" class="m-0" onsubmit="return confirm('¿Eliminar beneficiario?');">
                                         @csrf
                                         @method('DELETE')
-                                        <button type="submit" class="btn btn-outline-danger btn-sm">
+                                        <button type="submit" class="btn btn-outline-danger btn-sm w-100">
                                             <i class="bi bi-trash me-1"></i>Eliminar
                                         </button>
                                     </form>
-                                @endif
+                                </div>
                             </div>
                         </div>
                     </div>
                 @empty
                     <div class="col-12">
-                        <div class="text-center text-muted py-4">No hay beneficiarios que coincidan con la busqueda actual.</div>
+                        <div class="text-center text-muted py-4">Sin registros</div>
                     </div>
                 @endforelse
             </div>

@@ -20,11 +20,7 @@ class DatabaseSeeder extends Seeder
             EventoTipoSeeder::class,
         ];
 
-        // Demo data must be opt-in because local environments may still target shared databases.
-        $shouldSeedDemoData = app()->environment('local')
-            && filter_var(env('SEED_DEMO_DATA', false), FILTER_VALIDATE_BOOL);
-
-        if ($shouldSeedDemoData) {
+        if (app()->environment('local')) {
             $seeders[] = DemoDataSeeder::class;
         }
 

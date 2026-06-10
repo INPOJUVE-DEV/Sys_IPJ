@@ -5,9 +5,7 @@ namespace App\Providers;
 use App\Models\ComponentCatalog;
 use App\Models\Evento;
 use App\Models\Page;
-use App\Models\Beneficiario;
 use App\Models\Theme;
-use App\Observers\BeneficiarioObserver;
 use App\Policies\ComponentCatalogPolicy;
 use App\Policies\EventoPolicy;
 use App\Policies\PagePolicy;
@@ -42,6 +40,5 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(ComponentCatalog::class, ComponentCatalogPolicy::class);
         Gate::policy(Theme::class, ThemePolicy::class);
         Gate::policy(Evento::class, EventoPolicy::class);
-        Beneficiario::observe(BeneficiarioObserver::class);
     }
 }
