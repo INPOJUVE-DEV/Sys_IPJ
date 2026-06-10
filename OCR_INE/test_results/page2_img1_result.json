@@ -1,0 +1,86 @@
+{
+  "model_id": "MODEL_UNKNOWN",
+  "beneficiarios": {
+    "nombre": {
+      "value": null,
+      "confidence": 0.0,
+      "requires_review": true
+    },
+    "apellido_paterno": {
+      "value": "QEBERERO",
+      "confidence": 0.787,
+      "requires_review": false
+    },
+    "apellido_materno": {
+      "value": null,
+      "confidence": 0.0,
+      "requires_review": true
+    },
+    "curp": {
+      "value": null,
+      "confidence": 0.0,
+      "requires_review": true
+    },
+    "fecha_nacimiento": {
+      "value": null,
+      "confidence": 0.0,
+      "requires_review": true
+    },
+    "sexo": {
+      "value": null,
+      "confidence": 0.0,
+      "requires_review": true
+    },
+    "id_ine": {
+      "value": null,
+      "confidence": 0.0,
+      "requires_review": true
+    }
+  },
+  "domicilio": {
+    "calle": {
+      "value": "A A",
+      "confidence": 0.705,
+      "requires_review": false
+    },
+    "colonia": {
+      "value": null,
+      "confidence": 0.0,
+      "requires_review": true
+    },
+    "codigo_postal": {
+      "value": null,
+      "confidence": 0.0,
+      "requires_review": true
+    },
+    "seccional": {
+      "value": null,
+      "confidence": 0.0,
+      "requires_review": true
+    }
+  },
+  "quality": {
+    "front": {
+      "blur": 1.0,
+      "glare": 0.213,
+      "exposure": 1.0,
+      "perspective_ok": true,
+      "quality_grade": "good"
+    },
+    "back": {
+      "blur": 1.0,
+      "glare": 0.235,
+      "exposure": 1.0,
+      "perspective_ok": true,
+      "quality_grade": "good"
+    }
+  },
+  "warnings": [
+    "front_high_glare",
+    "back_high_glare",
+    "model_unknown",
+    "id_ine_not_found"
+  ],
+  "processing_ms": 5623,
+  "attempts": 3
+}

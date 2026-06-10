@@ -31,7 +31,6 @@ class InventoryBackfillTarjetas extends Command
         $count = 0;
         Beneficiario::query()
             ->whereNotNull('folio_tarjeta')
-            ->where('folio_tarjeta', 'not like', 'TD-%')
             ->where(function ($query) {
                 $query->whereNull('tarjeta_id')->orWhere('tarjeta_id', '');
             })

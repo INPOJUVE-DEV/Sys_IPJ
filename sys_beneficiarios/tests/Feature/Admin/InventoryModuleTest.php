@@ -287,50 +287,6 @@ class InventoryModuleTest extends TestCase
         ]);
     }
 
-    public function test_backfill_command_ignores_td_folios(): void
-    {
-        $admin = $this->createAdmin();
-        $office = Oficina::where('tipo', Oficina::TIPO_DELEGACION)->orderBy('id')->firstOrFail();
-        $mun = Municipio::create([
-            'clave' => 11,
-            'nombre' => 'Digital',
-            'oficina_id' => $office->id,
-        ]);
-        $seccion = Seccion::create([
-            'seccional' => '0011',
-            'municipio_id' => $mun->id,
-            'distrito_local' => 'DL',
-            'distrito_federal' => 'DF',
-        ]);
-
-        $beneficiario = Beneficiario::create([
-            'id' => (string) Str::uuid(),
-            'folio_tarjeta' => 'TD-00011',
-            'nombre' => 'Digital',
-            'apellido_paterno' => 'Lopez',
-            'apellido_materno' => 'Diaz',
-            'curp' => 'LODD000101MDFLRNA4',
-            'fecha_nacimiento' => '2000-01-01',
-            'edad' => 24,
-            'sexo' => 'F',
-            'discapacidad' => false,
-            'id_ine' => 'INE-DIG',
-            'telefono' => '5511111111',
-            'municipio_id' => $mun->id,
-            'seccion_id' => $seccion->id,
-            'created_by' => $admin->uuid,
-        ]);
-
-        $code = Artisan::call('inventario:backfill-tarjetas');
-
-        $this->assertSame(0, $code);
-        $beneficiario->refresh();
-        $this->assertNull($beneficiario->tarjeta_id);
-        $this->assertDatabaseMissing('tarjetas', [
-            'folio' => 'TD-00011',
-        ]);
-    }
-
     protected function municipioBeneficiario(Oficina $office, User $creator, int $clave): array
     {
         $municipio = Municipio::create([

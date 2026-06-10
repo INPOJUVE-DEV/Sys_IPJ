@@ -1,0 +1,5 @@
+__pycache__/
+*.py[cod]
+
+# Local/experimental image fixtures (do not version large binaries)
+test_images/

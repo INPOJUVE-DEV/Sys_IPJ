@@ -1,0 +1,89 @@
+{
+  "model_id": "MODEL_UNKNOWN",
+  "beneficiarios": {
+    "nombre": {
+      "value": null,
+      "confidence": 0.0,
+      "requires_review": true
+    },
+    "apellido_paterno": {
+      "value": null,
+      "confidence": 0.0,
+      "requires_review": true
+    },
+    "apellido_materno": {
+      "value": null,
+      "confidence": 0.0,
+      "requires_review": true
+    },
+    "curp": {
+      "value": null,
+      "confidence": 0.0,
+      "requires_review": true
+    },
+    "fecha_nacimiento": {
+      "value": null,
+      "confidence": 0.0,
+      "requires_review": true
+    },
+    "sexo": {
+      "value": null,
+      "confidence": 0.0,
+      "requires_review": true
+    },
+    "id_ine": {
+      "value": null,
+      "confidence": 0.0,
+      "requires_review": true
+    }
+  },
+  "domicilio": {
+    "calle": {
+      "value": "SSL",
+      "confidence": 0.64,
+      "requires_review": true
+    },
+    "colonia": {
+      "value": "EN MED",
+      "confidence": 0.64,
+      "requires_review": true
+    },
+    "codigo_postal": {
+      "value": null,
+      "confidence": 0.0,
+      "requires_review": true
+    },
+    "seccional": {
+      "value": null,
+      "confidence": 0.0,
+      "requires_review": true
+    }
+  },
+  "quality": {
+    "front": {
+      "blur": 1.0,
+      "glare": 0.815,
+      "exposure": 0.824,
+      "perspective_ok": false,
+      "quality_grade": "fair"
+    },
+    "back": {
+      "blur": 0.001,
+      "glare": 1.0,
+      "exposure": 0.013,
+      "perspective_ok": false,
+      "quality_grade": "poor"
+    }
+  },
+  "warnings": [
+    "front_high_glare",
+    "back_low_blur",
+    "back_high_glare",
+    "back_bad_exposure",
+    "back_perspective_failed",
+    "model_unknown",
+    "id_ine_not_found"
+  ],
+  "processing_ms": 3642,
+  "attempts": 3
+}
