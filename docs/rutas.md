@@ -1,46 +1,144 @@
 # Rutas principales
 
-Archivo: `sys_beneficiarios/routes/web.php`
+Este documento resume las rutas principales de Sys_IPJ y separa rutas web, rutas API y rutas de integración.
 
-- `/` redirige según rol autenticado (`admin` → `/admin`, `capturista` → `/capturista`). Si no autenticado, muestra login.
-- `/dashboard` (autenticado + verificado): dashboard base
+## Convenciones
 
-## Admin (middleware: `auth`, `role:admin`)
+- Rutas web: definidas en `sys_beneficiarios/routes/web.php`.
+- Rutas API: definidas en `sys_beneficiarios/routes/api.php`.
+- Base path API: `/api/v1`.
+- Las rutas web no deben usarse para integraciones sistema-a-sistema.
 
-- `GET /admin` → vista dashboard admin
-- `GET /admin/kpis` → KPIs JSON
-- `GET /admin/usuarios` → CRUD usuarios
-- `GET /admin/catalogos` → vista importación catálogos
-- `POST /admin/catalogos/import` → ejecutar importación
-- `GET /admin/beneficiarios` → listado
-- `GET /admin/beneficiarios/export` → exportación
-- `GET /admin/beneficiarios/{beneficiario}` → detalle
+## Web
 
-## Encargado 360 (middleware: `auth`, `role:encargado_360`)
+### Entrada principal
 
-- `GET /s360/enc360` → vista dashboard Enc360
-- `GET /s360/enc360/dash` → KPIs JSON
-- `GET /s360/enc360/asignaciones` → vista asignaciones
-- `POST /s360/enc360/assign` y `PUT /s360/enc360/assign/{beneficiario}` → asignar/reasignar
+- `GET /` → redirige según rol autenticado:
+  - `admin` → `/admin`
+  - `capturista` → `/capturista`
+  - usuario no autenticado → login
+- `GET /dashboard` → dashboard base para usuario autenticado y verificado.
 
-## Capturista (middleware: `auth`, `role:capturista`)
+## Admin
 
-- `GET /capturista` → panel
-- `GET /capturista/kpis` → KPIs personales JSON
-- `GET /mi-progreso/kpis` → alias compatibilidad
-- `GET /mis-registros` `GET /mis-registros/{id}` `PUT /mis-registros/{id}` → gestionar los propios registros
+Middleware general:
 
-## Recursos (middleware: `auth`, `role:admin|capturista`)
+- `auth`
+- `role:admin`
 
-- `Route::resource('beneficiarios', BeneficiarioController)` (excepto `show`)
-- `Route::resource('domicilios', DomicilioController)` (excepto `show`)
+Rutas principales:
 
-## Perfil (middleware: `auth`)
+- `GET /admin` → panel administrativo.
+- `GET /admin/kpis` → KPIs JSON.
+- `GET /admin/usuarios` → CRUD de usuarios.
+- `GET /admin/catalogos` → vista de importación de catálogos.
+- `POST /admin/catalogos/import` → ejecutar importación de catálogos.
+- `GET /admin/beneficiarios` → listado administrativo de beneficiarios.
+- `GET /admin/beneficiarios/export` → exportación de beneficiarios.
+- `GET /admin/beneficiarios/{beneficiario}` → detalle administrativo.
 
-- `GET /profile` `PATCH /profile` `DELETE /profile`
+## Encargado 360
 
-## API pública
+Middleware general:
 
-Archivo: `sys_beneficiarios/routes/api.php`
+- `auth`
+- `role:encargado_360`
 
-- `GET /api/secciones/{seccional}` (throttle `30,1`) → datos de seccional
+Rutas principales:
+
+- `GET /s360/enc360` → panel Encargado 360.
+- `GET /s360/enc360/dash` → KPIs JSON.
+- `GET /s360/enc360/asignaciones` → vista de asignaciones.
+- `POST /s360/enc360/assign` → asignar beneficiario.
+- `PUT /s360/enc360/assign/{beneficiario}` → reasignar beneficiario.
+
+## Capturista
+
+Middleware general:
+
+- `auth`
+- `role:capturista`
+
+Rutas principales:
+
+- `GET /capturista` → panel capturista.
+- `GET /capturista/kpis` → KPIs personales JSON.
+- `GET /mi-progreso/kpis` → alias de compatibilidad.
+- `GET /mis-registros` → listado de registros propios.
+- `GET /mis-registros/{id}` → detalle de registro propio.
+- `PUT /mis-registros/{id}` → actualización de registro propio.
+
+## Recursos compartidos
+
+Middleware general:
+
+- `auth`
+- `role:admin|capturista`
+
+Recursos:
+
+- `Route::resource('beneficiarios', BeneficiarioController)` excepto `show`.
+- `Route::resource('domicilios', DomicilioController)` excepto `show`.
+
+## Perfil
+
+Middleware:
+
+- `auth`
+
+Rutas:
+
+- `GET /profile`
+- `PATCH /profile`
+- `DELETE /profile`
+
+## API pública y autenticada
+
+Archivo:
+
+```txt
+sys_beneficiarios/routes/api.php
+```
+
+Base path:
+
+```txt
+/api/v1
+```
+
+Rutas actuales:
+
+- `GET /api/v1/health` → salud básica del API.
+- `GET /api/v1/pages/{slug}` → página pública publicada.
+- `GET /api/v1/components/registry` → catálogo público de componentes.
+- `GET /api/v1/themes/current` → tema público vigente.
+- `POST /api/v1/auth/login` → login API.
+- `POST /api/v1/auth/logout` → logout API con `auth:sanctum`.
+- `GET /api/v1/secciones/{seccional}` → datos de seccional con `throttle:30,1`.
+- `POST /api/v1/beneficiarios/cache` → legacy/en revisión; no usar para nueva sincronización entre sistemas.
+- `POST /api/v1/ocr/ine/extract` → OCR INE autenticado.
+
+Más detalle en:
+
+```txt
+docs/api.md
+```
+
+## Integraciones sistema-a-sistema
+
+Las integraciones no deben usar rutas web ni formularios internos.
+
+Cualquier integración nueva debe cumplir:
+
+- contrato API documentado;
+- autenticación sistema-a-sistema;
+- auditoría;
+- rate limit;
+- tablas separadas para staging, outbox o bitácora;
+- no modificar la tabla `beneficiarios` ni el modelo core `Beneficiario`.
+
+## Restricción sobre beneficiarios
+
+La tabla `beneficiarios` es columna principal del proyecto. No debe alterarse para agregar campos de sincronización, origen externo, hash de CURP, estados API_TJ o metadatos de integración.
+
+Si se necesita registrar estado de una integración, debe hacerse en tablas separadas referenciando al beneficiario por ID cuando sea necesario.
