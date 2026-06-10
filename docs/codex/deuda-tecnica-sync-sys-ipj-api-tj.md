@@ -1,59 +1,64 @@
 # Deuda Tecnica Sync Sys_IPJ API_TJ
 
-Registro de deuda tecnica detectada al comparar `docs/codex/implementacion-sync-sys-ipj-api-tj.md` contra el estado actual del repo.
+Registro de deuda tecnica y desalineaciones detectadas en la rama `main`.
 
-## Como usar este documento
+## Estados permitidos
 
-- Cada item debe mantenerse con estado `Abierta`, `En curso`, `Mitigada` o `Cerrada`.
-- La deuda tecnica aqui listada no sustituye el roadmap; sirve para no perder de vista riesgos estructurales mientras se implementa el MVP.
-- Cuando una deuda se atienda dentro de una fase del roadmap, enlazar el PR o commit en la columna de seguimiento.
+- `Abierta`
+- `En curso`
+- `Mitigada`
+- `Cerrada`
 
 ## Registro
 
-| ID | Area | Hallazgo actual | Impacto | Tratamiento recomendado | Momento sugerido | Estado | Seguimiento |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| DT-01 | Dominio beneficiarios | La logica de alta y guardado de domicilio ya esta duplicada entre `BeneficiarioController` e `InscripcionController` | Alta probabilidad de una tercera variante inconsistente al implementar inbound | Extraer `BeneficiarioRegistrationService` y reutilizarlo en web, inscripciones e integracion | Antes de cerrar inbound | Abierta | |
-| DT-02 | Contratos API | `ProblemJsonMiddleware` devuelve RFC 7807 para errores API, mientras el documento de integracion define respuestas JSON de negocio como `accepted`, `status`, `message` | Riesgo de respuestas inconsistentes o de adaptar excepciones de forma ad hoc | Definir una estrategia explicita para endpoints de integracion: responder manualmente o encapsular un responder dedicado | Fase 0 | Abierta | |
-| DT-03 | Seguridad criptografica | El proyecto no tiene aun una abstraccion JWT RS256 ni una politica de rotacion de llaves implementada | Error de seguridad o deuda operativa si se improvisa sobre el endpoint inbound | Crear capa de seguridad separada, soporte `kid` y procedimiento de alta/rotacion de llaves | Fase 2 | Abierta | |
-| DT-04 | Configuracion | `.env.example` no contiene variables de integracion y hoy no existe `config/integrations.php` | Riesgo de configuracion dispersa, onboarding lento y errores por ambiente | Centralizar variables en un archivo de config y documentar defaults seguros | Fase 1 o 2 | Abierta | |
-| DT-05 | Operacion de clientes | No existe comando, seeder o panel para administrar `integration_clients` e `integration_client_keys` | Dependencia manual peligrosa para despliegues y rotacion de llaves | Crear seed inicial y evaluar comando admin para altas/rotaciones | Fase 1 | Abierta | |
-| DT-06 | Observabilidad | Hay `activity_log` del dominio, pero no hay estandar de observabilidad para corridas de integracion, reintentos, request IDs ni alertado | Dificulta soporte, auditoria y diagnostico de fallas | Usar tablas de integracion como fuente principal y agregar logs estructurados con `sync_id` y `external_request_id` | Fase 3 y 4 | Abierta | |
-| DT-07 | Testing | No hay helpers de prueba para JWT firmado, `jti` replay ni corridas con colas | La cobertura puede quedar costosa de mantener y facil de omitir | Crear fixtures/utilidades de testing para tokens, claves y payloads base | Fase 2 antes de ampliar feature tests | Abierta | |
-| DT-08 | Regla de tarjeta valida | `Tarjeta` tiene varios estados (`disponible`, `asignada_oficina`, `asignada_usuario`, `consumida`, `devuelta`, `extraviada`, `bloqueada`) y el documento solo dice "tarjeta relacionada valida" | Ambiguedad funcional en el selector outbound y riesgo de sincronizar tarjetas incorrectas | Cerrar criterio funcional y dejarlo codificado en `CardholderSyncSelector` con tests | Fase 0 | Abierta | |
-| DT-09 | Cifrado de payload inbound | El documento pide `request_payload_encrypted`, pero el repo no tiene hoy una estrategia especifica para cifrado aplicacion-a-tabla fuera de `Crypt` | Riesgo de inconsistencia entre ambientes o imposibilidad de reprocesar/inspeccionar soporte | Elegir mecanismo, documentar formato y validar rotacion/backup de llaves | Fase 0 o 1 | Abierta | |
-| DT-10 | Superficie admin | Existen modulos admin para catalogos, inventario y beneficiarios, pero no hay un patron aun para pantallas de integracion y detalle de corridas | El MVP puede quedar operable solo por base de datos o endpoint sin visibilidad suficiente | Definir una UI minima de corridas y detalle de errores antes del rollout | Fase 5 | Abierta | |
-| DT-11 | Dependencia de usuario tecnico | No hay evidencia en seeders de un usuario tecnico `API_TJ_INTEGRATION_USER_EMAIL` | El endpoint inbound podria fallar en despliegue por prerequisito faltante | Incorporar validacion de health/readiness o seeder explicito para ambientes controlados | Fase 4 y rollout | Abierta | |
-| DT-12 | Reglas de dominio dispersas | La resolucion de seccion y validacion de municipio vive hoy repartida entre controladores, request classes y `SeccionResolver` | Dificulta reutilizacion limpia desde integracion y aumenta la deuda accidental | Reunir reglas en un servicio de aplicacion o helper de dominio con pruebas unitarias | Durante extraccion del servicio de registro | Abierta | |
+| ID | Area | Hallazgo actual | Impacto | Tratamiento recomendado | Momento sugerido | Estado |
+| --- | --- | --- | --- | --- | --- | --- |
+| DT-01 | Dominio beneficiarios | La logica de alta y guardado de domicilio ya esta duplicada entre `BeneficiarioController` e `InscripcionController` | Facilita una tercera variante inconsistente para inbound | Extraer `BeneficiarioRegistrationService` y reutilizarlo | Antes de cerrar Fase 4 | Abierta |
+| DT-02 | Contratos API | `ProblemJsonMiddleware` convive con respuestas JSON de negocio especificas para integracion | Riesgo de contratos inconsistentes | Mantener contrato dedicado para integracion y no depender de RFC 7807 en inbound | Cerrada en Fase 0 | Cerrada |
+| DT-03 | Seguridad criptografica | Existe JWT casero sin modelo formal de clientes, llaves rotables ni `jti` persistido | Riesgo de seguridad y mantenimiento | Reemplazar por capa formal `Integrations\Security\...` | Fase 2 | En curso |
+| DT-04 | Configuracion | Ya existe `config/api_tj.php`, pero no una config general compliant de integraciones | Riesgo de configuracion mezclada entre legado y objetivo | Introducir config de integraciones y separar legado de capa nueva | Fase 1 o 2 | Abierta |
+| DT-05 | Operacion de clientes | No existen tablas ni flujo formal para administrar clientes y llaves de integracion | Operacion manual fragil | Crear `integration_clients` e `integration_client_keys` | Fase 1 | Abierta |
+| DT-06 | Observabilidad | Las tablas actuales no cubren clientes, llaves, replay ni detalle por item | Soporte y auditoria incompletos | Crear auditoria compliant por corrida, item y request inbound | Fase 1, 3 y 4 | Abierta |
+| DT-07 | Testing | Las pruebas actuales caracterizan el legado, no el contrato objetivo | Puede ocultar regresiones del diseno nuevo | Agregar suite nueva y conservar la legacy temporalmente | Fase 2 a 6 | Abierta |
+| DT-08 | Regla de tarjeta valida | El documento base no fijaba que estado de tarjeta es valido para outbound | Ambiguedad funcional | Quedo resuelto en Fase 0: solo `consumida`, luego fallback a `folio_tarjeta` | Cerrada en Fase 0 | Cerrada |
+| DT-09 | Cifrado de payload inbound | No existia estrategia cerrada para `request_payload_encrypted` | Riesgo de solucion improvisada | Quedo resuelto en Fase 0: llave dedicada `INTEGRATION_PAYLOAD_ENCRYPTION_KEY` | Cerrada en Fase 0 | Cerrada |
+| DT-10 | Superficie admin | Ya hay UI legacy API_TJ, pero no una superficie compliant separada | Puede consolidar flujos incorrectos | Crear superficie admin nueva o refactorizada para la capa compliant | Fase 5 | Abierta |
+| DT-11 | Usuario tecnico | No hay evidencia de un seeder formal del usuario tecnico requerido por el documento base | Riesgo de fallas de despliegue | Crear resolver + precondicion operativa y evaluar seeder | Fase 4 | Abierta |
+| DT-12 | Reglas de dominio dispersas | La resolucion de seccion y municipio vive en varios puntos del sistema | Reutilizacion dificil desde integracion | Unificar reglas en servicio de aplicacion | Durante extraccion de servicio de registro | Abierta |
+| DT-13 | Invasion del core | `beneficiarios` ya contiene `source_system`, `source_external_request_id`, `curp_hash`, `status`, `api_tj_sync_*` | Contradiccion directa con el documento base | Dejar de depender de esos campos en trabajo nuevo y planear remediacion | Antes de cerrar Fase 1 | Abierta |
+| DT-14 | Nullable no permitido | `created_by` de `beneficiarios` ya fue hecho nullable en `main` | Rompe una restriccion explicita del diseno objetivo | Recuperar estrategia con usuario tecnico institucional y retirar dependencia del nullable | Antes de cerrar Fase 4 | Abierta |
+| DT-15 | Observer global | Existe `BeneficiarioObserver` con logica de integracion | Acopla el core a un integrador puntual | Removerlo del flujo compliant y mover la logica a servicios explicitos | Antes de cerrar Fase 4 | Abierta |
+| DT-16 | Drift de contrato | Las rutas y scopes actuales no coinciden con el contrato objetivo | Riesgo de consolidar endpoints equivocados | Tratar las rutas actuales como legado y abrir contrato nuevo en `/api/v1/integrations/api-tj/...` | Fase 2 y 4 | Abierta |
+| DT-17 | Logica funcional divergente | El legado actual auto-sincroniza inbound, genera folios digitales y usa payloads distintos al minimo definido | Riesgo de seguir construyendo sobre supuestos no aprobados | Congelar legado y reconstruir compliant con criterios del documento base | Fase 3 y 4 | Abierta |
+| DT-18 | Tarjetas invadidas | `tarjetas` ya recibio campos de integracion como `source_system` e `is_digital` | Segunda invasion del core | Evaluar si sobreviven por negocio propio o salen con la remediacion | Despues de Fase 1, antes de cierre final | Abierta |
 
-## Priorizacion sugerida
+## Priorizacion del MVP
 
-### Debe resolverse dentro del MVP
+Debe resolverse dentro del MVP compliant:
 
 - DT-01
-- DT-02
 - DT-03
 - DT-04
 - DT-05
+- DT-06
 - DT-07
-- DT-08
-- DT-09
 - DT-11
 - DT-12
+- DT-13
+- DT-14
+- DT-15
+- DT-16
+- DT-17
 
-### Puede mitigarse y cerrar despues del MVP si hay evidencia operativa suficiente
+Puede mitigarse y cerrarse despues del MVP si queda evidencia operativa:
 
-- DT-06
 - DT-10
+- DT-18
 
-## Criterios para cerrar un item
+## Notas de cierre de Fase 0
 
-- Debe existir cambio de codigo o documento verificable en el repo.
-- Debe quedar referencia del PR, commit o evidencia de prueba.
-- Si el item no se resuelve por completo, cambiarlo a `Mitigada` y anotar el riesgo remanente.
+Quedaron cubiertas y cerradas en documentacion:
 
-## Riesgos de no dar seguimiento
-
-- Duplicar reglas de captura y crear divergencias entre alta manual e inbound.
-- Abrir una integracion segura en papel pero fragil en operacion real.
-- Tener corridas y requests sin trazabilidad suficiente para soporte.
-- Mezclar deuda estructural con el MVP y perder visibilidad de que quedo pendiente.
+- DT-02
+- DT-08
+- DT-09
