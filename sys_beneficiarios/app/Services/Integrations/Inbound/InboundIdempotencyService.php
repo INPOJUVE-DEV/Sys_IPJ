@@ -43,6 +43,10 @@ class InboundIdempotencyService
             ]);
         }
 
+        if ($request->request_hash !== $requestHash) {
+            throw new InboundRequestConflictException('El external_request_id ya existe con un payload distinto.');
+        }
+
         if (in_array($request->status, [
             IntegrationInboundRequest::STATUS_FAILED,
             IntegrationInboundRequest::STATUS_REJECTED,

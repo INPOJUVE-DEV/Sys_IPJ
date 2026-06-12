@@ -19,7 +19,7 @@ Registro de deuda tecnica y riesgos reales detectados en `main`.
 | DT-04 | Configuracion | Ya existe `config/integrations.php`, pero su uso por ambiente aun debe validarse en despliegues reales | Riesgo de configuracion parcial o inconsistente entre entornos | Validar variables y llaves en cada ambiente al habilitar outbound e inbound | Fase 3 y 4 | Mitigada |
 | DT-05 | Operacion de clientes | Ya existe persistencia base para clientes y llaves, y Fase 3 ya consume firma saliente, pero aun no hay flujo operativo completo de administracion y rotacion | Operacion parcial | Construir administracion y rotacion real sobre la persistencia ya creada | Fase 4 en adelante | Mitigada |
 | DT-06 | Observabilidad | Inbound y outbound ya registran trazabilidad base y ya existen vistas admin de consulta y readiness, pero aun faltan logs estructurados de explotacion y observabilidad de rollout | Observabilidad operativa base cubierta, endurecimiento pendiente | Completar diagnostico operativo y trazas de explotacion al cerrar rollout | Fase 6 | Mitigada |
-| DT-07 | Testing | Ya existen y ya corrieron pruebas focalizadas de persistencia, signer, middleware JWT, outbound e inbound compliant, pero la cobertura sigue parcial para rollout y escenarios E2E | Cobertura parcial del proyecto completo | Ampliar la suite hacia migraciones, rollout y escenarios E2E de integracion | Fase 5 y 6 | Mitigada |
+| DT-07 | Testing | Ya existen y ya corrieron pruebas focalizadas de persistencia, signer, middleware JWT, outbound, inbound y migraciones de integracion, pero la validacion E2E con ambientes reales sigue siendo operativa y no automatizada | Cobertura fuerte para el alcance implementado; cierre operativo pendiente | Ejecutar rollout real con evidencia por ambiente y ampliar solo si aparecen huecos de explotacion | Post implementacion | Mitigada |
 | DT-08 | Regla de tarjeta valida | El documento base no fijaba que estado de tarjeta es valido para outbound | Ambiguedad funcional | Quedo resuelto en Fase 0: solo `consumida`, luego fallback a `folio_tarjeta` | Cerrada en Fase 0 | Cerrada |
 | DT-09 | Cifrado de payload inbound | No existia estrategia cerrada para `request_payload_encrypted` | Riesgo de solucion improvisada | Quedo resuelto en Fase 0: llave dedicada `INTEGRATION_PAYLOAD_ENCRYPTION_KEY` | Cerrada en Fase 0 | Cerrada |
 | DT-10 | Superficie admin | Ya existe una superficie admin para disparar sync, consultar corridas e inspeccionar inbound requests | La operacion base ya tiene punto de control institucional | Mantener la superficie alineada al rollout y a las necesidades reales de operacion | Cerrada en Fase 5 | Cerrada |
@@ -30,7 +30,7 @@ Registro de deuda tecnica y riesgos reales detectados en `main`.
 
 ## Priorizacion vigente
 
-No queda deuda critica abierta que bloquee el arranque de Fase 6.
+No queda deuda critica abierta que bloquee el cierre de implementacion.
 
 Debe seguirse dentro del MVP compliant:
 
@@ -90,3 +90,9 @@ Quedo cerrada la deuda de superficie operativa:
 Quedo reforzada la observabilidad base:
 
 - DT-06
+
+## Notas de cierre de Fase 6
+
+Quedo reforzada la cobertura de pruebas y despliegue documental:
+
+- DT-07

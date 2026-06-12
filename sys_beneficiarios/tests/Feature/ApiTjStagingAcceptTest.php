@@ -54,7 +54,12 @@ class ApiTjStagingAcceptTest extends TestCase
     public function test_request_without_token_is_rejected(): void
     {
         $this->postJson('/api/v1/integrations/api-tj/staging/accept', $this->makePayload())
-            ->assertUnauthorized();
+            ->assertUnauthorized()
+            ->assertJson([
+                'accepted' => false,
+                'status' => 'unauthorized',
+                'message' => 'Token de integracion invalido',
+            ]);
     }
 
     public function test_invalid_payload_returns_validation_error_contract(): void
@@ -71,6 +76,45 @@ class ApiTjStagingAcceptTest extends TestCase
             ->assertJsonPath('accepted', false)
             ->assertJsonPath('status', 'validation_error')
             ->assertJsonPath('external_request_id', 'API-TJ-STG-2001');
+
+        $this->assertDatabaseHas('integration_inbound_requests', [
+            'external_request_id' => 'API-TJ-STG-2001',
+            'status' => IntegrationInboundRequest::STATUS_REJECTED,
+        ]);
+    }
+
+    public function test_same_external_request_id_with_different_payload_returns_conflict_without_overwriting_request(): void
+    {
+        User::factory()->create([
+            'email' => 'integracion.api_tj@inpojuve.local',
+            'name' => 'Integracion API_TJ',
+        ]);
+
+        $firstResponse = $this->authorizedPost();
+        $firstResponse->assertCreated();
+
+        $request = IntegrationInboundRequest::query()
+            ->where('external_request_id', 'API-TJ-STG-2001')
+            ->firstOrFail();
+
+        $originalHash = $request->request_hash;
+        $originalPayload = $request->request_payload_encrypted;
+
+        $secondResponse = $this->authorizedPost([
+            'beneficiario' => [
+                'nombre' => 'OTRA',
+            ],
+        ], (string) Str::uuid());
+
+        $secondResponse->assertStatus(409)
+            ->assertJsonPath('accepted', false)
+            ->assertJsonPath('status', 'conflict');
+
+        $request->refresh();
+
+        $this->assertSame($originalHash, $request->request_hash);
+        $this->assertSame($originalPayload, $request->request_payload_encrypted);
+        $this->assertSame(IntegrationInboundRequest::STATUS_ACCEPTED, $request->status);
     }
 
     public function test_duplicate_curp_returns_conflict_without_creating_beneficiary(): void

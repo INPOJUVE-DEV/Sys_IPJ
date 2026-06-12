@@ -13,14 +13,14 @@ Documento de trabajo para ejecutar `implementacion-sync-sys-ipj-api-tj.md` sobre
 | Seguridad inbound | Ya existe la capa formal en codigo y ya fue validada en runtime: config, servicios JWT, `IntegrationJtiService` y middleware `integration.jwt` | Brecha cerrada para Fase 2 | Queda lista la base para cerrar inbound |
 | Persistencia de integracion | Ya existen tablas `integration_*` y modelos dedicados fuera del core | Brecha cerrada para Fase 1 | Base lista para outbound e inbound |
 | Queue | Ya existe infraestructura de colas por DB | Brecha baja | Sirve para el modo `manual + job queued` |
-| Testing | Ya existen y ya corrieron pruebas focalizadas de persistencia, signer, middleware JWT, outbound e inbound compliant | Cobertura parcial | Falta ampliar la suite hacia rollout y escenarios E2E |
+| Testing | Ya existen y ya corrieron pruebas focalizadas de persistencia, signer, middleware JWT, outbound, inbound y migraciones de integracion | Cobertura robusta para el alcance actual | Queda pendiente solo ejecucion de rollout real por ambiente |
 
 ## 2. Conclusion de arranque
 
 - `main` esta limpio respecto a invasion API_TJ del core.
 - La implementacion puede arrancar desde base limpia alrededor del dominio actual.
 - La persistencia nueva ya existe, la seguridad formal ya quedo cerrada y el outbound base ya esta implementado.
-- El siguiente paso correcto es cerrar Fase 6 sobre una base inbound, outbound y admin ya funcional.
+- El siguiente paso correcto es ejecutar rollout controlado por ambiente usando el checklist ya documentado.
 
 ## 3. Estado de fases
 
@@ -32,7 +32,7 @@ Documento de trabajo para ejecutar `implementacion-sync-sys-ipj-api-tj.md` sobre
 | Fase 3 | Completada | Outbound compliant Sys_IPJ -> API_TJ |
 | Fase 4 | Completada | Inbound compliant API_TJ -> Sys_IPJ |
 | Fase 5 | Completada | Superficie admin y observabilidad |
-| Fase 6 | Pendiente | Pruebas, rollout y cierre |
+| Fase 6 | Completada | Pruebas, rollout y cierre |
 
 ## 4. Fase 0 cerrada
 
@@ -228,25 +228,36 @@ Evidencia:
 
 ## 10. Fase 6. Pruebas y rollout
 
-Estado: `Pendiente`
+Estado: `Completada`
 
 Checklist:
 
 - [x] Unit tests de seguridad y CURP
 - [x] Feature tests inbound compliant
 - [x] Feature tests outbound compliant
-- [ ] Pruebas de migracion
-- [ ] Checklist de rollout
+- [x] Pruebas de migracion
+- [x] Checklist de rollout
+
+Criterio de salida:
+
+- Existen pruebas reproducibles para `migrate:fresh`, rollback de `integration_*` y una guia operativa concreta de rollout sin invadir tablas core.
+
+Evidencia:
+
+- `sys_beneficiarios/tests/Feature/IntegrationMigrationPhaseSixTest.php`
+- `docs/codex/checklist-rollout-sync-sys-ipj-api-tj.md`
+- validacion ejecutada con `docker compose run --rm app php vendor/bin/pest`
 
 ## 11. Orden recomendado
 
-1. Fase 6
+1. Ejecucion de rollout por ambiente
 
 ## 12. Siguiente paso
 
-El siguiente bloque debe atacar Fase 6:
+El trabajo de implementacion queda cubierto.
 
-- endurecer pruebas de migracion y checklist de rollout;
-- apoyarse en la persistencia, seguridad, flujos inbound/outbound y superficie admin ya cubiertos;
-- seguir sin tocar tablas core;
-- mantener `Beneficiario` sin metadatos de integracion.
+Lo siguiente ya es operativo:
+
+- ejecutar rollout por ambiente con `docs/codex/checklist-rollout-sync-sys-ipj-api-tj.md`;
+- validar llaves, cliente activo, usuario tecnico y conectividad real con API_TJ;
+- observar primeras corridas outbound e inbound en la superficie admin.

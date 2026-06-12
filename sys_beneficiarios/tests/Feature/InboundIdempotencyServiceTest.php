@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Integrations\IntegrationInboundRequest;
 use App\Services\Integrations\Inbound\InboundIdempotencyService;
+use App\Services\Integrations\Inbound\InboundRequestConflictException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
@@ -70,5 +71,39 @@ class InboundIdempotencyServiceTest extends TestCase
         $this->assertSame(IntegrationInboundRequest::STATUS_RECEIVED, $reloaded->status);
         $this->assertNull($reloaded->response_code);
         $this->assertNull($reloaded->error_message);
+    }
+
+    public function test_it_rejects_same_external_request_id_with_different_payload_hash(): void
+    {
+        $request = DB::transaction(fn () => app(InboundIdempotencyService::class)->resolveOrCreate(
+            'api_tj',
+            'API-TJ-STG-1003',
+            [
+                'external_request_id' => 'API-TJ-STG-1003',
+                'source' => 'api_tj',
+                'beneficiario' => ['curp' => 'TEST000101HMNRRS03'],
+            ],
+        ));
+
+        $originalHash = $request->request_hash;
+
+        $this->expectException(InboundRequestConflictException::class);
+        $this->expectExceptionMessage('payload distinto');
+
+        try {
+            DB::transaction(fn () => app(InboundIdempotencyService::class)->resolveOrCreate(
+                'api_tj',
+                'API-TJ-STG-1003',
+                [
+                    'external_request_id' => 'API-TJ-STG-1003',
+                    'source' => 'api_tj',
+                    'beneficiario' => ['curp' => 'TEST000101HMNRRS99'],
+                ],
+            ));
+        } finally {
+            $request->refresh();
+            $this->assertSame($originalHash, $request->request_hash);
+            $this->assertSame(IntegrationInboundRequest::STATUS_RECEIVED, $request->status);
+        }
     }
 }

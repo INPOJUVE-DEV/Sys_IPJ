@@ -78,7 +78,12 @@ class IntegrationJwtMiddlewareTest extends TestCase
 
         $this->withHeader('Authorization', 'Bearer '.$token)
             ->getJson('/_test/integration-jwt')
-            ->assertUnauthorized();
+            ->assertUnauthorized()
+            ->assertJson([
+                'accepted' => false,
+                'status' => 'unauthorized',
+                'message' => 'Token de integracion invalido',
+            ]);
     }
 
     public function test_missing_scope_is_rejected(): void
@@ -95,7 +100,26 @@ class IntegrationJwtMiddlewareTest extends TestCase
             'exp' => now()->addMinutes(5)->timestamp,
         ]))->getJson('/_test/integration-jwt');
 
-        $response->assertForbidden();
+        $response->assertForbidden()
+            ->assertJson([
+                'accepted' => false,
+                'status' => 'forbidden',
+                'message' => 'Permisos insuficientes',
+            ]);
+    }
+
+    public function test_malformed_token_returns_expected_integration_json(): void
+    {
+        $this->seedClient();
+
+        $this->withHeader('Authorization', 'Bearer malformed.token')
+            ->getJson('/_test/integration-jwt')
+            ->assertUnauthorized()
+            ->assertJson([
+                'accepted' => false,
+                'status' => 'unauthorized',
+                'message' => 'Token de integracion invalido',
+            ]);
     }
 
     private function seedClient(): void

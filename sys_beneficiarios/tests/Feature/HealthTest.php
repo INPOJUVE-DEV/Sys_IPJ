@@ -1,12 +1,11 @@
 <?php
 
 use Tests\TestCase;
-use function Pest\Laravel\get;
 
 uses(TestCase::class);
 
 it('returns health ok', function () {
-    $response = get('/api/v1/health');
+    $response = $this->get('/api/v1/health');
 
     $response->assertOk()
         ->assertJson(['status' => 'ok'])
@@ -14,7 +13,7 @@ it('returns health ok', function () {
 
     $etag = $response->headers->get('ETag');
 
-    $cached = get('/api/v1/health', [
+    $cached = $this->get('/api/v1/health', [
         'If-None-Match' => $etag,
     ]);
 

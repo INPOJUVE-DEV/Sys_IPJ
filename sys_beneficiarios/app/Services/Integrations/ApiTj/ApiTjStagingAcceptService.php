@@ -6,6 +6,7 @@ use App\Models\Beneficiario;
 use App\Models\Integrations\IntegrationInboundRequest;
 use App\Services\Beneficiarios\BeneficiarioRegistrationService;
 use App\Services\Integrations\Inbound\InboundIdempotencyService;
+use App\Services\Integrations\Inbound\InboundRequestConflictException;
 use App\Services\Integrations\Security\IntegrationAuthContext;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -36,6 +37,10 @@ class ApiTjStagingAcceptService
         try {
             $validatedPayload = $this->payloadValidator->validate($payload);
         } catch (ValidationException $exception) {
+            if ($externalRequestId !== '') {
+                return $this->rejectForValidation($auth->issuer, $externalRequestId, $payload, $exception);
+            }
+
             return ApiTjStagingAcceptResult::validationError($externalRequestId, $exception->errors());
         }
 
@@ -87,6 +92,8 @@ class ApiTjStagingAcceptService
 
                 return $result;
             });
+        } catch (InboundRequestConflictException $exception) {
+            return ApiTjStagingAcceptResult::conflict($externalRequestId, $exception->getMessage());
         } catch (ValidationException $exception) {
             return $this->rejectForValidation($auth->issuer, $externalRequestId, $validatedPayload, $exception);
         } catch (RuntimeException $exception) {
@@ -127,16 +134,20 @@ class ApiTjStagingAcceptService
     ): ApiTjStagingAcceptResult {
         $result = ApiTjStagingAcceptResult::validationError($externalRequestId, $exception->errors());
 
-        $this->updateRequestSafely(function () use ($sourceSystem, $externalRequestId, $payload, $result) {
-            $request = $this->idempotencyService->resolveOrCreate($sourceSystem, $externalRequestId, $payload, self::OPERATION);
+        try {
+            $this->updateRequestSafely(function () use ($sourceSystem, $externalRequestId, $payload, $result) {
+                $request = $this->idempotencyService->resolveOrCreate($sourceSystem, $externalRequestId, $payload, self::OPERATION);
 
-            $this->idempotencyService->markRejected(
-                $request,
-                $result->statusCode,
-                $result->body,
-                'Validation failed.',
-            );
-        });
+                $this->idempotencyService->markRejected(
+                    $request,
+                    $result->statusCode,
+                    $result->body,
+                    'Validation failed.',
+                );
+            });
+        } catch (InboundRequestConflictException $exception) {
+            return ApiTjStagingAcceptResult::conflict($externalRequestId, $exception->getMessage());
+        }
 
         return $result;
     }
@@ -152,16 +163,20 @@ class ApiTjStagingAcceptService
     ): ApiTjStagingAcceptResult {
         $result = ApiTjStagingAcceptResult::serverError($externalRequestId, $message);
 
-        $this->updateRequestSafely(function () use ($sourceSystem, $externalRequestId, $payload, $result, $message) {
-            $request = $this->idempotencyService->resolveOrCreate($sourceSystem, $externalRequestId, $payload, self::OPERATION);
+        try {
+            $this->updateRequestSafely(function () use ($sourceSystem, $externalRequestId, $payload, $result, $message) {
+                $request = $this->idempotencyService->resolveOrCreate($sourceSystem, $externalRequestId, $payload, self::OPERATION);
 
-            $this->idempotencyService->markFailed(
-                $request,
-                $result->statusCode,
-                $result->body,
-                $message,
-            );
-        });
+                $this->idempotencyService->markFailed(
+                    $request,
+                    $result->statusCode,
+                    $result->body,
+                    $message,
+                );
+            });
+        } catch (InboundRequestConflictException $exception) {
+            return ApiTjStagingAcceptResult::conflict($externalRequestId, $exception->getMessage());
+        }
 
         return $result;
     }
@@ -170,6 +185,8 @@ class ApiTjStagingAcceptService
     {
         try {
             DB::transaction($callback);
+        } catch (InboundRequestConflictException $exception) {
+            throw $exception;
         } catch (Throwable $exception) {
             report($exception);
         }
