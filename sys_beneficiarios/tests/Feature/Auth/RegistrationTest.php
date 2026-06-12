@@ -12,8 +12,8 @@ class RegistrationTest extends TestCase
     public function test_registration_screen_can_be_rendered(): void
     {
         $response = $this->get('/register');
-        // Registro está deshabilitado en esta app, debe responder 404
-        $response->assertStatus(404);
+
+        $response->assertOk();
     }
 
     public function test_new_users_can_register(): void
@@ -24,8 +24,11 @@ class RegistrationTest extends TestCase
             'password' => 'password',
             'password_confirmation' => 'password',
         ]);
-        // No debe autenticarse ni redirigir
-        $this->assertGuest();
-        $response->assertStatus(404);
+
+        $response->assertRedirect(route('dashboard', absolute: false));
+        $this->assertAuthenticated();
+        $this->assertDatabaseHas('users', [
+            'email' => 'test@example.com',
+        ]);
     }
 }

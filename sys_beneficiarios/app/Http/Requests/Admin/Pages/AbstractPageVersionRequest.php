@@ -37,7 +37,7 @@ abstract class AbstractPageVersionRequest extends FormRequest
     protected function withValidator($validator): void
     {
         $validator->after(function ($validator) {
-            if ($validator->fails()) {
+            if ($validator->errors()->isNotEmpty()) {
                 return;
             }
 
@@ -56,4 +56,3 @@ abstract class AbstractPageVersionRequest extends FormRequest
         });
     }
 }
-

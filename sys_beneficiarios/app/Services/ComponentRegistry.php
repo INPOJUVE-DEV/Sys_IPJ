@@ -52,18 +52,18 @@ class ComponentRegistry
 
             $type = $block['type'] ?? null;
             if (! is_string($type) || $type === '') {
-                $errors["$path.type"][] = 'El componente requiere un identificador "type" válido.';
+                $errors["$path.type"][] = 'El componente requiere un identificador "type" valido.';
                 continue;
             }
 
             $component = $components->get($type);
             if (! $component) {
-                $errors["$path.type"][] = "El componente '$type' no existe en el catálogo.";
+                $errors["$path.type"][] = "El componente '$type' no existe en el catalogo.";
                 continue;
             }
 
             if (! $component->enabled) {
-                $errors["$path.type"][] = "El componente '$type' está deshabilitado.";
+                $errors["$path.type"][] = "El componente '$type' esta deshabilitado.";
             }
 
             $schema = $component->schema ?? [];
@@ -137,7 +137,7 @@ class ComponentRegistry
                 break;
             case 'number':
                 if (! is_numeric($value)) {
-                    $errors[$path][] = 'Debe ser un número.';
+                    $errors[$path][] = 'Debe ser un numero.';
                     return;
                 }
 
@@ -149,7 +149,6 @@ class ComponentRegistry
                 }
                 break;
             default:
-                // tipos no soportados se ignoran por ahora
                 break;
         }
     }
@@ -190,7 +189,7 @@ class ComponentRegistry
         }
 
         if ($max !== null && count($value) > $max) {
-            $errors[$path][] = "Debe contener máximo $max elementos.";
+            $errors[$path][] = "Debe contener maximo $max elementos.";
         }
 
         $itemsSchema = $schema['items'] ?? null;
@@ -211,11 +210,11 @@ class ComponentRegistry
         }
 
         if ($max !== null && mb_strlen($value) > $max) {
-            $errors[$path][] = "Debe contener máximo $max caracteres.";
+            $errors[$path][] = "Debe contener maximo $max caracteres.";
         }
 
         if (($schema['format'] ?? null) === 'url' && filter_var($value, FILTER_VALIDATE_URL) === false) {
-            $errors[$path][] = 'Debe ser una URL válida.';
+            $errors[$path][] = 'Debe ser una URL valida.';
         }
 
         if (isset($schema['enum']) && ! in_array($value, $schema['enum'], true)) {

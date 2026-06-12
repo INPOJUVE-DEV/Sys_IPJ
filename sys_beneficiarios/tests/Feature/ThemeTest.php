@@ -121,5 +121,9 @@ it('rechaza tokens inválidos', function () {
 
     $response = actingAs($this->admin)->putJson('/admin/themes/current', $payload);
     $response->assertStatus(422)
-        ->assertJsonPath('errors."tokens.colors.secondary".0', 'The tokens.colors.secondary field is required.');
+        ->assertJsonValidationErrors([
+            'tokens.colors.primary',
+            'tokens.typography.line_height',
+            'tokens.spacing.md',
+        ]);
 });

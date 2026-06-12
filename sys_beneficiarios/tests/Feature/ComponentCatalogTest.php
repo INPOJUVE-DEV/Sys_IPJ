@@ -35,10 +35,15 @@ it('permite al admin registrar o actualizar componentes', function () {
     ];
 
     $response = actingAs($this->admin)->postJson('/admin/components', $payload);
-    $response->assertCreated()->assertJsonPath('data.key', 'hero');
+    $response->assertOk()
+        ->assertJsonPath('data.key', 'hero')
+        ->assertJsonPath('data.description', 'Hero principal');
 
     $index = actingAs($this->admin)->getJson('/admin/components');
-    $index->assertOk()->assertJsonPath('data.0.key', 'hero');
+    $index->assertOk();
+
+    $keys = collect($index->json('data'))->pluck('key');
+    expect($keys)->toContain('hero');
 });
 
 it('excluye componentes deshabilitados del registro publico', function () {

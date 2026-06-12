@@ -64,7 +64,7 @@ class OcrIneExtractTest extends TestCase
 
     public function test_requires_authentication(): void
     {
-        $response = $this->postJson('/api/ocr/ine/extract');
+        $response = $this->postJson('/api/v1/ocr/ine/extract');
         $response->assertStatus(401);
     }
 
@@ -75,13 +75,13 @@ class OcrIneExtractTest extends TestCase
 
         // No images
         $this->actingAs($user)
-            ->postJson('/api/ocr/ine/extract')
+            ->postJson('/api/v1/ocr/ine/extract')
             ->assertStatus(422)
             ->assertJsonValidationErrors(['front_image', 'back_image']);
 
         // Only front
         $this->actingAs($user)
-            ->postJson('/api/ocr/ine/extract', [
+            ->postJson('/api/v1/ocr/ine/extract', [
                 'front_image' => $this->fakeJpeg('front.jpg'),
             ])
             ->assertStatus(422)
@@ -89,7 +89,7 @@ class OcrIneExtractTest extends TestCase
 
         // Only back
         $this->actingAs($user)
-            ->postJson('/api/ocr/ine/extract', [
+            ->postJson('/api/v1/ocr/ine/extract', [
                 'back_image' => $this->fakeJpeg('back.jpg'),
             ])
             ->assertStatus(422)
@@ -102,7 +102,7 @@ class OcrIneExtractTest extends TestCase
         $user->assignRole('capturista');
 
         $this->actingAs($user)
-            ->postJson('/api/ocr/ine/extract', [
+            ->postJson('/api/v1/ocr/ine/extract', [
                 'front_image' => UploadedFile::fake()->create('doc.pdf', 100, 'application/pdf'),
                 'back_image' => $this->fakeJpeg('back.jpg'),
             ])
@@ -116,7 +116,7 @@ class OcrIneExtractTest extends TestCase
         $user->assignRole('capturista');
 
         $this->actingAs($user)
-            ->postJson('/api/ocr/ine/extract', [
+            ->postJson('/api/v1/ocr/ine/extract', [
                 'front_image' => $this->fakeJpeg('front.jpg', 6000),
                 'back_image' => $this->fakeJpeg('back.jpg'),
             ])
@@ -134,7 +134,7 @@ class OcrIneExtractTest extends TestCase
         $user->assignRole('capturista');
 
         $response = $this->actingAs($user)
-            ->postJson('/api/ocr/ine/extract', [
+            ->postJson('/api/v1/ocr/ine/extract', [
                 'front_image' => $this->fakeJpeg('front.jpg'),
                 'back_image' => $this->fakeJpeg('back.jpg'),
             ]);
@@ -163,7 +163,7 @@ class OcrIneExtractTest extends TestCase
         $user->assignRole('capturista');
 
         $response = $this->actingAs($user)
-            ->postJson('/api/ocr/ine/extract', [
+            ->postJson('/api/v1/ocr/ine/extract', [
                 'front_image' => $this->fakeJpeg('front.jpg'),
                 'back_image' => $this->fakeJpeg('back.jpg'),
             ]);
@@ -188,7 +188,7 @@ class OcrIneExtractTest extends TestCase
         $user->assignRole('capturista');
 
         $response = $this->actingAs($user)
-            ->postJson('/api/ocr/ine/extract', [
+            ->postJson('/api/v1/ocr/ine/extract', [
                 'front_image' => $this->fakeJpeg('front.jpg'),
                 'back_image' => $this->fakeJpeg('back.jpg'),
             ]);
@@ -197,4 +197,3 @@ class OcrIneExtractTest extends TestCase
             ->assertJsonPath('error_code', 'IMAGE_DECODE_FAILED');
     }
 }
-

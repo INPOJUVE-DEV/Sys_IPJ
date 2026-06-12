@@ -23,7 +23,10 @@ return new class extends Migration
             $table->timestamp('processed_at')->nullable();
             $table->timestamps();
 
-            $table->unique(['source_system', 'external_request_id']);
+            $table->unique(
+                ['source_system', 'external_request_id'],
+                'int_inbound_req_source_ext_unique'
+            );
         });
     }
 

@@ -4,7 +4,19 @@ services:
       context: ./sys_beneficiarios
       dockerfile: Dockerfile
     container_name: sys_beneficiarios_app
+    depends_on:
+      mysql:
+        condition: service_healthy
     environment:
+      DB_CONNECTION: mysql
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_DATABASE: sys_beneficiarios_local
+      DB_USERNAME: sys_ipj
+      DB_PASSWORD: sys_ipj
+      SESSION_DRIVER: file
+      CACHE_STORE: file
+      QUEUE_CONNECTION: sync
       OCR_INE_SERVICE_URL: http://ocr-ine:8001
       OCR_INE_API_KEY: ${OCR_INE_API_KEY:-change-me-in-production}
     volumes:
@@ -12,6 +24,26 @@ services:
       # Isolar dirs de escritura a volúmenes nombrados
       - storage_data:/var/www/html/storage
       - cache_data:/var/www/html/bootstrap/cache
+    restart: unless-stopped
+    networks:
+      - backend
+
+  mysql:
+    image: mysql:8.4
+    container_name: sys_beneficiarios_mysql
+    environment:
+      MYSQL_DATABASE: sys_beneficiarios_local
+      MYSQL_USER: sys_ipj
+      MYSQL_PASSWORD: sys_ipj
+      MYSQL_ROOT_PASSWORD: root
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 20s
+    volumes:
+      - mysql_data:/var/lib/mysql
     restart: unless-stopped
     networks:
       - backend
@@ -60,6 +92,7 @@ services:
 volumes:
   storage_data:
   cache_data:
+  mysql_data:
   node_modules:
 
 networks:

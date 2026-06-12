@@ -17,14 +17,14 @@ cp .env.example .env
 Revisa en `.env` (valores por defecto para Docker):
 - `APP_URL=http://localhost`
 - `DB_CONNECTION=mysql`
-- `DB_HOST=0.0.0.0`
+- `DB_HOST=mysql`
 - `DB_PORT=3306`
-- `DB_DATABASE=sys_beneficiarios`
-- `DB_USERNAME=app`
-- `DB_PASSWORD=TuClaveSegura123!`
+- `DB_DATABASE=sys_beneficiarios_local`
+- `DB_USERNAME=sys_ipj`
+- `DB_PASSWORD=sys_ipj`
 - `OCR_INE_SERVICE_URL=http://localhost:8001` (si ejecutas Laravel fuera de Docker)
 - `OCR_INE_API_KEY=` (opcional en local; recomendado definir en ambientes compartidos)
-> La base de datos corre fuera de Docker; actualiza estos valores con el host externo que recibas.
+> `docker compose` ya levanta un MySQL local para desarrollo y pruebas.
 
 2) Levanta contenedores desde la raíz del repo:
 

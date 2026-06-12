@@ -4,7 +4,6 @@ namespace App\Http\Requests\Admin\Themes;
 
 use App\Models\Theme;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 
 class UpdateThemeRequest extends FormRequest
 {
@@ -51,8 +50,8 @@ class UpdateThemeRequest extends FormRequest
         ];
     }
 
-    protected function hexColor(): Rule
+    protected function hexColor(): string
     {
-        return Rule::regex('/^#(?:[0-9a-fA-F]{3}){1,2}$/');
+        return 'regex:/^#(?:[0-9a-fA-F]{3}){1,2}$/';
     }
 }
