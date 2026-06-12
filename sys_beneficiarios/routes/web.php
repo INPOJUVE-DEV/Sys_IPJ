@@ -1,6 +1,9 @@
 <?php
 
 use App\Http\Controllers\Admin\BeneficiariosController as AdminBeneficiariosController;
+use App\Http\Controllers\Admin\ApiTjCardholderSyncController;
+use App\Http\Controllers\Admin\ApiTjInboundRequestController;
+use App\Http\Controllers\Admin\ApiTjSyncRunController;
 use App\Http\Controllers\Admin\CatalogosController;
 use App\Http\Controllers\Admin\ComponentCatalogController;
 use App\Http\Controllers\Admin\EventoTipoController as AdminEventoTipoController;
@@ -183,6 +186,13 @@ Route::middleware(['auth','role:admin'])->prefix('admin')->name('admin.')->group
     // Export antes de parámetro para no capturar "export" como {beneficiario}
     Route::get('beneficiarios/export', [AdminBeneficiariosController::class, 'export'])->name('beneficiarios.export');
     Route::get('beneficiarios/{beneficiario}', [AdminBeneficiariosController::class, 'show'])->name('beneficiarios.show');
+    Route::prefix('integraciones/api-tj')->name('integraciones.api_tj.')->group(function () {
+        Route::post('cardholders/sync', [ApiTjCardholderSyncController::class, 'store'])->name('cardholders.sync');
+        Route::get('sync-runs', [ApiTjSyncRunController::class, 'index'])->name('sync-runs.index');
+        Route::get('sync-runs/{run}', [ApiTjSyncRunController::class, 'show'])->name('sync-runs.show');
+        Route::get('inbound-requests', [ApiTjInboundRequestController::class, 'index'])->name('inbound-requests.index');
+        Route::get('inbound-requests/{inboundRequest}', [ApiTjInboundRequestController::class, 'show'])->name('inbound-requests.show');
+    });
 });
 
-require __DIR__.'/auth.php';
+require __DIR__.'/auth.php';

@@ -35,13 +35,14 @@ echo "readable=".(is_readable($ca)?"1":"0")."\n";
 echo "size=".(file_exists($ca)?filesize($ca):0)."\n";
 '
 
-# No intentes cache:clear si CACHE_STORE usa DB (requiere conexion)
+# No intentes cache:clear por defecto durante boot one-shot.
+# Solo se habilita si el entorno lo pide explicitamente.
 if [ -f artisan ]; then
-  if [ "${CACHE_STORE}" != "database" ]; then
+  if [ "${RUN_LARAVEL_CACHE_CLEAR_ON_BOOT:-0}" = "1" ] && [ "${CACHE_STORE:-database}" != "database" ]; then
     echo "== cache:clear (safe) =="
     php artisan cache:clear || true
   else
-    echo "== cache:clear skipped because CACHE_STORE=database (needs DB) =="
+    echo "== cache:clear skipped by default =="
   fi
 fi
 

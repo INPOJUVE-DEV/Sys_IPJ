@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\BeneficiariosImportController;
+use App\Http\Controllers\Api\Integrations\ApiTjStagingAcceptController;
 use App\Http\Controllers\Api\OcrIneController;
 use App\Http\Controllers\Api\SeccionesController;
 use App\Http\Controllers\Auth\LoginController;
@@ -26,6 +27,12 @@ Route::prefix('auth')->group(function () {
 Route::middleware('throttle:30,1')->get('/secciones/{seccional}', [SeccionesController::class, 'show']);
 Route::middleware(['auth:sanctum', 'throttle:30,1'])->post('/beneficiarios/cache', [BeneficiariosImportController::class, 'store']);
 
-// OCR INE – proxy to external Python OCR service
+Route::prefix('integrations/api-tj')
+    ->middleware(['integration.jwt:beneficiarios.staging.push', 'throttle:30,1'])
+    ->group(function () {
+        Route::post('/staging/accept', ApiTjStagingAcceptController::class);
+    });
+
+// OCR INE proxy to external Python OCR service
 Route::middleware(['web', 'auth', 'throttle:10,1'])
     ->post('/ocr/ine/extract', [OcrIneController::class, 'extract']);

@@ -1,4 +1,4 @@
-# Fase 0 Decisiones de Realineacion Sync Sys_IPJ API_TJ
+# Fase 0 Decisiones de Base Sync Sys_IPJ API_TJ
 
 Estado: `Completada`
 
@@ -8,29 +8,33 @@ Fecha de cierre: `2026-06-10`
 
 Cerrar las decisiones base antes de tocar migraciones, seguridad, endpoints o flujos de sincronizacion.
 
-En `main` el trabajo no parte de cero. Ya existe una implementacion API_TJ activa, por lo que la Fase 0 se enfoca en definir como vamos a realinear esa implementacion al documento base `implementacion-sync-sys-ipj-api-tj.md`.
+La verificacion de `main` confirma una base limpia respecto a invasion API_TJ del core. En el estado actual:
+
+- `Beneficiario` no contiene metadatos de integracion.
+- La migracion base de `beneficiarios` mantiene `created_by` obligatorio.
+- `routes/api.php` no expone rutas `api-tj`.
+- No hay trazas de `ApiTj*`, `api_tj_*`, `source_system`, `curp_hash` ni `BeneficiarioObserver`.
+
+Con esto, la Fase 0 se cierra como fase de definicion arquitectonica, no de remediacion.
 
 ## 2. Hallazgos verificados en `main`
 
-- Ya existen rutas legacy de integracion bajo `/api/api-tj/*`.
-- Ya existen clases `ApiTj*` en servicios, middleware, controladores, modelos y pruebas.
-- Ya existen tablas `api_tj_inbound_requests` y `api_tj_sync_runs`.
-- `beneficiarios` ya fue alterada con campos de integracion y estado de sync.
-- `tarjetas` tambien recibio campos de integracion.
-- `created_by` de `beneficiarios` ya fue hecho nullable por migracion.
-- Existe un `BeneficiarioObserver` global con logica de integracion.
-- La seguridad JWT actual existe, pero esta resuelta con config estatica y sin modelo formal de clientes, llaves ni `jti` persistido en tablas dedicadas.
+- `sys_beneficiarios/app/Models/Beneficiario.php` solo contiene campos core del dominio.
+- `sys_beneficiarios/database/migrations/2025_08_31_010300_create_beneficiarios_table.php` define `created_by` obligatorio.
+- `sys_beneficiarios/routes/api.php` solo expone salud, paginas, auth, secciones, `beneficiarios/cache` y OCR.
+- La busqueda de `ApiTj*`, `api_tj_*`, `source_system`, `curp_hash` y `BeneficiarioObserver` no devolvio coincidencias.
 
 ## 3. Decision principal
 
-La implementacion actual de `ApiTj*` se considera `legado de transicion`.
+La integracion Sys_IPJ API_TJ se implementara como una capa nueva fuera del core.
 
 Esto significa:
 
-- No sera la base final del diseno.
-- No seguiremos ampliando ese acoplamiento al modelo core.
-- La meta oficial sigue siendo la capa de integracion externa al core descrita en el documento base.
-- Las piezas nuevas deben nacer bajo namespaces `Integrations\...`.
+- no se modificara `Beneficiario` para metadatos de integracion;
+- no se agregaran campos de integracion a tablas core;
+- no se haran nullable campos core para conveniencia de integracion;
+- no se agregaran observers globales para sincronizacion;
+- toda pieza nueva nacerá bajo namespaces `Integrations\...`.
 
 ## 4. Decisiones cerradas
 
@@ -38,18 +42,13 @@ Esto significa:
 
 Decision:
 
-- La capa compliant usara una libreria mantenida para JWT en lugar de seguir extendiendo el servicio casero actual.
-- La opcion elegida para implementacion es `firebase/php-jwt`.
+- La capa de seguridad usara `firebase/php-jwt`.
 
 Motivo:
 
-- Reduce riesgo criptografico frente a seguir manteniendo parseo, firma y verificacion manual.
-- Encaja bien con el uso de RS256 ya requerido por el documento base.
+- Evita implementar firma y verificacion manual.
+- Encaja con el requisito RS256 del documento base.
 - Permite concentrar la logica propia en clientes, scopes, `kid`, `jti` e idempotencia.
-
-Alcance:
-
-- El header se podra leer para extraer `kid`, pero ningun claim se tratara como confiable hasta despues de verificar firma y claims requeridos.
 
 ## D-02. Regla de `tarjeta_numero` valida para outbound
 
@@ -61,20 +60,19 @@ Decision:
 
 Motivo:
 
-- En el flujo actual de inventario, `consumida` representa la tarjeta ya ligada a una persona del padron.
-- Estados como `disponible`, `asignada_oficina`, `asignada_usuario` o `devuelta` siguen siendo inventario o preasignacion.
+- `consumida` representa la tarjeta ya ligada al beneficiario.
+- Los demas estados siguen siendo inventario o preasignacion.
 
 ## D-03. Contrato de respuestas inbound
 
 Decision:
 
-- El endpoint compliant devolvera JSON de integracion propio.
-- `ProblemJsonMiddleware` no sera el contrato principal de este endpoint.
+- El endpoint inbound compliant devolvera JSON de integracion propio.
+- No se usara `ProblemJsonMiddleware` como contrato principal de ese endpoint.
 
 Motivo:
 
 - El documento base define respuestas de negocio especificas como `created`, `already_processed`, `duplicate` y `validation_error`.
-- Mezclar RFC 7807 con ese contrato aumentaria la ambiguedad.
 
 ## D-04. Estructura de codigo nueva
 
@@ -90,59 +88,29 @@ Decision:
 
 Motivo:
 
-- Permite construir una capa general de integraciones y no seguir acoplando el sistema a una sola implementacion puntual.
+- Permite construir una capa de integraciones alrededor del core sin invadirlo.
 
 ## D-05. Cifrado de payload inbound almacenado
 
 Decision:
 
 - `request_payload_encrypted` se implementara con un encrypter dedicado alimentado por `INTEGRATION_PAYLOAD_ENCRYPTION_KEY`.
-- No se adoptara como solucion final el `Crypt` global atado a `APP_KEY`.
+- No se usara como solucion final el `Crypt` global atado a `APP_KEY`.
 
 Motivo:
 
 - Separa la llave de integracion de la llave general de la aplicacion.
 - Alinea el diseño con el documento base.
 
-## D-06. Politica de remediacion del legado
+## D-06. Politica de implementacion
 
 Decision:
 
-- La implementacion actual se congela como referencia operativa.
-- Ningun desarrollo nuevo debe seguir dependiendo de:
-  - columnas de integracion en `beneficiarios`;
-  - columnas de integracion en `tarjetas`;
-  - `BeneficiarioObserver`;
-  - rutas `/api/api-tj/inbound` y `/api/api-tj/sync`;
-  - scopes legacy como `beneficiarios.create`.
+- La Fase 1 arranca desde base limpia.
+- No se crearan endpoints ni UI en la siguiente fase.
+- El primer paso sera solo persistencia nueva de integracion fuera del core.
 
-Ruta objetivo:
-
-- inbound nuevo: `POST /api/v1/integrations/api-tj/staging/accept`
-- scope inbound nuevo: `beneficiarios.staging.push`
-- outbound nuevo: `POST /api/v1/cardholders/sync`
-- payload outbound nuevo: `sync_id` + `items` minimos definidos en el documento base
-
-## 5. Que se conserva temporalmente
-
-- `api_tj_inbound_requests`
-- `api_tj_sync_runs`
-- pruebas feature actuales de `ApiTj*`
-- `config/api_tj.php`
-
-Estas piezas se conservan como referencia y para no perder trazabilidad mientras construimos la capa compliant.
-
-## 6. Que se reemplaza en fases siguientes
-
-- columnas `source_system`, `source_external_request_id`, `curp_hash`, `status`, `api_tj_sync_*` en `beneficiarios`
-- `created_by` nullable en `beneficiarios`
-- columnas `source_system` e `is_digital` en `tarjetas` si no tienen justificacion fuera de integracion
-- `BeneficiarioObserver`
-- `ValidateApiTjJwt`
-- `ApiTjJwtService`
-- rutas y controladores legacy `ApiTj*` que no cumplan el contrato objetivo
-
-## 7. Resultado de Fase 0
+## 5. Resultado de Fase 0
 
 La Fase 0 queda cubierta porque ya resolvimos:
 
@@ -151,6 +119,6 @@ La Fase 0 queda cubierta porque ya resolvimos:
 - el contrato de respuestas inbound;
 - la estructura de codigo nueva;
 - la estrategia de cifrado de payload;
-- la postura oficial frente al legado de `main`.
+- la politica de arrancar desde base limpia sin tocar el core.
 
-El siguiente bloque ya puede entrar a Fase 1 sin seguir profundizando el acoplamiento actual al core.
+El siguiente bloque puede entrar a Fase 1 con un objetivo acotado: persistencia nueva de integracion fuera del core.

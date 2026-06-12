@@ -10,6 +10,8 @@ use App\Policies\ComponentCatalogPolicy;
 use App\Policies\EventoPolicy;
 use App\Policies\PagePolicy;
 use App\Policies\ThemePolicy;
+use App\Services\Integrations\Security\Contracts\JwtCodec;
+use App\Services\Integrations\Security\FirebaseJwtCodec;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -23,7 +25,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->singleton(JwtCodec::class, FirebaseJwtCodec::class);
     }
 
     /**

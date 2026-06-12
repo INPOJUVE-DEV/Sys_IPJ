@@ -4,13 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreInscripcionRequest;
 use App\Http\Requests\UpdateInscripcionRequest;
-use App\Models\Beneficiario;
-use App\Models\Domicilio;
 use App\Models\Inscripcion;
 use App\Models\Municipio;
 use App\Models\Programa;
-use App\Models\Seccion;
-use App\Support\SeccionResolver;
+use App\Services\Beneficiarios\BeneficiarioRegistrationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -84,21 +81,14 @@ class InscripcionController extends Controller
         return view('inscripciones.create', compact('programas', 'municipios', 'periodo', 'dailyCount', 'dailyCountStart'));
     }
 
-    public function store(StoreInscripcionRequest $request)
+    public function store(StoreInscripcionRequest $request, BeneficiarioRegistrationService $registrationService)
     {
         $data = $request->validated();
 
         try {
-            $inscripcion = DB::transaction(function () use ($request, $data) {
-                $dom = $request->input('domicilio', []);
-                $seccion = $this->resolveSeccionFromInput($dom, $data['id_ine'] ?? null);
-                $seccion?->loadMissing('municipio');
-                $this->ensureUserCanCaptureSeccion($seccion);
-                $inputMunicipioId = $dom['municipio_id'] ?? null;
-
-                $beneficiario = Beneficiario::where('curp', $data['curp'])->lockForUpdate()->first();
-                $requestedFolio = trim((string) ($data['folio_tarjeta'] ?? ''));
-                $payload = [
+            $inscripcion = DB::transaction(function () use ($request, $data, $registrationService) {
+                $beneficiarioPayload = [
+                    'folio_tarjeta' => $data['folio_tarjeta'] ?? null,
                     'nombre' => $data['nombre'],
                     'apellido_paterno' => $data['apellido_paterno'],
                     'apellido_materno' => $data['apellido_materno'],
@@ -109,24 +99,12 @@ class InscripcionController extends Controller
                     'id_ine' => $data['id_ine'],
                     'telefono' => $data['telefono'],
                 ];
-                if ($requestedFolio !== '') {
-                    $payload['folio_tarjeta'] = $requestedFolio;
-                }
 
-                if ($beneficiario) {
-                    $beneficiario->fill($payload);
-                } else {
-                    $beneficiario = new Beneficiario($payload);
-                    $beneficiario->id = (string) Str::uuid();
-                    $beneficiario->created_by = Auth::user()->uuid;
-                }
-
-                $beneficiario->seccion()->associate($seccion);
-                $beneficiario->municipio_id = $seccion?->municipio_id ?? $inputMunicipioId;
-                $beneficiario->tarjeta_id = null;
-                $beneficiario->save();
-
-                $this->saveDomicilio($request, $beneficiario, $seccion);
+                $beneficiario = $registrationService->upsertByCurp(
+                    $beneficiarioPayload,
+                    $request->input('domicilio', []),
+                    $request->user(),
+                );
 
                 $programa = Programa::findOrFail($data['programa_id']);
                 $periodo = $data['periodo'];
@@ -206,51 +184,6 @@ class InscripcionController extends Controller
         return redirect()->route('inscripciones.index')->with('status', 'Inscripcion eliminada');
     }
 
-    protected function saveDomicilio(Request $request, Beneficiario $beneficiario, ?Seccion $seccion = null): void
-    {
-        $dom = $request->input('domicilio');
-        if (!$dom) {
-            return;
-        }
-        $municipioId = $seccion?->municipio_id ?? $beneficiario->municipio_id;
-        $payload = array_filter([
-            'calle' => $dom['calle'] ?? null,
-            'numero_ext' => $dom['numero_ext'] ?? null,
-            'numero_int' => $dom['numero_int'] ?? null,
-            'colonia' => $dom['colonia'] ?? null,
-            'municipio_id' => $municipioId,
-            'codigo_postal' => $dom['codigo_postal'] ?? null,
-            'seccion_id' => $seccion?->id,
-        ], fn ($v) => !is_null($v));
-        if (empty($payload)) {
-            return;
-        }
-        $domicilio = $beneficiario->domicilio ?: new Domicilio(['id' => (string) Str::uuid(), 'beneficiario_id' => $beneficiario->id]);
-        $domicilio->fill($payload);
-        $domicilio->beneficiario_id = $beneficiario->id;
-        $domicilio->save();
-    }
-
-    private function resolveSeccionFromInput(array $domicilio, ?string $idIne = null): ?Seccion
-    {
-        $seccion = SeccionResolver::resolveFromIne($idIne)
-            ?: SeccionResolver::resolve($domicilio['seccional'] ?? null);
-        if (! $seccion) {
-            throw ValidationException::withMessages([
-                'id_ine' => 'No fue posible detectar una seccional valida a partir del ID INE.',
-            ]);
-        }
-
-        $inputMunicipioId = $domicilio['municipio_id'] ?? null;
-        if ($inputMunicipioId && (string) $inputMunicipioId !== (string) $seccion->municipio_id) {
-            throw ValidationException::withMessages([
-                'domicilio.municipio_id' => 'El municipio no coincide con la seccional seleccionada.',
-            ]);
-        }
-
-        return $seccion;
-    }
-
     private function availableMunicipios()
     {
         $query = Municipio::orderBy('nombre');
@@ -260,22 +193,6 @@ class InscripcionController extends Controller
         }
 
         return $query->pluck('nombre', 'id');
-    }
-
-    private function ensureUserCanCaptureSeccion(?Seccion $seccion): void
-    {
-        $user = auth()->user();
-        if (! $user?->hasAnyRole(['delegado', 'capturista', 'capturista_programas']) || ! $user->oficina_id || ! $seccion) {
-            return;
-        }
-
-        $seccion->loadMissing('municipio');
-        $officeId = $seccion->municipio?->oficina_id;
-        if ($officeId && (int) $officeId !== (int) $user->oficina_id) {
-            throw ValidationException::withMessages([
-                'id_ine' => 'La seccional detectada no pertenece a tu oficina.',
-            ]);
-        }
     }
 
     private function ensureCanManageInscripcion(Inscripcion $inscripcion): void

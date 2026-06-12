@@ -1,6 +1,6 @@
 # Deuda Tecnica Sync Sys_IPJ API_TJ
 
-Registro de deuda tecnica y desalineaciones detectadas en la rama `main`.
+Registro de deuda tecnica y riesgos reales detectados en `main`.
 
 ## Estados permitidos
 
@@ -13,47 +13,33 @@ Registro de deuda tecnica y desalineaciones detectadas en la rama `main`.
 
 | ID | Area | Hallazgo actual | Impacto | Tratamiento recomendado | Momento sugerido | Estado |
 | --- | --- | --- | --- | --- | --- | --- |
-| DT-01 | Dominio beneficiarios | La logica de alta y guardado de domicilio ya esta duplicada entre `BeneficiarioController` e `InscripcionController` | Facilita una tercera variante inconsistente para inbound | Extraer `BeneficiarioRegistrationService` y reutilizarlo | Antes de cerrar Fase 4 | Abierta |
-| DT-02 | Contratos API | `ProblemJsonMiddleware` convive con respuestas JSON de negocio especificas para integracion | Riesgo de contratos inconsistentes | Mantener contrato dedicado para integracion y no depender de RFC 7807 en inbound | Cerrada en Fase 0 | Cerrada |
-| DT-03 | Seguridad criptografica | Existe JWT casero sin modelo formal de clientes, llaves rotables ni `jti` persistido | Riesgo de seguridad y mantenimiento | Reemplazar por capa formal `Integrations\Security\...` | Fase 2 | En curso |
-| DT-04 | Configuracion | Ya existe `config/api_tj.php`, pero no una config general compliant de integraciones | Riesgo de configuracion mezclada entre legado y objetivo | Introducir config de integraciones y separar legado de capa nueva | Fase 1 o 2 | Abierta |
-| DT-05 | Operacion de clientes | No existen tablas ni flujo formal para administrar clientes y llaves de integracion | Operacion manual fragil | Crear `integration_clients` e `integration_client_keys` | Fase 1 | Abierta |
-| DT-06 | Observabilidad | Las tablas actuales no cubren clientes, llaves, replay ni detalle por item | Soporte y auditoria incompletos | Crear auditoria compliant por corrida, item y request inbound | Fase 1, 3 y 4 | Abierta |
-| DT-07 | Testing | Las pruebas actuales caracterizan el legado, no el contrato objetivo | Puede ocultar regresiones del diseno nuevo | Agregar suite nueva y conservar la legacy temporalmente | Fase 2 a 6 | Abierta |
+| DT-01 | Dominio beneficiarios | La duplicacion principal de alta y guardado de domicilio ya fue extraida a `BeneficiarioRegistrationService` y reutilizada en los flujos de beneficiario e inscripcion | El riesgo principal de una tercera variante inconsistente para inbound quedo removido | Mantener el servicio compartido como unico punto de escritura para altas y actualizaciones de beneficiarios | Cubierta antes de Fase 4 | Cerrada |
+| DT-02 | Contratos API | La integracion necesita respuestas JSON de negocio propias y no debe depender del contrato general de errores | Riesgo de mezclar contratos si no se define desde el inicio | Mantener contrato dedicado para inbound | Cerrada en Fase 0 | Cerrada |
+| DT-03 | Seguridad criptografica | La capa formal JWT ya quedo instalada y validada en runtime con `firebase/php-jwt` | Riesgo principal mitigado para autenticacion inbound | Mantener pruebas y rotacion de llaves al avanzar a flujos reales | Cerrada en Fase 2 | Cerrada |
+| DT-04 | Configuracion | Ya existe `config/integrations.php`, pero su uso por ambiente aun debe validarse en despliegues reales | Riesgo de configuracion parcial o inconsistente entre entornos | Validar variables y llaves en cada ambiente al habilitar outbound e inbound | Fase 3 y 4 | Mitigada |
+| DT-05 | Operacion de clientes | Ya existe persistencia base para clientes y llaves, y Fase 3 ya consume firma saliente, pero aun no hay flujo operativo completo de administracion y rotacion | Operacion parcial | Construir administracion y rotacion real sobre la persistencia ya creada | Fase 4 en adelante | Mitigada |
+| DT-06 | Observabilidad | Inbound y outbound ya registran trazabilidad base y ya existen vistas admin de consulta y readiness, pero aun faltan logs estructurados de explotacion y observabilidad de rollout | Observabilidad operativa base cubierta, endurecimiento pendiente | Completar diagnostico operativo y trazas de explotacion al cerrar rollout | Fase 6 | Mitigada |
+| DT-07 | Testing | Ya existen y ya corrieron pruebas focalizadas de persistencia, signer, middleware JWT, outbound e inbound compliant, pero la cobertura sigue parcial para rollout y escenarios E2E | Cobertura parcial del proyecto completo | Ampliar la suite hacia migraciones, rollout y escenarios E2E de integracion | Fase 5 y 6 | Mitigada |
 | DT-08 | Regla de tarjeta valida | El documento base no fijaba que estado de tarjeta es valido para outbound | Ambiguedad funcional | Quedo resuelto en Fase 0: solo `consumida`, luego fallback a `folio_tarjeta` | Cerrada en Fase 0 | Cerrada |
 | DT-09 | Cifrado de payload inbound | No existia estrategia cerrada para `request_payload_encrypted` | Riesgo de solucion improvisada | Quedo resuelto en Fase 0: llave dedicada `INTEGRATION_PAYLOAD_ENCRYPTION_KEY` | Cerrada en Fase 0 | Cerrada |
-| DT-10 | Superficie admin | Ya hay UI legacy API_TJ, pero no una superficie compliant separada | Puede consolidar flujos incorrectos | Crear superficie admin nueva o refactorizada para la capa compliant | Fase 5 | Abierta |
-| DT-11 | Usuario tecnico | No hay evidencia de un seeder formal del usuario tecnico requerido por el documento base | Riesgo de fallas de despliegue | Crear resolver + precondicion operativa y evaluar seeder | Fase 4 | Abierta |
-| DT-12 | Reglas de dominio dispersas | La resolucion de seccion y municipio vive en varios puntos del sistema | Reutilizacion dificil desde integracion | Unificar reglas en servicio de aplicacion | Durante extraccion de servicio de registro | Abierta |
-| DT-13 | Invasion del core | `beneficiarios` ya contiene `source_system`, `source_external_request_id`, `curp_hash`, `status`, `api_tj_sync_*` | Contradiccion directa con el documento base | Dejar de depender de esos campos en trabajo nuevo y planear remediacion | Antes de cerrar Fase 1 | Abierta |
-| DT-14 | Nullable no permitido | `created_by` de `beneficiarios` ya fue hecho nullable en `main` | Rompe una restriccion explicita del diseno objetivo | Recuperar estrategia con usuario tecnico institucional y retirar dependencia del nullable | Antes de cerrar Fase 4 | Abierta |
-| DT-15 | Observer global | Existe `BeneficiarioObserver` con logica de integracion | Acopla el core a un integrador puntual | Removerlo del flujo compliant y mover la logica a servicios explicitos | Antes de cerrar Fase 4 | Abierta |
-| DT-16 | Drift de contrato | Las rutas y scopes actuales no coinciden con el contrato objetivo | Riesgo de consolidar endpoints equivocados | Tratar las rutas actuales como legado y abrir contrato nuevo en `/api/v1/integrations/api-tj/...` | Fase 2 y 4 | Abierta |
-| DT-17 | Logica funcional divergente | El legado actual auto-sincroniza inbound, genera folios digitales y usa payloads distintos al minimo definido | Riesgo de seguir construyendo sobre supuestos no aprobados | Congelar legado y reconstruir compliant con criterios del documento base | Fase 3 y 4 | Abierta |
-| DT-18 | Tarjetas invadidas | `tarjetas` ya recibio campos de integracion como `source_system` e `is_digital` | Segunda invasion del core | Evaluar si sobreviven por negocio propio o salen con la remediacion | Despues de Fase 1, antes de cierre final | Abierta |
+| DT-10 | Superficie admin | Ya existe una superficie admin para disparar sync, consultar corridas e inspeccionar inbound requests | La operacion base ya tiene punto de control institucional | Mantener la superficie alineada al rollout y a las necesidades reales de operacion | Cerrada en Fase 5 | Cerrada |
+| DT-11 | Usuario tecnico | Ya existe `ApiTjTechnicalUserResolver` y `IntegrationTechnicalUserSeeder` para sostener `created_by` obligatorio en altas inbound | El bloqueo operativo para abrir el endpoint inbound quedo resuelto a nivel aplicacion y pruebas | Mantener configurado `API_TJ_INTEGRATION_USER_EMAIL` por ambiente | Cubierta antes de Fase 4 | Cerrada |
+| DT-12 | Reglas de dominio dispersas | La resolucion de seccion y municipio ya quedo centralizada para altas y actualizaciones de beneficiarios en `BeneficiarioLocationResolver`, pero aun existen validaciones afines fuera de ese flujo | Queda dispersion residual fuera del camino principal de registro | Seguir convergiendo validaciones relacionadas al resolver compartido cuando se toquen esos modulos | Durante Fase 4 y endurecimiento posterior | Mitigada |
+| DT-13 | Tooling local | En Windows con PHP portatil, `artisan test` no hereda de forma confiable las extensiones CLI; la ejecucion reproducible actual es `vendor/bin/phpunit` o CI con PHP configurado | Friccion operativa local, no bloqueo funcional | Documentar wrapper o script de ejecucion reproducible para Composer y PHPUnit | Fase 3 | Mitigada |
+| DT-14 | Tooling Docker | El entrypoint ya evita `cache:clear` por defecto y elimino el bloqueo por permisos, pero aun emite ruido al listar `/etc/secrets` cuando el contenedor no monta secretos | Riesgo bajo, pero deja salida ruidosa en ejecuciones Docker locales | Ajustar el entrypoint para que la inspeccion de secretos sea condicional al directorio montado | Post MVP o al endurecer DX local | Mitigada |
 
-## Priorizacion del MVP
+## Priorizacion vigente
 
-Debe resolverse dentro del MVP compliant:
+No queda deuda critica abierta que bloquee el arranque de Fase 6.
 
-- DT-01
-- DT-03
-- DT-04
-- DT-05
-- DT-06
-- DT-07
-- DT-11
+Debe seguirse dentro del MVP compliant:
+
 - DT-12
-- DT-13
-- DT-14
-- DT-15
-- DT-16
-- DT-17
 
 Puede mitigarse y cerrarse despues del MVP si queda evidencia operativa:
 
-- DT-10
-- DT-18
+- DT-14
+- DT-13
 
 ## Notas de cierre de Fase 0
 
@@ -62,3 +48,45 @@ Quedaron cubiertas y cerradas en documentacion:
 - DT-02
 - DT-08
 - DT-09
+
+## Notas de cierre de Fase 2
+
+Quedo cubierta y cerrada en implementacion validada:
+
+- DT-03
+
+## Notas de cierre de Fase 3
+
+Quedaron mitigadas con implementacion y pruebas:
+
+- DT-06
+- DT-07
+
+## Notas de cobertura previas a Fase 4
+
+Quedaron cubiertas antes de avanzar:
+
+- DT-01
+- DT-11
+- DT-14
+
+Quedo mitigada con extraccion de servicios compartidos:
+
+- DT-12
+
+## Notas de cierre de Fase 4
+
+Quedaron reforzadas con implementacion validada:
+
+- DT-06
+- DT-07
+
+## Notas de cierre de Fase 5
+
+Quedo cerrada la deuda de superficie operativa:
+
+- DT-10
+
+Quedo reforzada la observabilidad base:
+
+- DT-06

@@ -146,6 +146,11 @@
                 'route' => route('admin.themes.current.show'),
                 'pattern' => 'admin.themes.*',
             ],
+            [
+                'label' => 'Integraciones',
+                'route' => route('admin.integraciones.api_tj.sync-runs.index'),
+                'pattern' => 'admin.integraciones.api_tj.*',
+            ],
         ];
     }
 

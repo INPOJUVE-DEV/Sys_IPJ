@@ -3,6 +3,7 @@
 use App\Http\Middleware\AccessLog;
 use App\Http\Middleware\ETagMiddleware;
 use App\Http\Middleware\ProblemJsonMiddleware;
+use App\Http\Middleware\ValidateIntegrationJwt;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -24,6 +25,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'access.log' => AccessLog::class,
             'etag' => ETagMiddleware::class,
+            'integration.jwt' => ValidateIntegrationJwt::class,
             'permission' => PermissionMiddleware::class,
             'role' => RoleMiddleware::class,
             'role_or_permission' => RoleOrPermissionMiddleware::class,

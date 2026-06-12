@@ -16,8 +16,10 @@ class DatabaseSeeder extends Seeder
             OficinaSeeder::class,
             RoleSeeder::class,
             AdminUserSeeder::class,
+            IntegrationTechnicalUserSeeder::class,
             CatalogosSeeder::class,
             EventoTipoSeeder::class,
+            IntegrationClientSeeder::class,
         ];
 
         if (app()->environment('local')) {
