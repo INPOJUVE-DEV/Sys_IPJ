@@ -30,6 +30,7 @@ class ApiTjStagingPayloadValidatorTest extends TestCase
         $validated = app(ApiTjStagingPayloadValidator::class)->validate([
             'external_request_id' => 'API-TJ-STG-0001',
             'source' => 'api_tj',
+            'submitted_by' => ' user.external ',
             'beneficiario' => [
                 'folio_tarjeta' => ' FOL-01 ',
                 'nombre' => ' Ana ',
@@ -54,11 +55,54 @@ class ApiTjStagingPayloadValidatorTest extends TestCase
         ]);
 
         $this->assertSame('api_tj', $validated['source']);
+        $this->assertSame('user.external', $validated['submitted_by']);
         $this->assertSame('PELJ000101HMNRRS09', $validated['beneficiario']['curp']);
         $this->assertSame('Ana', $validated['beneficiario']['nombre']);
         $this->assertSame('F', $validated['beneficiario']['sexo']);
         $this->assertNull($validated['beneficiario']['domicilio']['numero_int']);
         $this->assertSame('31000', $validated['beneficiario']['domicilio']['codigo_postal']);
+    }
+
+    public function test_it_allows_missing_submitted_by(): void
+    {
+        $municipio = Municipio::query()->create([
+            'clave' => 3,
+            'nombre' => 'Delicias',
+        ]);
+
+        Seccion::query()->create([
+            'seccional' => '0789',
+            'municipio_id' => $municipio->id,
+            'distrito_local' => '03',
+            'distrito_federal' => '03',
+        ]);
+
+        $validated = app(ApiTjStagingPayloadValidator::class)->validate([
+            'external_request_id' => 'API-TJ-STG-0003',
+            'source' => 'api_tj',
+            'beneficiario' => [
+                'nombre' => 'Ana',
+                'apellido_paterno' => 'Perez',
+                'apellido_materno' => 'Lopez',
+                'curp' => 'PELJ000101HMNRRS09',
+                'fecha_nacimiento' => '2000-01-01',
+                'sexo' => 'F',
+                'discapacidad' => false,
+                'id_ine' => '078912345678901234',
+                'telefono' => '6141234567',
+                'domicilio' => [
+                    'calle' => 'Principal',
+                    'numero_ext' => '100',
+                    'colonia' => 'Centro',
+                    'municipio_id' => $municipio->id,
+                    'codigo_postal' => '33000',
+                    'seccional' => '0789',
+                ],
+            ],
+        ]);
+
+        $this->assertArrayHasKey('submitted_by', $validated);
+        $this->assertNull($validated['submitted_by']);
     }
 
     public function test_it_rejects_an_invalid_source(): void

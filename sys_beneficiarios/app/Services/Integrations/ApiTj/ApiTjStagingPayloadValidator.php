@@ -28,6 +28,7 @@ class ApiTjStagingPayloadValidator
         $validated = Validator::make($payload, [
             'external_request_id' => ['required', 'string', 'max:255'],
             'source' => ['required', 'string', Rule::in(['api_tj'])],
+            'submitted_by' => ['nullable', 'string', 'max:255'],
             'beneficiario' => ['required', 'array'],
             'beneficiario.folio_tarjeta' => ['nullable', 'string', 'max:255'],
             'beneficiario.nombre' => ['required', 'string', 'max:255'],
@@ -50,6 +51,7 @@ class ApiTjStagingPayloadValidator
         ])->validate();
 
         Arr::set($validated, 'source', 'api_tj');
+        Arr::set($validated, 'submitted_by', $this->nullableTrimmedString(Arr::get($validated, 'submitted_by')));
         Arr::set($validated, 'beneficiario.curp', strtoupper(trim((string) Arr::get($validated, 'beneficiario.curp'))));
         Arr::set($validated, 'beneficiario.nombre', trim((string) Arr::get($validated, 'beneficiario.nombre')));
         Arr::set($validated, 'beneficiario.apellido_paterno', trim((string) Arr::get($validated, 'beneficiario.apellido_paterno')));
