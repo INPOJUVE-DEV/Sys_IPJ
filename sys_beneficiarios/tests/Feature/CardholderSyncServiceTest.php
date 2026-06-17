@@ -177,6 +177,74 @@ class CardholderSyncServiceTest extends TestCase
         ]);
     }
 
+    public function test_run_maps_conflict_results_as_rejected_items(): void
+    {
+        Queue::fake();
+        Http::fake([
+            'https://api-tj.test/*' => Http::response([
+                'accepted' => true,
+                'results' => [
+                    ['index' => 0, 'status' => 'accepted', 'action' => 'inserted'],
+                    ['index' => 1, 'status' => 'conflict', 'reason' => 'tarjeta_numero ya existe con otro curp_hash'],
+                ],
+            ], 200),
+        ]);
+
+        $actor = User::factory()->create();
+        $this->makeBeneficiarioWithConsumedCard($actor, 'PEWA000101HSPABC10', 'LEG-001', 'TJ-CONFLICT-001');
+        $this->makeBeneficiario($actor, 'PEWB000101HSPABC11', 'LEG-CONFLICT');
+
+        $service = app(CardholderSyncService::class);
+        $run = $service->queue($actor);
+        $service->run($run->fresh());
+
+        $run->refresh();
+
+        $this->assertSame(IntegrationSyncRun::STATUS_PARTIAL, $run->status);
+        $this->assertSame(1, $run->success_count);
+        $this->assertSame(1, $run->failed_count);
+        $this->assertSame(0, $run->skipped_count);
+        $this->assertDatabaseHas('integration_sync_items', [
+            'sync_run_id' => $run->id,
+            'status' => IntegrationSyncItem::STATUS_REJECTED,
+            'error_message' => 'tarjeta_numero ya existe con otro curp_hash',
+        ]);
+    }
+
+    public function test_run_maps_skipped_results_as_skipped_items(): void
+    {
+        Queue::fake();
+        Http::fake([
+            'https://api-tj.test/*' => Http::response([
+                'accepted' => true,
+                'results' => [
+                    ['index' => 0, 'status' => 'accepted', 'action' => 'updated'],
+                    ['index' => 1, 'status' => 'skipped', 'reason' => 'curp_hash invalido'],
+                ],
+            ], 200),
+        ]);
+
+        $actor = User::factory()->create();
+        $this->makeBeneficiarioWithConsumedCard($actor, 'PEXA000101HSPABC12', 'LEG-001', 'TJ-SKIPPED-001');
+        $this->makeBeneficiario($actor, 'PEXB000101HSPABC13', 'LEG-SKIPPED');
+
+        $service = app(CardholderSyncService::class);
+        $run = $service->queue($actor);
+        $service->run($run->fresh());
+
+        $run->refresh();
+
+        $this->assertSame(IntegrationSyncRun::STATUS_PARTIAL, $run->status);
+        $this->assertSame(1, $run->success_count);
+        $this->assertSame(0, $run->failed_count);
+        $this->assertSame(1, $run->skipped_count);
+        $this->assertDatabaseHas('integration_sync_items', [
+            'sync_run_id' => $run->id,
+            'status' => IntegrationSyncItem::STATUS_SKIPPED,
+            'error_message' => 'curp_hash invalido',
+        ]);
+    }
+
     private function makeBeneficiario(User $actor, string $curp, ?string $folioTarjeta): Beneficiario
     {
         return Beneficiario::query()->create([

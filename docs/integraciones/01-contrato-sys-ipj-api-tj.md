@@ -1,51 +1,29 @@
-# Contrato de integración Sys_IPJ ↔ API_TJ
+# Contrato de integracion Sys_IPJ ↔ API_TJ
 
-Este documento define el contrato conceptual entre Sys_IPJ y API_TJ. No representa implementación existente hasta que un PR de código lo agregue explícitamente.
+Este documento define el contrato operativo actual entre `Sys_IPJ` y `API_TJ`.
 
 ## Principios
 
-1. Sys_IPJ es fuente de verdad del padrón oficial.
-2. API_TJ es canal digital, padrón mínimo sincronizado y staging temporal.
-3. La tabla `beneficiarios` de Sys_IPJ no se modifica para soportar sincronización.
-4. Toda comunicación entre sistemas se realiza por API documentada.
-5. Ningún sistema externo escribe directo en la base de datos de Sys_IPJ.
+1. `Sys_IPJ` es fuente de verdad del padron oficial.
+2. `API_TJ` es canal digital y staging temporal.
+3. La integracion no invade tablas core de `Sys_IPJ`.
+4. Toda comunicacion ocurre por API documentada.
+5. Ningun sistema externo escribe directo en la base de datos de `Sys_IPJ`.
 
-## Dirección 1: Sys_IPJ → API_TJ
+## Direccion 1: Sys_IPJ -> API_TJ
 
-### Objetivo
-
-Enviar a API_TJ el padrón mínimo necesario para:
-
-- validar elegibilidad;
-- saber si una persona ya tiene tarjeta;
-- permitir activación digital;
-- responder lookup de Unidad de Informática.
-
-### Operación propuesta
+### Operacion
 
 ```txt
 POST API_TJ /api/v1/cardholders/sync
 ```
 
-Este endpoint vive en API_TJ, no en Sys_IPJ.
-
-### Actor
-
-Sys_IPJ.
-
-### Frecuencia
-
-Manual en primera etapa.
-
-La automatización programada queda fuera de alcance hasta que exista operación estable y trazabilidad.
-
-### Payload mínimo
+### Payload minimo
 
 ```json
 {
   "sync_id": "SYS-IPJ-2026-06-10-001",
-  "source": "sys_ipj",
-  "records": [
+  "items": [
     {
       "curp_hash": "hmac-sha256",
       "curp_masked": "MELR**********06",
@@ -59,77 +37,56 @@ La automatización programada queda fuera de alcance hasta que exista operación
 
 ### Campos
 
-| Campo | Requerido | Descripción |
+| Campo | Requerido | Descripcion |
 | --- | --- | --- |
-| `sync_id` | Sí | Identificador único de corrida. |
-| `source` | Sí | Debe ser `sys_ipj`. |
-| `records` | Sí | Arreglo de registros mínimos. |
-| `curp_hash` | Sí | HMAC-SHA-256 de CURP normalizada. |
-| `curp_masked` | Sí | CURP enmascarada para auditoría no sensible. |
-| `tarjeta_numero` | Sí | Folio o número de tarjeta. |
-| `status` | Sí | Estado operativo del registro. |
-| `synced_at` | Sí | Fecha de generación del registro. |
-
-### Estados permitidos
-
-```txt
-active
-inactive
-blocked
-```
+| `sync_id` | Si | Identificador unico de corrida. |
+| `items` | Si | Arreglo de registros minimos. |
+| `curp_hash` | Si | HMAC-SHA-256 de CURP normalizada. |
+| `curp_masked` | Si | CURP enmascarada para auditoria no sensible. |
+| `tarjeta_numero` | Si | Folio de tarjeta valido. |
+| `status` | Si | Estado operativo del registro. |
+| `synced_at` | Si | Fecha de generacion del registro. |
 
 ### Reglas de Sys_IPJ
 
 - No persistir `curp_hash` en `beneficiarios`.
-- No persistir estado de API_TJ en `beneficiarios`.
-- No modificar `tarjetas` para registrar sincronización.
-- Registrar la corrida en tabla separada, por ejemplo `integration_sync_runs`.
-- Registrar cada resultado en tabla separada, por ejemplo `integration_sync_items`.
+- No persistir estado de `API_TJ` en `beneficiarios`.
+- No modificar `tarjetas` para registrar sincronizacion.
+- Registrar corridas en `integration_sync_runs`.
+- Registrar resultados por item en `integration_sync_items`.
 
 ### Respuesta esperada de API_TJ
 
 ```json
 {
   "accepted": true,
-  "sync_id": "SYS-IPJ-2026-06-10-001",
-  "total": 1,
-  "accepted_count": 1,
-  "rejected_count": 0,
+  "status": "partial",
   "results": [
     {
       "index": 0,
-      "status": "upserted",
-      "tarjeta_numero": "TJ-0080"
+      "status": "accepted",
+      "action": "inserted"
     }
   ]
 }
 ```
 
-## Dirección 2: API_TJ → Sys_IPJ
+## Direccion 2: API_TJ -> Sys_IPJ
 
-### Objetivo
-
-Enviar a Sys_IPJ un expediente temporal aprobado en API_TJ para alta oficial.
-
-### Operación propuesta
+### Operacion
 
 ```txt
 POST Sys_IPJ /api/v1/integrations/api-tj/staging/accept
 ```
 
-Este endpoint vive en Sys_IPJ.
-
-### Actor
-
-API_TJ, después de acción manual de usuario autorizado.
-
-### Payload propuesto
+### Payload
 
 ```json
 {
   "external_request_id": "API-TJ-STG-2026-0001",
   "source": "api_tj",
   "submitted_by": {
+    "system": "api_tj",
     "user_id": "123",
     "name": "Administrador API_TJ"
   },
@@ -157,146 +114,121 @@ API_TJ, después de acción manual de usuario autorizado.
 }
 ```
 
-### Campos mínimos
+### Campos minimos
 
-| Campo | Requerido | Descripción |
+| Campo | Requerido | Descripcion |
 | --- | --- | --- |
-| `external_request_id` | Sí | ID único del staging en API_TJ. |
-| `source` | Sí | Debe ser `api_tj`. |
-| `submitted_by` | Sí | Usuario interno que aprobó el envío. |
-| `beneficiario` | Sí | Expediente completo. |
-| `beneficiario.curp` | Sí | CURP para validación oficial. |
-| `beneficiario.domicilio` | Sí | Domicilio completo. |
+| `external_request_id` | Si | ID unico del staging en API_TJ. |
+| `source` | Si | Debe ser `api_tj`. |
+| `submitted_by` | No | Contexto opcional del aprobador. Si se envia, debe ser objeto. |
+| `submitted_by.system` | No | Sistema origen del aprobador. |
+| `submitted_by.user_id` | No | Identificador del aprobador en API_TJ. |
+| `submitted_by.name` | No | Nombre del aprobador en API_TJ. |
+| `beneficiario` | Si | Expediente completo. |
+| `beneficiario.curp` | Si | CURP para validacion oficial. |
+| `beneficiario.domicilio` | Si | Domicilio completo. |
 
 ### Reglas de Sys_IPJ al recibir
 
-Sys_IPJ debe:
+`Sys_IPJ` debe:
 
 1. Autenticar el sistema emisor.
-2. Validar scope de integración.
+2. Validar scope de integracion.
 3. Validar idempotencia por `external_request_id`.
-4. Auditar request completo en tabla separada.
+4. Auditar el request en `integration_inbound_requests`.
 5. Validar estructura del expediente.
-6. Validar CURP.
-7. Validar seccional y municipio.
-8. Validar duplicados contra padrón oficial.
-9. Crear beneficiario oficial solo si procede.
-10. Crear domicilio asociado.
-11. Responder resultado estructurado.
+6. Validar CURP, seccional y municipio.
+7. Validar duplicados contra el padron oficial.
+8. Crear beneficiario y domicilio solo si procede.
+9. Responder resultado estructurado.
 
-Sys_IPJ no debe:
+`Sys_IPJ` no debe:
 
 - Guardar `external_request_id` en `beneficiarios`.
 - Guardar `source = api_tj` en `beneficiarios`.
-- Usar `created_by = null`.
-- Saltarse reglas de captura por tratarse de API_TJ.
+- Hacer `created_by = null`.
+- Saltarse reglas core por tratarse de `API_TJ`.
 
-### Respuesta exitosa propuesta
+### Respuestas esperadas
+
+Creado:
 
 ```json
 {
   "accepted": true,
   "status": "created",
   "external_request_id": "API-TJ-STG-2026-0001",
-  "beneficiario_id": "uuid",
-  "message": "Beneficiario creado correctamente"
+  "beneficiario_id": "uuid"
 }
 ```
 
-### Respuesta por duplicado
+Ya procesado:
+
+```json
+{
+  "accepted": true,
+  "status": "already_processed",
+  "external_request_id": "API-TJ-STG-2026-0001"
+}
+```
+
+Duplicado:
 
 ```json
 {
   "accepted": false,
   "status": "duplicate",
-  "external_request_id": "API-TJ-STG-2026-0001",
-  "message": "Ya existe un beneficiario con la CURP proporcionada"
+  "external_request_id": "API-TJ-STG-2026-0001"
 }
 ```
 
-### Respuesta por validación
+Validacion:
 
 ```json
 {
   "accepted": false,
   "status": "validation_error",
-  "external_request_id": "API-TJ-STG-2026-0001",
-  "errors": {
-    "beneficiario.curp": ["CURP inválida"]
-  }
+  "external_request_id": "API-TJ-STG-2026-0001"
 }
 ```
 
 ## Idempotencia
 
-Todo request externo debe incluir un identificador único.
-
-Para API_TJ hacia Sys_IPJ:
+La llave operativa inbound es:
 
 ```txt
-external_request_id
+source_system + external_request_id
 ```
 
-Regla:
+Reglas:
 
-- Si Sys_IPJ ya procesó ese `external_request_id`, debe devolver la misma respuesta lógica o un estado `already_processed`.
-- No debe crear duplicados.
+- mismo `external_request_id` + mismo payload -> `already_processed`;
+- mismo `external_request_id` + payload distinto -> `conflict`;
+- no crear duplicados.
 
-## Auditoría
+## Auditoria
 
-Sys_IPJ debe registrar solicitudes externas en tabla separada.
+`Sys_IPJ` registra la integracion en tablas separadas:
 
-Tabla sugerida:
-
-```txt
-integration_inbound_requests
-```
-
-Datos mínimos:
-
-- sistema origen;
-- ID externo;
-- operación;
-- hash de payload;
-- payload recibido o payload cifrado si contiene datos sensibles;
-- código HTTP de respuesta;
-- estado;
-- error;
-- fechas.
+- `integration_sync_runs`
+- `integration_sync_items`
+- `integration_inbound_requests`
+- `integration_jti_logs`
 
 ## Seguridad
 
-La comunicación debe usar:
+La comunicacion usa:
 
 - HTTPS;
-- JWT firmado, preferentemente RS256;
+- JWT RS256;
 - scopes por sistema;
-- expiración corta;
+- expiracion corta;
 - `jti` anti-replay;
-- auditoría;
+- auditoria;
 - rate limit.
 
-Detalle en:
+Detalle adicional:
 
 ```txt
 docs/integraciones/02-seguridad-jwt-rs256.md
 ```
-
-## Fuera de alcance de este contrato
-
-No se define aquí:
-
-- migraciones concretas;
-- controladores Laravel;
-- servicios PHP;
-- jobs o colas;
-- implementación de Auth0;
-- automatización nocturna.
-
-Eso corresponde al documento de implementación paso a paso.
-
-## Resumen
-
-Sys_IPJ y API_TJ se conectan por contratos explícitos.
-
-La integración no modifica el core de beneficiarios; lo rodea con auditoría, validación e idempotencia.

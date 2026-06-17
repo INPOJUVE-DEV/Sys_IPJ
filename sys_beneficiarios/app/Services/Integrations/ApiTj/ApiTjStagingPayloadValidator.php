@@ -28,7 +28,10 @@ class ApiTjStagingPayloadValidator
         $validated = Validator::make($payload, [
             'external_request_id' => ['required', 'string', 'max:255'],
             'source' => ['required', 'string', Rule::in(['api_tj'])],
-            'submitted_by' => ['nullable', 'string', 'max:255'],
+            'submitted_by' => ['nullable', 'array'],
+            'submitted_by.system' => ['nullable', 'string', 'max:255'],
+            'submitted_by.user_id' => ['nullable', 'string', 'max:255'],
+            'submitted_by.name' => ['nullable', 'string', 'max:255'],
             'beneficiario' => ['required', 'array'],
             'beneficiario.folio_tarjeta' => ['nullable', 'string', 'max:255'],
             'beneficiario.nombre' => ['required', 'string', 'max:255'],
@@ -51,7 +54,7 @@ class ApiTjStagingPayloadValidator
         ])->validate();
 
         Arr::set($validated, 'source', 'api_tj');
-        Arr::set($validated, 'submitted_by', $this->nullableTrimmedString(Arr::get($validated, 'submitted_by')));
+        $this->normalizeSubmittedBy($validated);
         Arr::set($validated, 'beneficiario.curp', strtoupper(trim((string) Arr::get($validated, 'beneficiario.curp'))));
         Arr::set($validated, 'beneficiario.nombre', trim((string) Arr::get($validated, 'beneficiario.nombre')));
         Arr::set($validated, 'beneficiario.apellido_paterno', trim((string) Arr::get($validated, 'beneficiario.apellido_paterno')));
@@ -69,6 +72,24 @@ class ApiTjStagingPayloadValidator
         Arr::set($validated, 'beneficiario.domicilio.seccional', trim((string) Arr::get($validated, 'beneficiario.domicilio.seccional')));
 
         return $validated;
+    }
+
+    /**
+     * @param  array<string, mixed>  $validated
+     */
+    private function normalizeSubmittedBy(array &$validated): void
+    {
+        $submittedBy = Arr::get($validated, 'submitted_by');
+
+        if (! is_array($submittedBy)) {
+            Arr::set($validated, 'submitted_by', null);
+
+            return;
+        }
+
+        Arr::set($validated, 'submitted_by.system', $this->nullableTrimmedString($submittedBy['system'] ?? null));
+        Arr::set($validated, 'submitted_by.user_id', $this->nullableTrimmedString($submittedBy['user_id'] ?? null));
+        Arr::set($validated, 'submitted_by.name', $this->nullableTrimmedString($submittedBy['name'] ?? null));
     }
 
     private function nullableTrimmedString(mixed $value): ?string

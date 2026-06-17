@@ -30,7 +30,11 @@ class ApiTjStagingPayloadValidatorTest extends TestCase
         $validated = app(ApiTjStagingPayloadValidator::class)->validate([
             'external_request_id' => 'API-TJ-STG-0001',
             'source' => 'api_tj',
-            'submitted_by' => ' user.external ',
+            'submitted_by' => [
+                'system' => ' api_tj ',
+                'user_id' => ' 123 ',
+                'name' => ' Administrador API_TJ ',
+            ],
             'beneficiario' => [
                 'folio_tarjeta' => ' FOL-01 ',
                 'nombre' => ' Ana ',
@@ -55,7 +59,9 @@ class ApiTjStagingPayloadValidatorTest extends TestCase
         ]);
 
         $this->assertSame('api_tj', $validated['source']);
-        $this->assertSame('user.external', $validated['submitted_by']);
+        $this->assertSame('api_tj', $validated['submitted_by']['system']);
+        $this->assertSame('123', $validated['submitted_by']['user_id']);
+        $this->assertSame('Administrador API_TJ', $validated['submitted_by']['name']);
         $this->assertSame('PELJ000101HMNRRS09', $validated['beneficiario']['curp']);
         $this->assertSame('Ana', $validated['beneficiario']['nombre']);
         $this->assertSame('F', $validated['beneficiario']['sexo']);
@@ -103,6 +109,55 @@ class ApiTjStagingPayloadValidatorTest extends TestCase
 
         $this->assertArrayHasKey('submitted_by', $validated);
         $this->assertNull($validated['submitted_by']);
+    }
+
+    public function test_it_allows_optional_submitted_by_object_fields_to_be_empty(): void
+    {
+        $municipio = Municipio::query()->create([
+            'clave' => 4,
+            'nombre' => 'Parral',
+        ]);
+
+        Seccion::query()->create([
+            'seccional' => '0999',
+            'municipio_id' => $municipio->id,
+            'distrito_local' => '04',
+            'distrito_federal' => '04',
+        ]);
+
+        $validated = app(ApiTjStagingPayloadValidator::class)->validate([
+            'external_request_id' => 'API-TJ-STG-0004',
+            'source' => 'api_tj',
+            'submitted_by' => [
+                'system' => ' ',
+                'user_id' => '',
+            ],
+            'beneficiario' => [
+                'nombre' => 'Ana',
+                'apellido_paterno' => 'Perez',
+                'apellido_materno' => 'Lopez',
+                'curp' => 'PELJ000101HMNRRS09',
+                'fecha_nacimiento' => '2000-01-01',
+                'sexo' => 'F',
+                'discapacidad' => false,
+                'id_ine' => '099912345678901234',
+                'telefono' => '6141234567',
+                'domicilio' => [
+                    'calle' => 'Principal',
+                    'numero_ext' => '100',
+                    'colonia' => 'Centro',
+                    'municipio_id' => $municipio->id,
+                    'codigo_postal' => '33800',
+                    'seccional' => '0999',
+                ],
+            ],
+        ]);
+
+        $this->assertSame([
+            'system' => null,
+            'user_id' => null,
+            'name' => null,
+        ], $validated['submitted_by']);
     }
 
     public function test_it_rejects_an_invalid_source(): void

@@ -69,7 +69,7 @@ Idempotency-Key: <external_request_id>
 Scope: beneficiarios.staging.push
 ```
 
-Payload obligatorio:
+Payload minimo:
 
 ```json
 {
@@ -101,6 +101,12 @@ Payload obligatorio:
   }
 }
 ```
+
+`submitted_by` es opcional. Si API_TJ lo envia, Sys_IPJ acepta este objeto con campos opcionales:
+
+- `submitted_by.system`
+- `submitted_by.user_id`
+- `submitted_by.name`
 
 ## Variables críticas
 

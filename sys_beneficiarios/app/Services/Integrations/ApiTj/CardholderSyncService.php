@@ -148,6 +148,7 @@ class CardholderSyncService
                 $applied = $this->applyResponse($preparedBatch['map'], $response);
                 $successCount += $applied['success'];
                 $failedCount += $applied['failed'];
+                $skippedCount += $applied['skipped'];
 
                 if ($applied['abort']) {
                     $this->failRemainingPendingItems($run, $response->message() ?? 'Outbound sync aborted after API_TJ failure.');
@@ -251,12 +252,13 @@ class CardholderSyncService
 
     /**
      * @param  array<int, IntegrationSyncItem>  $indexMap
-     * @return array{success: int, failed: int, abort: bool}
+     * @return array{success: int, failed: int, skipped: int, abort: bool}
      */
     private function applyResponse(array $indexMap, ApiTjSyncResponse $response): array
     {
         $success = 0;
         $failed = 0;
+        $skipped = 0;
         $abort = false;
 
         if ($response->statusCode >= 400) {
@@ -273,6 +275,7 @@ class CardholderSyncService
             return [
                 'success' => 0,
                 'failed' => count($indexMap),
+                'skipped' => 0,
                 'abort' => true,
             ];
         }
@@ -292,6 +295,7 @@ class CardholderSyncService
             return [
                 'success' => $response->accepted() ? count($indexMap) : 0,
                 'failed' => $response->accepted() ? 0 : count($indexMap),
+                'skipped' => 0,
                 'abort' => ! $response->accepted(),
             ];
         }
@@ -308,6 +312,34 @@ class CardholderSyncService
                     $response->statusCode,
                     $result ?? $response->body,
                     $message,
+                );
+
+                $failed++;
+
+                continue;
+            }
+
+            if ($this->isSkippedResult($resultStatus)) {
+                $this->markItem(
+                    $syncItem,
+                    IntegrationSyncItem::STATUS_SKIPPED,
+                    $response->statusCode,
+                    $result ?? $response->body,
+                    $message,
+                );
+
+                $skipped++;
+
+                continue;
+            }
+
+            if ($this->isErrorResult($resultStatus)) {
+                $this->markItem(
+                    $syncItem,
+                    IntegrationSyncItem::STATUS_ERROR,
+                    $response->statusCode,
+                    $result ?? $response->body,
+                    $message ?? 'API_TJ returned an item error.',
                 );
 
                 $failed++;
@@ -341,7 +373,7 @@ class CardholderSyncService
             $success++;
         }
 
-        return compact('success', 'failed', 'abort');
+        return compact('success', 'failed', 'skipped', 'abort');
     }
 
     private function finalizeRun(
@@ -357,7 +389,7 @@ class CardholderSyncService
             $status = IntegrationSyncRun::STATUS_PARTIAL;
         } elseif ($failedCount > 0) {
             $status = IntegrationSyncRun::STATUS_FAILED;
-        } elseif ($skippedCount > 0 && $successCount > 0) {
+        } elseif ($skippedCount > 0) {
             $status = IntegrationSyncRun::STATUS_PARTIAL;
         }
 
@@ -409,7 +441,7 @@ class CardholderSyncService
     private function resolveResultMessage(?array $result, ApiTjSyncResponse $response): ?string
     {
         if ($result) {
-            foreach (['message', 'error', 'detail'] as $field) {
+            foreach (['message', 'reason', 'error', 'detail', 'action'] as $field) {
                 $value = $result[$field] ?? null;
                 if (is_string($value) && trim($value) !== '') {
                     return trim($value);
@@ -423,12 +455,22 @@ class CardholderSyncService
     private function isRejectedResult(string $status): bool
     {
         return in_array($status, [
+            'conflict',
             'rejected',
             'invalid',
             'duplicate',
-            'error',
             'failed',
         ], true);
+    }
+
+    private function isSkippedResult(string $status): bool
+    {
+        return $status === 'skipped';
+    }
+
+    private function isErrorResult(string $status): bool
+    {
+        return $status === 'error';
     }
 
     /**
