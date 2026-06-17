@@ -1,37 +1,27 @@
-# QA end-to-end Sys_IPJ ↔ API_TJ
+# QA end-to-end API_TJ ↔ Sys_IPJ
 
 ## Objetivo
 
-Diseñar y ejecutar pruebas de flujo entre `Sys_IPJ` y `API_TJ` antes de conectar tráfico real entre ambos sistemas.
+Validar que `API_TJ` sea compatible con el contrato implementado en `Sys_IPJ` para los flujos de integración entre sistemas.
 
-Este documento se enfoca en la responsabilidad de `Sys_IPJ`:
+Este documento cubre la perspectiva de `API_TJ`:
 
-1. Enviar padrón mínimo a `API_TJ`.
-2. Recibir staging aprobado desde `API_TJ`.
-3. Mantener auditoría e idempotencia fuera del modelo core.
-4. Preservar `beneficiarios`, `domicilios`, `tarjetas`, `users`, `municipios` y `secciones` sin metadatos de integración.
+1. Recibir padrón mínimo desde `Sys_IPJ`.
+2. Permitir lookup de Unidad Informática.
+3. Crear staging de beneficiarios desde Unidad Informática.
+4. Enviar staging aprobado hacia `Sys_IPJ`.
+5. Auditar cada intercambio sin exponer PII innecesaria.
 
-## Contrato base validado
+## Contrato requerido
 
 ### Sys_IPJ → API_TJ
 
-Endpoint destino:
+API_TJ debe aceptar:
 
 ```txt
-POST {API_TJ_BASE_URL}/api/v1/cardholders/sync
-```
-
-Headers:
-
-```txt
+POST /api/v1/cardholders/sync
 Authorization: Bearer <jwt_rs256>
-Content-Type: application/json
-```
-
-Scope requerido por API_TJ:
-
-```txt
-cardholders.sync
+Scope: cardholders.sync
 ```
 
 Payload:
@@ -50,29 +40,36 @@ Payload:
 }
 ```
 
+### Unidad Informática → API_TJ
+
+Lookup:
+
+```txt
+POST /api/v1/cardholders/lookup
+Authorization: Bearer <jwt_rs256>
+Scope: cardholders.lookup
+```
+
+Staging:
+
+```txt
+POST /api/v1/beneficiarios-staging
+Authorization: Bearer <jwt_rs256>
+Scope: beneficiarios.staging.create
+```
+
 ### API_TJ → Sys_IPJ
 
-Endpoint receptor:
+API_TJ debe enviar:
 
 ```txt
-POST /api/v1/integrations/api-tj/staging/accept
-```
-
-Headers:
-
-```txt
+POST {SYS_IPJ_PUSH_URL}
 Authorization: Bearer <jwt_rs256>
-Content-Type: application/json
 Idempotency-Key: <external_request_id>
+Scope: beneficiarios.staging.push
 ```
 
-Scope requerido por Sys_IPJ:
-
-```txt
-beneficiarios.staging.push
-```
-
-Payload esperado:
+Payload obligatorio:
 
 ```json
 {
@@ -105,406 +102,408 @@ Payload esperado:
 }
 ```
 
-## Datos QA sugeridos
+## Variables críticas
 
-| Caso | CURP | Tarjeta | Resultado esperado |
-|---|---|---|---|
-| Beneficiario válido 1 | `PELJ000101HMNRRS09` | `TJ-QA-0001` | Sync accepted |
-| Beneficiario válido 2 | `MOCJ050521MSPNRL01` | `TJ-QA-0002` | Sync accepted |
-| Sin folio/tarjeta | `GARC010101HSPRRN08` | null | Sync skipped |
-| Staging válido | `MOCJ050521MSPNRL01` | `TJ-QA-9001` | Beneficiario creado o duplicate si ya existe |
+```env
+CURP_HASH_SECRET=<mismo_valor_que_Sys_IPJ>
 
-## Suite A. Outbound Sys_IPJ → API_TJ
+INTEGRATION_JWT_AUDIENCE=api_tj
+SYS_IPJ_JWT_PUBLIC_KEY=-----BEGIN PUBLIC KEY-----...
+SYS_IPJ_JWT_KID=sys_ipj-current
+SYS_IPJ_ALLOWED_SCOPES=["cardholders.sync"]
 
-### A1. Sync exitoso de padrón mínimo
+INFORMATICA_JWT_PUBLIC_KEY=-----BEGIN PUBLIC KEY-----...
+INFORMATICA_JWT_KID=unidad_informatica-current
+INFORMATICA_ALLOWED_SCOPES=["cardholders.lookup","beneficiarios.staging.create"]
 
-Precondiciones:
-
-- `API_TJ_BASE_URL` apunta al ambiente QA de API_TJ.
-- `CURP_HASH_SECRET` es igual en ambos sistemas.
-- API_TJ tiene cliente `sys_ipj` activo.
-- API_TJ tiene llave pública de Sys_IPJ con `kid = SYS_IPJ_JWT_KID`.
-- `SYS_IPJ_PRIVATE_KEY_PATH` existe y es legible.
-- Queue worker activo.
-
-Acción:
-
-```txt
-Admin Sys_IPJ → Integraciones → API_TJ → disparar sync manual
+SYS_IPJ_PUSH_URL=https://<sys-ipj-url>/api/v1/integrations/api-tj/staging/accept
+SYS_IPJ_PUSH_TIMEOUT_MS=8000
+API_TJ_TO_SYS_IPJ_PRIVATE_KEY_PATH=/app/keys/api_tj_private.pem
+API_TJ_TO_SYS_IPJ_JWT_KID=api_tj-current
+API_TJ_TO_SYS_IPJ_ISSUER=api_tj
+API_TJ_TO_SYS_IPJ_SUBJECT=api_tj
+API_TJ_TO_SYS_IPJ_AUDIENCE=sys_ipj
+API_TJ_TO_SYS_IPJ_SCOPE=beneficiarios.staging.push
+API_TJ_TO_SYS_IPJ_JWT_EXPIRES_IN=5m
 ```
 
-Esperado en Sys_IPJ:
+## Suite A. Recepción de padrón desde Sys_IPJ
 
-- Se crea registro en `integration_sync_runs`.
-- Se crean registros en `integration_sync_items`.
-- Los beneficiarios con tarjeta/folio válido se envían.
-- Los beneficiarios sin folio válido quedan como `skipped`.
+### A1. Sync exitoso
 
-Esperado en API_TJ:
+Request esperado:
 
-- Se insertan/actualizan registros en `cardholders_sync`.
-- Se registra auditoría `SYS_IPJ_TO_API_TJ`.
+```json
+{
+  "sync_id": "SYS-IPJ-QA-001",
+  "items": [
+    {
+      "curp_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "curp_masked": "PELJ************09",
+      "tarjeta_numero": "TJ-QA-0001",
+      "status": "active"
+    }
+  ]
+}
+```
 
-Criterio PASS:
+Esperado:
 
-```txt
-HTTP 2xx desde API_TJ.
-integration_sync_runs.status in [success, partial].
-cardholders_sync contiene los hashes enviados.
+- HTTP 200.
+- Insert/update en `cardholders_sync`.
+- Registro en `sync_audit_log` con `direction = SYS_IPJ_TO_API_TJ`.
+
+Validación SQL:
+
+```sql
+SELECT curp_hash, tarjeta_numero, status
+FROM cardholders_sync
+WHERE tarjeta_numero = 'TJ-QA-0001';
 ```
 
 ### A2. Sync con item inválido
 
-Simulación:
+Payload inválido:
 
-- Forzar un item sin `tarjeta_numero` o con `curp_hash` inválido.
+```json
+{
+  "curp_hash": "INVALID_HASH",
+  "curp_masked": "PELJ************09",
+  "tarjeta_numero": "TJ-QA-0001",
+  "status": "active"
+}
+```
 
 Esperado:
 
-- API_TJ no debe insertar item inválido.
-- Sys_IPJ debe auditarlo como `skipped`, `rejected` o `error` según respuesta recibida.
+- No insertar item inválido.
+- Incrementar `skipped`.
+- Responder resultado granular por índice.
 
-Observación QA:
+Respuesta recomendada:
 
-- Si API_TJ no devuelve `results` por índice, Sys_IPJ puede marcar todos los items 2xx como `accepted`. Esto debe tratarse como riesgo de auditoría, no como bloqueo de conectividad.
+```json
+{
+  "accepted": true,
+  "status": "partial",
+  "processed": 1,
+  "inserted": 0,
+  "updated": 0,
+  "skipped": 1,
+  "conflict": 0,
+  "results": [
+    {
+      "index": 0,
+      "status": "skipped",
+      "message": "curp_hash invalido"
+    }
+  ]
+}
+```
 
 ### A3. Conflicto por tarjeta
 
-Simulación:
+Caso:
 
-- API_TJ ya tiene `tarjeta_numero = TJ-QA-0001` asociada a un `curp_hash` diferente.
-- Sys_IPJ manda la misma tarjeta con otro hash.
-
-Esperado:
-
-- API_TJ reporta conflicto.
-- Sys_IPJ debe dejar evidencia en `integration_sync_items`.
-
-Riesgo actual:
-
-- Si API_TJ solo responde conteos agregados, Sys_IPJ no puede atribuir conflicto a un item específico.
-
-## Suite B. Inbound API_TJ → Sys_IPJ
-
-### B1. Push válido de staging
-
-Precondiciones:
-
-- Sys_IPJ tiene cliente `api_tj` activo en `integration_clients`.
-- Sys_IPJ tiene llave pública de API_TJ en `integration_client_keys`.
-- JWT API_TJ usa:
-  - `iss = api_tj`
-  - `aud = sys_ipj`
-  - `scope = beneficiarios.staging.push`
-  - `kid = api_tj-current`
-- Existe usuario técnico `API_TJ_INTEGRATION_USER_EMAIL`.
-
-Acción:
-
-```txt
-API_TJ POST /api/v1/integrations/api-tj/staging/accept
-```
+- Existe `tarjeta_numero = TJ-QA-0001` con `curp_hash = A`.
+- Llega `tarjeta_numero = TJ-QA-0001` con `curp_hash = B`.
 
 Esperado:
 
 ```json
 {
   "accepted": true,
-  "status": "created",
-  "external_request_id": "USI-QA-0001",
-  "beneficiario_id": "<uuid>"
+  "status": "partial",
+  "conflict": 1,
+  "results": [
+    {
+      "index": 0,
+      "status": "conflict",
+      "message": "tarjeta_numero ya existe con otro curp_hash"
+    }
+  ]
 }
 ```
 
-Validar en DB:
+## Suite B. Lookup Unidad Informática
 
-```sql
-SELECT status, response_code
-FROM integration_inbound_requests
-WHERE external_request_id = 'USI-QA-0001';
+### B1. Lookup registrado
 
-SELECT id, created_by
-FROM beneficiarios
-WHERE curp = 'MOCJ050521MSPNRL01';
+Request:
 
-SELECT *
-FROM domicilios
-WHERE beneficiario_id = '<beneficiario_id>';
-```
-
-Criterio PASS:
-
-- `integration_inbound_requests.status = accepted`.
-- Se crea beneficiario oficial.
-- Se crea domicilio.
-- `created_by` corresponde al usuario técnico.
-- No se agregan metadatos de integración en `beneficiarios`.
-
-### B2. Push sin JWT
-
-Acción:
-
-```txt
-POST /api/v1/integrations/api-tj/staging/accept sin Authorization
+```json
+{
+  "curp": "PELJ000101HMNRRS09"
+}
 ```
 
 Esperado:
 
 ```json
 {
-  "accepted": false,
-  "status": "unauthorized",
-  "message": "Token de integracion invalido"
+  "registered": true,
+  "folio_tarjeta": "TJ-QA-0001"
 }
 ```
 
 Criterio PASS:
 
-- HTTP 401.
-- No se crea beneficiario.
+- JWT con scope `cardholders.lookup`.
+- `CURP_HASH_SECRET` coincide con Sys_IPJ.
+- Existe registro en `cardholders_sync`.
 
-### B3. Push con scope incorrecto
+### B2. Lookup no registrado
 
-Token:
+Esperado:
 
 ```txt
-scope = beneficiarios.create
+HTTP 404
+registered = false
 ```
+
+### B3. Lookup sin scope
 
 Esperado:
 
 ```txt
 HTTP 403
-status = forbidden
 ```
 
-Criterio PASS:
+## Suite C. Crear staging
 
-- Sys_IPJ bloquea el request.
-- No se crea beneficiario.
+### C1. Crear staging válido
 
-### B4. Push con payload sin `source`
-
-Payload:
+Request:
 
 ```json
 {
-  "external_request_id": "USI-QA-0002",
-  "beneficiario": {}
+  "external_request_id": "USI-QA-0001",
+  "beneficiario": {
+    "folio_tarjeta": "TJ-QA-9001",
+    "nombre": "LAURA",
+    "apellido_paterno": "MARTINEZ",
+    "apellido_materno": "SOTO",
+    "curp": "MOCJ050521MSPNRL01",
+    "fecha_nacimiento": "2005-05-21",
+    "sexo": "F",
+    "discapacidad": false,
+    "id_ine": "INEQA123456",
+    "telefono": "4441234567",
+    "domicilio": {
+      "calle": "AV QA",
+      "numero_ext": "100",
+      "numero_int": null,
+      "colonia": "CENTRO",
+      "municipio_id": 1,
+      "codigo_postal": "78000",
+      "seccional": "001"
+    }
+  }
 }
 ```
 
 Esperado:
 
-```txt
-HTTP 422
-status = validation_error
+```json
+{
+  "created": true,
+  "status": "pending",
+  "staging_id": 123
+}
 ```
 
-Criterio PASS:
+Validar:
 
-- Se registra inbound rechazado si trae `external_request_id`.
+```sql
+SELECT external_request_id, curp_masked, status
+FROM beneficiario_staging
+WHERE external_request_id = 'USI-QA-0001';
+```
 
-### B5. Push duplicado idempotente
+### C2. Validación preventiva de staging
+
+Casos que deben rechazarse antes de intentar push a Sys_IPJ:
+
+| Campo | Valor inválido | Esperado |
+|---|---|---|
+| `telefono` | `444ABC` | 422 |
+| `sexo` | `Z` | 422 |
+| `fecha_nacimiento` | `ayer` | 422 |
+| `municipio_id` | `0` | 422 |
+| `seccional` | vacío | 422 |
+
+## Suite D. Push API_TJ → Sys_IPJ
+
+### D1. Push válido
+
+Precondiciones:
+
+- `SYS_IPJ_PUSH_URL` apunta a `/api/v1/integrations/api-tj/staging/accept`.
+- API_TJ firma con `scope = beneficiarios.staging.push`.
+- API_TJ manda `source = api_tj`.
+- Sys_IPJ tiene llave pública de API_TJ activa.
 
 Acción:
 
-- Enviar dos veces el mismo `external_request_id` con el mismo payload.
+```txt
+POST /api/v1/admin/beneficiarios-staging/:id/push
+```
 
-Esperado segundo request:
+Esperado en API_TJ:
+
+```json
+{
+  "sent": true,
+  "message": "Beneficiario enviado a Sys_IPJ",
+  "sys_ipj_status": 201
+}
+```
+
+Esperado en Sys_IPJ:
 
 ```json
 {
   "accepted": true,
-  "status": "already_processed"
+  "status": "created",
+  "beneficiario_id": "<uuid>"
 }
 ```
 
-Criterio PASS:
+### D2. Push con scope incorrecto
 
-- No se crea beneficiario duplicado.
-- `integration_inbound_requests` mantiene el request original.
+Scope:
 
-### B6. Push con mismo `external_request_id` y payload distinto
-
-Acción:
-
-- Enviar `external_request_id = USI-QA-0003` con payload A.
-- Reenviar `USI-QA-0003` con payload B.
+```txt
+beneficiarios.create
+```
 
 Esperado:
 
 ```txt
-HTTP 409
-status = conflict
+Sys_IPJ HTTP 403
+API_TJ registra intento fallido
 ```
 
-Criterio PASS:
+### D3. Push sin `source`
 
-- No se sobreescribe `request_hash`.
-- No se sobreescribe payload cifrado.
-- No se crea beneficiario adicional.
-
-### B7. Push con CURP existente
-
-Acción:
-
-- Enviar staging con CURP ya existente en `beneficiarios`, incluso si está soft-deleted.
-
-Esperado:
+Body sin:
 
 ```json
 {
-  "accepted": false,
-  "status": "duplicate"
+  "source": "api_tj"
 }
 ```
 
-Criterio PASS:
+Esperado:
 
-- No se crea beneficiario nuevo.
-- Inbound queda `rejected`.
+```txt
+Sys_IPJ HTTP 422
+status = validation_error
+```
 
-## Suite C. Seguridad y llaves
+### D4. Push repetido
 
-### C1. Llave pública API_TJ no registrada
+Mismo `external_request_id` y mismo payload.
 
 Esperado:
 
 ```txt
-HTTP 401
+Sys_IPJ status = already_processed
+API_TJ no duplica beneficiario
 ```
 
-Criterio PASS:
-
-- Sys_IPJ rechaza tokens cuyo `kid` no esté activo.
-
-### C2. Replay JWT
-
-Acción:
-
-- Reutilizar el mismo JWT con el mismo `jti`.
+### D5. Mismo `external_request_id`, payload distinto
 
 Esperado:
 
 ```txt
-Primer request: procesa según payload.
-Segundo request: HTTP 401 unauthorized.
+Sys_IPJ HTTP 409 conflict
+API_TJ registra intento rechazado/error
 ```
 
-Criterio PASS:
+## Suite E. Seguridad JWT
 
-- Se registra `jti` en `integration_jti_logs`.
-- El segundo intento se bloquea.
-
-### C3. Audiencia incorrecta
-
-Token:
-
-```txt
-aud = api_tj
-```
-
-Esperado en inbound Sys_IPJ:
-
-```txt
-HTTP 401
-```
-
-Criterio PASS:
-
-- Sys_IPJ solo acepta audiencia `sys_ipj`.
-
-## Suite D. Auditoría
-
-### D1. Auditoría outbound
-
-Validar:
-
-```sql
-SELECT * FROM integration_sync_runs ORDER BY created_at DESC LIMIT 1;
-SELECT * FROM integration_sync_items WHERE sync_run_id = '<run_id>';
-```
-
-Criterio PASS:
-
-- Hay corrida.
-- Hay items.
-- Hay conteos coherentes.
-
-### D2. Auditoría inbound
-
-Validar:
-
-```sql
-SELECT source_system, external_request_id, status, response_code, error_message
-FROM integration_inbound_requests
-ORDER BY received_at DESC
-LIMIT 10;
-```
-
-Criterio PASS:
-
-- Cada request externo con `external_request_id` queda auditado.
-- Los inválidos quedan `rejected`.
-- Los fallos controlados quedan `failed`.
-
-## Resultado QA esperado antes de conexión real
-
-| Suite | Resultado requerido |
+| Caso | Esperado |
 |---|---|
-| A1 Sync exitoso | PASS |
-| A2 Item inválido | PASS o WARN documentado |
-| A3 Conflicto tarjeta | PASS o WARN documentado |
-| B1 Push válido | PASS |
-| B2 Sin JWT | PASS |
-| B3 Scope incorrecto | PASS |
-| B4 Sin source | PASS |
-| B5 Idempotencia repetida | PASS |
-| B6 Payload distinto mismo ID | PASS |
-| B7 CURP duplicada | PASS |
-| C1 Llave no registrada | PASS |
-| C2 Replay JWT | PASS |
-| C3 Audiencia incorrecta | PASS |
-| D1 Auditoría outbound | PASS |
-| D2 Auditoría inbound | PASS |
+| Sin Authorization | 401 |
+| Token malformado | 401 |
+| `kid` no registrado | 401 |
+| Scope no permitido | 403 |
+| Scope requerido faltante | 403 |
+| IP fuera de allowlist | 403 |
+| Replay de `jti` | 401 |
+| Audiencia incorrecta | 401 |
+
+## Suite F. Auditoría
+
+### F1. Auditoría de sync recibido
+
+```sql
+SELECT direction, executed_by, request_count, inserted_count, updated_count, skipped_count, conflict_count, status
+FROM sync_audit_log
+WHERE direction = 'SYS_IPJ_TO_API_TJ'
+ORDER BY created_at DESC
+LIMIT 1;
+```
+
+### F2. Auditoría de push staging
+
+```sql
+SELECT staging_id, external_request_id, actor, response_status, status, error_message
+FROM staging_push_attempts
+WHERE external_request_id = 'USI-QA-0001'
+ORDER BY attempted_at DESC;
+```
+
+### F3. Auditoría de llamada de integración
+
+```sql
+SELECT client_code, method, path, required_scope, status_code
+FROM integration_audit_log
+ORDER BY created_at DESC
+LIMIT 20;
+```
+
+## Resultado QA requerido
+
+| Suite | Resultado mínimo |
+|---|---|
+| A. Sync padrón | PASS con auditoría |
+| B. Lookup Unidad Informática | PASS |
+| C. Staging Unidad Informática | PASS |
+| D. Push a Sys_IPJ | PASS obligatorio antes de conexión real |
+| E. JWT/security | PASS |
+| F. Auditoría | PASS |
+
+## Estado actual conocido
+
+Antes de habilitar conexión real, API_TJ debe corregir:
+
+1. `API_TJ_TO_SYS_IPJ_SCOPE` debe ser `beneficiarios.staging.push`.
+2. El body de `sysIpjClient` debe incluir `source = api_tj`.
+3. El body de `sysIpjClient` debe usar `beneficiario` como objeto operativo principal.
+4. `/cardholders/sync` debe devolver `results` por índice para auditoría exacta en Sys_IPJ.
+5. Staging debe validar con reglas equivalentes a Sys_IPJ para evitar rechazos tardíos.
 
 ## Decisión GO / NO GO
 
 ### GO parcial
 
-Permitido si:
+Permitido:
 
-- Sys_IPJ → API_TJ sync funciona.
-- Unidad Informática → API_TJ lookup/staging funciona.
-- API_TJ → Sys_IPJ push sigue desactivado hasta corregir contrato saliente.
+- Recibir sync de Sys_IPJ.
+- Habilitar lookup de Unidad Informática.
+- Habilitar creación de staging.
+
+No permitido:
+
+- Push real hacia Sys_IPJ si el contrato saliente no está corregido.
 
 ### GO completo
 
 Permitido solo si:
 
-- API_TJ manda `scope = beneficiarios.staging.push`.
-- API_TJ manda `source = api_tj`.
-- API_TJ manda `beneficiario` como objeto principal.
-- Sys_IPJ crea beneficiario y domicilio.
-- La auditoría queda en ambos sistemas.
-
-### NO GO
-
-Cualquier caso:
-
-- `CURP_HASH_SECRET` distinto.
-- Llaves públicas no cargadas.
-- Queue worker inactivo para outbound.
-- API_TJ usa `scope = beneficiarios.create` en push hacia Sys_IPJ.
-- API_TJ omite `source = api_tj`.
-- Producción no tiene backup reciente.
-
-## Pendientes detectados para compatibilidad completa
-
-1. Corregir en API_TJ el scope saliente hacia Sys_IPJ: `beneficiarios.staging.push`.
-2. Corregir en API_TJ el body saliente: agregar `source = api_tj` y quitar `records` como campo operativo.
-3. Agregar tests de contrato para `sysIpjClient`.
-4. Mejorar respuesta de `/api/v1/cardholders/sync` con `results` por índice.
-5. Endurecer validación de staging en API_TJ para evitar rechazos tardíos en Sys_IPJ.
-6. Agregar en Sys_IPJ comando operativo para cargar/rotar llave pública de API_TJ.
+- Push hacia Sys_IPJ usa scope `beneficiarios.staging.push`.
+- Push hacia Sys_IPJ manda `source = api_tj`.
+- Push crea beneficiario oficial en Sys_IPJ.
+- Ambos sistemas registran auditoría.
