@@ -126,7 +126,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         try {
-            const res = await fetch(`/api/v1/secciones/${encodeURIComponent(query)}`, { headers: { 'Accept': 'application/json' } });
+            const res = await fetch(`/api/secciones/${encodeURIComponent(query)}`, { headers: { 'Accept': 'application/json' } });
             const payload = await res.json();
             if (!res.ok || payload.found === false) {
                 clearData('No encontrada', !municipioFueAutocompletado);

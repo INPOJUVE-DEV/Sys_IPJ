@@ -273,12 +273,12 @@ class PageManagementTest extends TestCase
         $this->actingAs($this->admin)->postJson('/admin/pages', $this->basePayload);
         $this->actingAs($this->admin)->postJson('/admin/pages/landing-hero/publish');
 
-        $first = $this->getJson('/api/v1/pages/landing-hero');
+        $first = $this->getJson('/api/pages/landing-hero');
         $first->assertOk()->assertHeader('ETag');
 
         $etag = $first->headers->get('ETag');
 
-        $second = $this->getJson('/api/v1/pages/landing-hero', [
+        $second = $this->getJson('/api/pages/landing-hero', [
             'If-None-Match' => $etag,
         ]);
         $second->assertStatus(304);

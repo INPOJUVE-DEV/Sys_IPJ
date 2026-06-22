@@ -67,7 +67,7 @@ it('excluye componentes deshabilitados del registro publico', function () {
         ]
     );
 
-    $response = getJson('/api/v1/components/registry');
+    $response = getJson('/api/components/registry');
 
     $response->assertOk();
     $keys = collect($response->json('data'))->pluck('key');

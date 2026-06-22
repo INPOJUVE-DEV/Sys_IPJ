@@ -5,7 +5,7 @@ use Tests\TestCase;
 uses(TestCase::class);
 
 it('returns health ok', function () {
-    $response = $this->get('/api/v1/health');
+    $response = $this->get('/api/health');
 
     $response->assertOk()
         ->assertJson(['status' => 'ok'])
@@ -13,7 +13,7 @@ it('returns health ok', function () {
 
     $etag = $response->headers->get('ETag');
 
-    $cached = $this->get('/api/v1/health', [
+    $cached = $this->get('/api/health', [
         'If-None-Match' => $etag,
     ]);
 

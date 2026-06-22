@@ -546,7 +546,7 @@
                         const currentRequest = ++requestSerial;
                         if (!query) { clearResolvedData('-', '-', true); return; }
                         try {
-                            const res = await fetch(`/api/v1/secciones/${encodeURIComponent(query)}`, { headers: { 'Accept': 'application/json' } });
+                            const res = await fetch(`/api/secciones/${encodeURIComponent(query)}`, { headers: { 'Accept': 'application/json' } });
                             const data = await res.json();
                             if (currentRequest !== requestSerial) return;
                             if (!res.ok || data.found === false) {

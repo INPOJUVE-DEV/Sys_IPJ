@@ -31,7 +31,7 @@ class SeccionesLookupTest extends TestCase
             ['municipio_id' => $municipio->id, 'distrito_local' => 'DL', 'distrito_federal' => 'DF']
         );
 
-        $this->getJson('/api/v1/secciones/12345')
+        $this->getJson('/api/secciones/12345')
             ->assertOk()
             ->assertJsonPath('found', true)
             ->assertJsonPath('seccional', '12345')
@@ -41,7 +41,7 @@ class SeccionesLookupTest extends TestCase
 
     public function test_lookup_returns_found_false_instead_of_404_for_unknown_seccional(): void
     {
-        $this->getJson('/api/v1/secciones/99999')
+        $this->getJson('/api/secciones/99999')
             ->assertOk()
             ->assertJsonPath('found', false)
             ->assertJsonPath('seccional', '99999')

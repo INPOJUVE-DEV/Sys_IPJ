@@ -50,18 +50,18 @@ beforeEach(function () {
 it('expone el tema activo en el endpoint público con ETag y cache', function () {
     Cache::flush();
 
-    $first = getJson('/api/v1/themes/current');
+    $first = getJson('/api/themes/current');
     $first->assertOk()->assertJsonPath('data.name', 'Initial Theme')->assertHeader('ETag');
     $etag = $first->headers->get('ETag');
 
-    $second = getJson('/api/v1/themes/current', ['If-None-Match' => $etag]);
+    $second = getJson('/api/themes/current', ['If-None-Match' => $etag]);
     $second->assertStatus(304);
 });
 
 it('permite actualizar tokens del tema activo y limpia cache', function () {
     Cache::flush();
 
-    $initial = getJson('/api/v1/themes/current');
+    $initial = getJson('/api/themes/current');
     $initial->assertOk()->assertHeader('ETag');
     $oldEtag = $initial->headers->get('ETag');
 
@@ -94,7 +94,7 @@ it('permite actualizar tokens del tema activo y limpia cache', function () {
     expect(Cache::has('theme.current'))->toBeTrue();
     expect(Cache::has('theme.current.payload'))->toBeFalse();
 
-    $public = getJson('/api/v1/themes/current');
+    $public = getJson('/api/themes/current');
     $public->assertOk()->assertJsonPath('data.name', 'Nuevo tema')->assertHeader('ETag');
     expect($public->headers->get('ETag'))->not->toBe($oldEtag);
 });

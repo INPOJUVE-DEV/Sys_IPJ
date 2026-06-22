@@ -27,7 +27,7 @@ Route::prefix('auth')->group(function () {
 Route::middleware('throttle:30,1')->get('/secciones/{seccional}', [SeccionesController::class, 'show']);
 Route::middleware(['auth:sanctum', 'throttle:30,1'])->post('/beneficiarios/cache', [BeneficiariosImportController::class, 'store']);
 
-Route::prefix('integrations/api-tj')
+Route::prefix('v1/integrations/api-tj')
     ->middleware(['integration.jwt:beneficiarios.staging.push', 'throttle:30,1'])
     ->group(function () {
         Route::post('/staging/accept', ApiTjStagingAcceptController::class);

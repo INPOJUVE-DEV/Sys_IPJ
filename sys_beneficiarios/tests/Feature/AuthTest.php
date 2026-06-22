@@ -14,7 +14,7 @@ it('logs in and out via sanctum', function () {
         'password' => Hash::make('password'),
     ]);
 
-    $login = postJson('/api/v1/auth/login', [
+    $login = postJson('/api/auth/login', [
         'email' => 'admin@example.com',
         'password' => 'password',
     ]);
@@ -28,7 +28,7 @@ it('logs in and out via sanctum', function () {
     $token = $login->json('token');
 
     $logout = $this->withHeader('Authorization', 'Bearer '.$token)
-        ->postJson('/api/v1/auth/logout');
+        ->postJson('/api/auth/logout');
 
     $logout->assertNoContent();
 
