@@ -77,6 +77,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const summaryCard = document.getElementById('domicilio-form-seccion-summary');
     const summaryMun = document.getElementById('domicilio-form-seccional-muni');
     const summaryDist = document.getElementById('domicilio-form-seccional-distritos');
+    let municipioFueAutocompletado = false;
+    let syncingMunicipio = false;
 
     const renderSummary = (municipio = '-', dl = '-', df = '-') => {
         if (summaryMun) summaryMun.textContent = municipio || '-';
@@ -90,33 +92,49 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const applyData = (data) => {
         if (!data) return;
-        if (municipioSelect) municipioSelect.value = data.municipio_id ? String(data.municipio_id) : '';
+        if (municipioSelect) {
+            syncingMunicipio = true;
+            municipioSelect.value = data.municipio_id ? String(data.municipio_id) : '';
+            syncingMunicipio = false;
+            municipioFueAutocompletado = !!data.municipio_id;
+        }
         renderSummary(data.municipio || '-', data.distrito_local || '-', data.distrito_federal || '-');
         toggleSummary(true);
     };
 
-    const clearData = () => {
-        if (municipioSelect) municipioSelect.value = '';
-        renderSummary('-', '-', '-');
+    const clearData = (municipio = '-', preserveMunicipio = false) => {
+        if (municipioSelect && !preserveMunicipio && municipioFueAutocompletado) {
+            syncingMunicipio = true;
+            municipioSelect.value = '';
+            syncingMunicipio = false;
+            municipioFueAutocompletado = false;
+        }
+        renderSummary(municipio, '-', '-');
         toggleSummary(false);
     };
+
+    municipioSelect?.addEventListener('change', () => {
+        if (!syncingMunicipio) {
+            municipioFueAutocompletado = false;
+        }
+    });
 
     const hydrate = async (value) => {
         const query = (value || '').trim();
         if (!query) {
-            clearData();
+            clearData('-', true);
             return;
         }
         try {
-            const res = await fetch(`/api/secciones/${encodeURIComponent(query)}`, { headers: { 'Accept': 'application/json' } });
-            if (!res.ok) {
-                clearData();
+            const res = await fetch(`/api/v1/secciones/${encodeURIComponent(query)}`, { headers: { 'Accept': 'application/json' } });
+            const payload = await res.json();
+            if (!res.ok || payload.found === false) {
+                clearData('No encontrada', !municipioFueAutocompletado);
                 return;
             }
-            const payload = await res.json();
             applyData(payload);
         } catch (_) {
-            clearData();
+            clearData('No disponible', !municipioFueAutocompletado);
         }
     };
 
@@ -130,7 +148,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (seccionInput.value) {
             hydrate(seccionInput.value);
         } else {
-            clearData();
+            clearData('-', true);
         }
     }
 });

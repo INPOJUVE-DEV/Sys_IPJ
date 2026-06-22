@@ -75,6 +75,47 @@ class CardholderSyncServiceTest extends TestCase
         Queue::assertPushed(RunCardholderSyncJob::class, fn (RunCardholderSyncJob $job) => $job->syncRunId === $run->id);
     }
 
+    public function test_queue_beneficiario_creates_a_single_item_for_the_requested_beneficiary(): void
+    {
+        Queue::fake();
+
+        $actor = User::factory()->create();
+        $target = $this->makeBeneficiario($actor, 'PESD000101HSPABC14', 'LEG-ONLY');
+        $other = $this->makeBeneficiarioWithConsumedCard($actor, 'PESE000101HSPABC15', 'LEG-OTHER', 'TJ-OTHER');
+
+        $run = app(CardholderSyncService::class)->queueBeneficiario($target, $actor);
+
+        $this->assertSame(IntegrationSyncRun::STATUS_QUEUED, $run->status);
+        $this->assertSame(1, $run->total_items);
+        $this->assertCount(1, $run->items);
+        $this->assertSame($target->id, $run->items->sole()->beneficiario_id);
+        $this->assertDatabaseMissing('integration_sync_items', [
+            'sync_run_id' => $run->id,
+            'beneficiario_id' => $other->id,
+        ]);
+
+        Queue::assertPushed(RunCardholderSyncJob::class, fn (RunCardholderSyncJob $job) => $job->syncRunId === $run->id);
+    }
+
+    public function test_queue_beneficiario_marks_missing_card_numbers_as_skipped_without_dispatching_a_job(): void
+    {
+        Queue::fake();
+
+        $actor = User::factory()->create();
+        $beneficiario = $this->makeBeneficiario($actor, 'PESF000101HSPABC16', null);
+
+        $run = app(CardholderSyncService::class)->queueBeneficiario($beneficiario, $actor);
+
+        $this->assertSame(IntegrationSyncRun::STATUS_SUCCESS, $run->status);
+        $this->assertSame(1, $run->total_items);
+        $this->assertSame(1, $run->skipped_count);
+        $this->assertCount(1, $run->items);
+        $this->assertSame(IntegrationSyncItem::STATUS_SKIPPED, $run->items->sole()->status);
+        $this->assertSame($beneficiario->id, $run->items->sole()->beneficiario_id);
+
+        Queue::assertNotPushed(RunCardholderSyncJob::class);
+    }
+
     public function test_run_records_partial_success_when_some_items_are_skipped_locally(): void
     {
         Queue::fake();

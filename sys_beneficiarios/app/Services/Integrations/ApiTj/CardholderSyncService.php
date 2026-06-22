@@ -27,7 +27,26 @@ class CardholderSyncService
 
     public function queue(User $actor, array $options = []): IntegrationSyncRun
     {
-        $run = DB::transaction(function () use ($actor) {
+        return $this->queueRun(
+            $this->selector->queryEligible()->get(),
+            $actor,
+        );
+    }
+
+    public function queueBeneficiario(Beneficiario $beneficiario, User $actor): IntegrationSyncRun
+    {
+        $target = Beneficiario::query()
+            ->with([
+                'tarjeta' => fn ($query) => $query->select(['id', 'folio', 'estatus', 'beneficiario_id']),
+            ])
+            ->findOrFail($beneficiario->id);
+
+        return $this->queueRun(collect([$target]), $actor);
+    }
+
+    private function queueRun(Collection $beneficiarios, User $actor): IntegrationSyncRun
+    {
+        $run = DB::transaction(function () use ($beneficiarios, $actor) {
             $run = IntegrationSyncRun::query()->create([
                 'id' => (string) Str::uuid(),
                 'target_system' => self::TARGET_SYSTEM,
@@ -39,31 +58,17 @@ class CardholderSyncService
             $syncMoment = $run->created_at ?? now();
             $pendingCount = 0;
             $skippedCount = 0;
-            $totalItems = 0;
+            $totalItems = $beneficiarios->count();
 
-            foreach ($this->selector->queryEligible()->get() as $beneficiario) {
-                $totalItems++;
+            foreach ($beneficiarios as $beneficiario) {
+                $itemStatus = $this->createSyncItem($run, $beneficiario, $syncMoment);
 
-                try {
-                    $payload = $this->payloadFactory->makeItem($beneficiario, $syncMoment);
-
-                    $run->items()->create([
-                        'id' => (string) Str::uuid(),
-                        'beneficiario_id' => $beneficiario->id,
-                        'payload_hash' => $this->hashPayload($payload),
-                        'status' => IntegrationSyncItem::STATUS_PENDING,
-                    ]);
-
+                if ($itemStatus === IntegrationSyncItem::STATUS_PENDING) {
                     $pendingCount++;
-                } catch (SkipSyncItemException $exception) {
-                    $run->items()->create([
-                        'id' => (string) Str::uuid(),
-                        'beneficiario_id' => $beneficiario->id,
-                        'payload_hash' => $this->hashSkip($beneficiario, $exception->getMessage()),
-                        'status' => IntegrationSyncItem::STATUS_SKIPPED,
-                        'error_message' => $exception->getMessage(),
-                    ]);
+                    continue;
+                }
 
+                if ($itemStatus === IntegrationSyncItem::STATUS_SKIPPED) {
                     $skippedCount++;
                 }
             }
@@ -85,6 +90,32 @@ class CardholderSyncService
         }
 
         return $run->fresh(['items']);
+    }
+
+    private function createSyncItem(IntegrationSyncRun $run, Beneficiario $beneficiario, $syncMoment): string
+    {
+        try {
+            $payload = $this->payloadFactory->makeItem($beneficiario, $syncMoment);
+
+            $run->items()->create([
+                'id' => (string) Str::uuid(),
+                'beneficiario_id' => $beneficiario->id,
+                'payload_hash' => $this->hashPayload($payload),
+                'status' => IntegrationSyncItem::STATUS_PENDING,
+            ]);
+
+            return IntegrationSyncItem::STATUS_PENDING;
+        } catch (SkipSyncItemException $exception) {
+            $run->items()->create([
+                'id' => (string) Str::uuid(),
+                'beneficiario_id' => $beneficiario->id,
+                'payload_hash' => $this->hashSkip($beneficiario, $exception->getMessage()),
+                'status' => IntegrationSyncItem::STATUS_SKIPPED,
+                'error_message' => $exception->getMessage(),
+            ]);
+
+            return IntegrationSyncItem::STATUS_SKIPPED;
+        }
     }
 
     public function run(IntegrationSyncRun $run): void

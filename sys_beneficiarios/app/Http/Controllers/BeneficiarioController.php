@@ -7,6 +7,7 @@ use App\Http\Requests\UpdateBeneficiarioRequest;
 use App\Models\Beneficiario;
 use App\Models\Municipio;
 use App\Services\Beneficiarios\BeneficiarioRegistrationService;
+use App\Services\Integrations\ApiTj\CardholderSyncService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
@@ -92,7 +93,11 @@ class BeneficiarioController extends Controller
         return view('beneficiarios.create', compact('municipios'));
     }
 
-    public function store(StoreBeneficiarioRequest $request, BeneficiarioRegistrationService $registrationService)
+    public function store(
+        StoreBeneficiarioRequest $request,
+        BeneficiarioRegistrationService $registrationService,
+        CardholderSyncService $syncService,
+    )
     {
         $data = $request->validated();
 
@@ -115,8 +120,22 @@ class BeneficiarioController extends Controller
                 ->with('error', 'No se pudo registrar el beneficiario, intenta nuevamente.');
         }
 
+        $statusMessage = 'Registrado';
+
+        try {
+            $syncService->queueBeneficiario($beneficiario, $request->user());
+        } catch (\Throwable $e) {
+            Log::error('Error al programar sincronizacion de beneficiario hacia API_TJ', [
+                'message' => $e->getMessage(),
+                'beneficiario_id' => $beneficiario->id,
+                'user_id' => $request->user()?->uuid,
+            ]);
+
+            $statusMessage = 'Registrado. La sincronizacion con API_TJ quedo pendiente de revisar.';
+        }
+
         return redirect()->route('beneficiarios.create')
-            ->with('status', 'Registrado')
+            ->with('status', $statusMessage)
             ->with('last_beneficiario_id', $beneficiario->id)
             ->with('beneficiario_registered', true);
     }

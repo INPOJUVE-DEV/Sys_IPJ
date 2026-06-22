@@ -9,13 +9,24 @@ use Illuminate\Validation\ValidationException;
 
 class BeneficiarioLocationResolver
 {
-    public function resolve(array $domicilio, ?string $idIne = null, ?User $actor = null, ?Seccion $fallback = null): Seccion
+    public function resolve(array $domicilio, ?string $idIne = null, ?User $actor = null, ?Seccion $fallback = null): ?Seccion
     {
-        $seccion = SeccionResolver::resolveFromIne($idIne)
-            ?: SeccionResolver::resolve($domicilio['seccional'] ?? null)
-            ?: $fallback;
+        $detectedSeccional = SeccionResolver::extractFromIne($idIne);
+        $submittedSeccional = $domicilio['seccional'] ?? null;
+
+        $seccion = SeccionResolver::resolve($detectedSeccional);
+
+        if (! $seccion && $this->shouldResolveSubmittedSeccional($submittedSeccional, $detectedSeccional, $idIne)) {
+            $seccion = SeccionResolver::resolve($submittedSeccional);
+        }
+
+        $seccion ??= $fallback;
 
         if (! $seccion) {
+            if (! empty($domicilio['municipio_id'])) {
+                return null;
+            }
+
             throw ValidationException::withMessages([
                 'id_ine' => 'No fue posible detectar una seccional valida a partir del ID INE.',
             ]);
@@ -33,6 +44,19 @@ class BeneficiarioLocationResolver
         $this->ensureActorCanCaptureSeccion($actor, $seccion);
 
         return $seccion;
+    }
+
+    private function shouldResolveSubmittedSeccional(?string $submittedSeccional, ?string $detectedSeccional, ?string $idIne): bool
+    {
+        if (blank($submittedSeccional)) {
+            return false;
+        }
+
+        if (blank($idIne)) {
+            return true;
+        }
+
+        return SeccionResolver::normalize($submittedSeccional) === SeccionResolver::normalize($detectedSeccional);
     }
 
     public function ensureActorCanCaptureSeccion(?User $actor, Seccion $seccion): void

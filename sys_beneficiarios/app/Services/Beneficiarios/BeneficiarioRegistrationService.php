@@ -99,16 +99,18 @@ class BeneficiarioRegistrationService
             actor: $actor,
             fallback: $fallbackSeccion,
         );
+        $municipioId = $seccion?->municipio_id
+            ?? ($domicilioData['municipio_id'] ?? $beneficiario->municipio_id);
 
         $beneficiario->fill($normalizedData);
         $beneficiario->seccion()->associate($seccion);
-        $beneficiario->municipio_id = $seccion->municipio_id;
+        $beneficiario->municipio_id = $municipioId;
         if ($resetTarjetaId) {
             $beneficiario->tarjeta_id = null;
         }
         $beneficiario->save();
 
-        $this->saveDomicilio($beneficiario, $domicilioData, $seccion);
+        $this->saveDomicilio($beneficiario, $domicilioData, $seccion, $municipioId);
 
         return $beneficiario->fresh(['domicilio', 'seccion', 'municipio', 'tarjeta']);
     }
@@ -129,16 +131,16 @@ class BeneficiarioRegistrationService
     /**
      * @param  array<string, mixed>  $domicilioData
      */
-    private function saveDomicilio(Beneficiario $beneficiario, array $domicilioData, Seccion $seccion): void
+    private function saveDomicilio(Beneficiario $beneficiario, array $domicilioData, ?Seccion $seccion, mixed $municipioId): void
     {
         $payload = array_filter([
             'calle' => $domicilioData['calle'] ?? null,
             'numero_ext' => $domicilioData['numero_ext'] ?? null,
             'numero_int' => $domicilioData['numero_int'] ?? null,
             'colonia' => $domicilioData['colonia'] ?? null,
-            'municipio_id' => $seccion->municipio_id,
+            'municipio_id' => $municipioId,
             'codigo_postal' => $domicilioData['codigo_postal'] ?? null,
-            'seccion_id' => $seccion->id,
+            'seccion_id' => $seccion?->id,
         ], fn ($value) => ! is_null($value));
 
         if ($payload === []) {

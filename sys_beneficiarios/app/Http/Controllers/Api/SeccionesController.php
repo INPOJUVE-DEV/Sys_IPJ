@@ -11,10 +11,20 @@ class SeccionesController extends Controller
     {
         $seccion = SeccionResolver::resolve($seccional)?->loadMissing('municipio');
         if (! $seccion) {
-            abort(404);
+            return response()->json([
+                'found' => false,
+                'seccional' => SeccionResolver::extractFromIne($seccional)
+                    ?? SeccionResolver::normalize($seccional)
+                    ?? trim($seccional),
+                'municipio_id' => null,
+                'municipio' => null,
+                'distrito_local' => null,
+                'distrito_federal' => null,
+            ]);
         }
 
         return [
+            'found' => true,
             'id' => $seccion->id,
             'seccional' => $seccion->seccional,
             'municipio_id' => $seccion->municipio_id,

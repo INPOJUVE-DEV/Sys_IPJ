@@ -137,4 +137,75 @@ class ValidationTest extends TestCase
             'codigo_postal' => '01234',
         ]);
     }
+
+    public function test_unknown_seccional_can_be_saved_when_municipio_is_selected(): void
+    {
+        [$office, $mun] = $this->officeAndSeccion();
+        $u = $this->capturistaForOffice($office);
+        $payload = $this->validPayload([
+            'curp' => 'PEPJ000101HDFLRNB2',
+            'id_ine' => '999990001122334455',
+            'domicilio' => [
+                'calle' => 'Calle',
+                'numero_ext' => '1',
+                'colonia' => 'Centro',
+                'municipio_id' => $mun->id,
+                'codigo_postal' => '01234',
+                'seccional' => '99999',
+            ],
+        ]);
+
+        $response = $this->actingAs($u)->post(route('beneficiarios.store'), $payload);
+
+        $response->assertRedirect(route('beneficiarios.create'));
+        $response->assertSessionHasNoErrors();
+
+        $benef = \App\Models\Beneficiario::where('curp', 'PEPJ000101HDFLRNB2')->first();
+        $this->assertNotNull($benef);
+        $this->assertSame($mun->id, $benef->municipio_id);
+        $this->assertNull($benef->seccion_id);
+
+        $this->assertDatabaseHas('domicilios', [
+            'beneficiario_id' => $benef->id,
+            'municipio_id' => $mun->id,
+            'seccion_id' => null,
+        ]);
+    }
+
+    public function test_unknown_id_ine_ignores_a_stale_hidden_seccional_when_municipio_is_selected(): void
+    {
+        [$office, $mun] = $this->officeAndSeccion();
+        $u = $this->capturistaForOffice($office);
+        $otherMunicipio = Municipio::updateOrCreate(
+            ['clave' => 2],
+            ['nombre' => 'Otro municipio', 'oficina_id' => $office->id]
+        );
+        $otherSeccion = Seccion::updateOrCreate(
+            ['seccional' => '54321'],
+            ['municipio_id' => $otherMunicipio->id, 'distrito_local' => 'DL2', 'distrito_federal' => 'DF2']
+        );
+
+        $payload = $this->validPayload([
+            'curp' => 'PEPJ000101HDFLRNC3',
+            'id_ine' => '999990001122334455',
+            'domicilio' => [
+                'calle' => 'Calle',
+                'numero_ext' => '1',
+                'colonia' => 'Centro',
+                'municipio_id' => $mun->id,
+                'codigo_postal' => '01234',
+                'seccional' => $otherSeccion->seccional,
+            ],
+        ]);
+
+        $response = $this->actingAs($u)->post(route('beneficiarios.store'), $payload);
+
+        $response->assertRedirect(route('beneficiarios.create'));
+        $response->assertSessionHasNoErrors();
+
+        $benef = \App\Models\Beneficiario::where('curp', 'PEPJ000101HDFLRNC3')->first();
+        $this->assertNotNull($benef);
+        $this->assertSame($mun->id, $benef->municipio_id);
+        $this->assertNull($benef->seccion_id);
+    }
 }

@@ -489,79 +489,108 @@
                 window.beneficiarioWizardShouldReset = false;
             }
 
-            const munSel = document.getElementById('dom-municipio-id');
-            const seccCard = document.getElementById('dom-seccional-summary');
-            const seccValue = document.getElementById('dom-seccional-value');
-            const seccMunicipio = document.getElementById('dom-seccional-muni');
-            const seccDistritos = document.getElementById('dom-seccional-distritos');
-            if (secc) {
-                const detectSeccionalFromIdIne = (value) => {
-                    const digits = (value || '').replace(/\D/g, '');
-                    if (digits.length >= 5) return digits.slice(0, 5);
-                    if (digits.length >= 4) return digits.slice(0, 4);
-                    return '';
-                };
-                const syncSeccionalFromIdIne = () => {
-                    const detected = detectSeccionalFromIdIne(idIne?.value);
-                    secc.value = detected;
-                    return detected;
-                };
-                const renderSummary = (seccional = '-', municipio = '-', dl = '-', df = '-') => {
-                    if (seccValue) seccValue.textContent = seccional || '-';
-                    if (seccMunicipio) seccMunicipio.textContent = municipio || '-';
-                    if (seccDistritos) seccDistritos.textContent = `DL: ${dl || '--'} · DF: ${df || '--'}`;
-                };
-                const toggleSummaryState = (hasData) => {
-                    seccCard?.classList.toggle('border-success', !!hasData);
-                    seccCard?.classList.toggle('border-secondary', !hasData);
-                };
-                const applyData = (data) => {
-                    if (!data) return;
-                    if (munSel) munSel.value = data.municipio_id ? String(data.municipio_id) : '';
-                    renderSummary(data.seccional || secc.value || '-', data.municipio || '-', data.distrito_local || '-', data.distrito_federal || '-');
-                    toggleSummaryState(true);
-                };
-                const clearData = () => {
-                    if (munSel) munSel.value = '';
-                    renderSummary(secc.value || '-', '-', '-', '-');
-                    toggleSummaryState(false);
-                };
-                let timer = null;
-                const debounced = (fn, wait = 400) => (...args) => { clearTimeout(timer); timer = setTimeout(() => fn(...args), wait); };
-                const fetchDistritos = async (val) => {
-                    const query = (val || '').trim();
-                    if (!query) { clearData(); return; }
-                    try {
-                        const res = await fetch(`/api/secciones/${encodeURIComponent(query)}`, { headers: { 'Accept': 'application/json' } });
-                        if (!res.ok) { clearData(); return; }
-                        const data = await res.json();
-                        applyData(data);
-                    } catch (_) { clearData(); }
-                };
-                const debouncedFetch = debounced(fetchDistritos, 400);
-                const refreshDetectedSeccional = () => {
-                    const detected = syncSeccionalFromIdIne();
-                    if (!detected) {
-                        clearData();
-                        return;
+                const munSel = document.getElementById('dom-municipio-id');
+                const seccCard = document.getElementById('dom-seccional-summary');
+                const seccValue = document.getElementById('dom-seccional-value');
+                const seccMunicipio = document.getElementById('dom-seccional-muni');
+                const seccDistritos = document.getElementById('dom-seccional-distritos');
+                if (secc) {
+                    let municipioFueAutocompletado = false;
+                    let requestSerial = 0;
+                    let syncingMunicipio = false;
+
+                    const detectSeccionalFromIdIne = (value) => {
+                        const digits = (value || '').replace(/\D/g, '');
+                        if (digits.length >= 5) return digits.slice(0, 5);
+                        if (digits.length >= 4) return digits.slice(0, 4);
+                        return '';
+                    };
+                    const renderSummary = (seccional = '-', municipio = '-', dl = '-', df = '-') => {
+                        if (seccValue) seccValue.textContent = seccional || '-';
+                        if (seccMunicipio) seccMunicipio.textContent = municipio || '-';
+                        if (seccDistritos) seccDistritos.textContent = `DL: ${dl || '--'} · DF: ${df || '--'}`;
+                    };
+                    const toggleSummaryState = (hasData) => {
+                        seccCard?.classList.toggle('border-success', !!hasData);
+                        seccCard?.classList.toggle('border-secondary', !hasData);
+                    };
+                    const setMunicipioValue = (value, autocompletado = false) => {
+                        if (!munSel) return;
+                        syncingMunicipio = true;
+                        munSel.value = value ? String(value) : '';
+                        syncingMunicipio = false;
+                        municipioFueAutocompletado = autocompletado && !!value;
+                    };
+                    const applyData = (data) => {
+                        if (!data) return;
+                        secc.value = data.seccional || '';
+                        setMunicipioValue(data.municipio_id, true);
+                        renderSummary(data.seccional || secc.value || '-', data.municipio || '-', data.distrito_local || '-', data.distrito_federal || '-');
+                        toggleSummaryState(true);
+                    };
+                    const clearResolvedData = (seccional = '-', municipio = '-', preserveMunicipio = false) => {
+                        secc.value = '';
+                        if (!preserveMunicipio && municipioFueAutocompletado) {
+                            setMunicipioValue('', false);
+                        }
+                        renderSummary(seccional || '-', municipio || '-', '-', '-');
+                        toggleSummaryState(false);
+                    };
+                    const renderMissingSeccional = (query) => {
+                        clearResolvedData(query || '-', 'No encontrada', !municipioFueAutocompletado);
+                    };
+                    let timer = null;
+                    const debounced = (fn, wait = 400) => (...args) => { clearTimeout(timer); timer = setTimeout(() => fn(...args), wait); };
+                    const fetchDistritos = async (val) => {
+                        const query = (val || '').trim();
+                        const currentRequest = ++requestSerial;
+                        if (!query) { clearResolvedData('-', '-', true); return; }
+                        try {
+                            const res = await fetch(`/api/v1/secciones/${encodeURIComponent(query)}`, { headers: { 'Accept': 'application/json' } });
+                            const data = await res.json();
+                            if (currentRequest !== requestSerial) return;
+                            if (!res.ok || data.found === false) {
+                                renderMissingSeccional(data.seccional || query);
+                                return;
+                            }
+                            applyData(data);
+                        } catch (_) {
+                            if (currentRequest !== requestSerial) return;
+                            clearResolvedData(query || '-', 'No disponible', !municipioFueAutocompletado);
+                        }
+                    };
+                    const debouncedFetch = debounced(fetchDistritos, 400);
+                    const refreshDetectedSeccional = () => {
+                        const detected = detectSeccionalFromIdIne(idIne?.value);
+                        requestSerial++;
+                        if (!detected) {
+                            clearResolvedData('-', '-', true);
+                            return;
+                        }
+                        secc.value = '';
+                        renderSummary(detected, 'Buscando...', '-', '-');
+                        toggleSummaryState(false);
+                        debouncedFetch(detected);
+                    };
+                    munSel?.addEventListener('change', () => {
+                        if (!syncingMunicipio) {
+                            municipioFueAutocompletado = false;
+                        }
+                    });
+                    idIne?.addEventListener('input', refreshDetectedSeccional);
+                    idIne?.addEventListener('change', refreshDetectedSeccional);
+                    idIne?.addEventListener('blur', refreshDetectedSeccional);
+                    if (idIne?.value) {
+                        refreshDetectedSeccional();
+                }
+                    if (secc.value) {
+                        fetchDistritos(secc.value);
+                    } else {
+                        clearResolvedData('-', '-', true);
                     }
-                    renderSummary(detected, seccMunicipio?.textContent || '-', '-', '-');
-                    debouncedFetch(detected);
-                };
-                idIne?.addEventListener('input', refreshDetectedSeccional);
-                idIne?.addEventListener('change', refreshDetectedSeccional);
-                idIne?.addEventListener('blur', refreshDetectedSeccional);
-                if (idIne?.value) {
-                    refreshDetectedSeccional();
                 }
-                if (secc.value) {
-                    fetchDistritos(secc.value);
-                } else {
-                    clearData();
-                }
-            }
-        });
-    </script>
+            });
+        </script>
 
     {{-- OCR INE Script --}}
     @if(($mode ?? 'create') === 'create')
