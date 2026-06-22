@@ -7,8 +7,8 @@ use App\Models\Beneficiario;
 use App\Models\Integrations\IntegrationSyncItem;
 use App\Models\Integrations\IntegrationSyncRun;
 use App\Models\User;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Throwable;
 
@@ -27,8 +27,23 @@ class CardholderSyncService
 
     public function queue(User $actor, array $options = []): IntegrationSyncRun
     {
+        $query = $this->selector->queryEligible();
+        $limit = isset($options['limit']) ? max(1, (int) $options['limit']) : null;
+
+        if ($limit !== null) {
+            $query->limit($limit);
+        }
+
         return $this->queueRun(
-            $this->selector->queryEligible()->get(),
+            $query->get(),
+            $actor,
+        );
+    }
+
+    public function queueLimited(User $actor, int $limit = 100): IntegrationSyncRun
+    {
+        return $this->queueRun(
+            $this->selector->queryEligible()->limit(max(1, $limit))->get(),
             $actor,
         );
     }
@@ -46,25 +61,26 @@ class CardholderSyncService
 
     private function queueRun(Collection $beneficiarios, User $actor): IntegrationSyncRun
     {
-        $run = DB::transaction(function () use ($beneficiarios, $actor) {
-            $run = IntegrationSyncRun::query()->create([
-                'id' => (string) Str::uuid(),
-                'target_system' => self::TARGET_SYSTEM,
-                'operation' => self::OPERATION,
-                'status' => IntegrationSyncRun::STATUS_PENDING,
-                'requested_by' => $actor->uuid,
-            ]);
+        $run = IntegrationSyncRun::query()->create([
+            'id' => (string) Str::uuid(),
+            'target_system' => self::TARGET_SYSTEM,
+            'operation' => self::OPERATION,
+            'status' => IntegrationSyncRun::STATUS_PENDING,
+            'requested_by' => $actor->uuid,
+        ]);
 
-            $syncMoment = $run->created_at ?? now();
-            $pendingCount = 0;
-            $skippedCount = 0;
-            $totalItems = $beneficiarios->count();
+        $syncMoment = $run->created_at ?? now();
+        $pendingCount = 0;
+        $skippedCount = 0;
+        $totalItems = $beneficiarios->count();
 
+        try {
             foreach ($beneficiarios as $beneficiario) {
                 $itemStatus = $this->createSyncItem($run, $beneficiario, $syncMoment);
 
                 if ($itemStatus === IntegrationSyncItem::STATUS_PENDING) {
                     $pendingCount++;
+
                     continue;
                 }
 
@@ -72,22 +88,60 @@ class CardholderSyncService
                     $skippedCount++;
                 }
             }
+        } catch (QueryException $exception) {
+            if ($this->isLockWaitTimeout($exception)) {
+                return $this->failQueueingRun(
+                    $run,
+                    $pendingCount + $skippedCount,
+                    $skippedCount,
+                    $this->lockWaitTimeoutMessage(),
+                );
+            }
 
-            $run->forceFill([
-                'total_items' => $totalItems,
-                'skipped_count' => $skippedCount,
-                'status' => $pendingCount > 0
-                    ? IntegrationSyncRun::STATUS_QUEUED
-                    : IntegrationSyncRun::STATUS_SUCCESS,
-                'finished_at' => $pendingCount > 0 ? null : now(),
-            ])->save();
+            throw $exception;
+        }
 
-            return $run;
-        });
+        $run->forceFill([
+            'total_items' => $totalItems,
+            'skipped_count' => $skippedCount,
+            'status' => $pendingCount > 0
+                ? IntegrationSyncRun::STATUS_QUEUED
+                : IntegrationSyncRun::STATUS_SUCCESS,
+            'finished_at' => $pendingCount > 0 ? null : now(),
+            'error_message' => null,
+        ])->save();
 
         if ($run->status === IntegrationSyncRun::STATUS_QUEUED) {
             RunCardholderSyncJob::dispatch($run->id);
         }
+
+        return $run->fresh(['items']);
+    }
+
+    private function failQueueingRun(
+        IntegrationSyncRun $run,
+        int $totalItems,
+        int $skippedCount,
+        string $message,
+    ): IntegrationSyncRun {
+        try {
+            $this->failRemainingPendingItems($run, $message);
+        } catch (Throwable) {
+            // Best effort: keep the run auditable even if some pending items cannot be updated.
+        }
+
+        $failedCount = $run->items()
+            ->whereIn('status', [IntegrationSyncItem::STATUS_ERROR, IntegrationSyncItem::STATUS_REJECTED])
+            ->count();
+
+        $run->forceFill([
+            'status' => IntegrationSyncRun::STATUS_FAILED,
+            'total_items' => $totalItems,
+            'failed_count' => $failedCount,
+            'skipped_count' => $skippedCount,
+            'finished_at' => now(),
+            'error_message' => $message,
+        ])->save();
 
         return $run->fresh(['items']);
     }
@@ -523,5 +577,20 @@ class CardholderSyncService
         $suffix = strtoupper(substr(str_replace('-', '', $run->id), 0, 8));
 
         return "SYS-IPJ-{$timestamp}-{$suffix}";
+    }
+
+    private function isLockWaitTimeout(QueryException $exception): bool
+    {
+        $sqlState = (string) ($exception->errorInfo[0] ?? '');
+        $driverCode = (string) ($exception->errorInfo[1] ?? '');
+        $message = strtolower($exception->getMessage());
+
+        return ($sqlState === 'HY000' && $driverCode === '1205')
+            || str_contains($message, 'lock wait timeout');
+    }
+
+    private function lockWaitTimeoutMessage(): string
+    {
+        return 'No se pudo preparar la sincronizacion porque la base de datos excedio el tiempo de espera de bloqueo (lock wait timeout). La corrida se marco como failed; reduce el limite del lote e intenta nuevamente.';
     }
 }

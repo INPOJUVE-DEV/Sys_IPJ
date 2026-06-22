@@ -24,5 +24,7 @@ return [
         'hash_secret' => env('CURP_HASH_SECRET'),
         'timeout_seconds' => (int) env('API_TJ_SYNC_TIMEOUT_SECONDS', 15),
         'batch_size' => max(1, (int) env('API_TJ_SYNC_BATCH_SIZE', 100)),
+        'manual_sync_limit' => max(1, (int) env('API_TJ_MANUAL_SYNC_LIMIT', 100)),
     ],
 ];
+

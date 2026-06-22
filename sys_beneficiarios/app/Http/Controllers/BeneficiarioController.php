@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreBeneficiarioRequest;
 use App\Http\Requests\UpdateBeneficiarioRequest;
 use App\Models\Beneficiario;
+use App\Models\Integrations\IntegrationSyncRun;
 use App\Models\Municipio;
 use App\Services\Beneficiarios\BeneficiarioRegistrationService;
 use App\Services\Integrations\ApiTj\CardholderSyncService;
@@ -123,7 +124,11 @@ class BeneficiarioController extends Controller
         $statusMessage = 'Registrado';
 
         try {
-            $syncService->queueBeneficiario($beneficiario, $request->user());
+            $syncRun = $syncService->queueBeneficiario($beneficiario, $request->user());
+
+            if ($syncRun->status === IntegrationSyncRun::STATUS_FAILED) {
+                $statusMessage = 'Registrado. La sincronizacion con API_TJ quedo marcada como failed y requiere revision.';
+            }
         } catch (\Throwable $e) {
             Log::error('Error al programar sincronizacion de beneficiario hacia API_TJ', [
                 'message' => $e->getMessage(),

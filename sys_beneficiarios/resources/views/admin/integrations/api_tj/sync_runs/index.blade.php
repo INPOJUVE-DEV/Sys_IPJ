@@ -30,9 +30,23 @@
                     </div>
                 </form>
                 <div class="d-flex flex-column gap-2">
-                    <form method="POST" action="{{ route('admin.integraciones.api_tj.cardholders.sync') }}">
+                    <form method="POST" action="{{ route('admin.integraciones.api_tj.cardholders.sync') }}" class="row g-2 align-items-end">
                         @csrf
-                        <button type="submit" class="btn btn-success w-100">Disparar sync manual</button>
+                        <div class="col-12">
+                            <label for="manual-sync-limit" class="form-label">Lote manual</label>
+                            <input
+                                id="manual-sync-limit"
+                                type="number"
+                                name="limit"
+                                min="1"
+                                max="1000"
+                                value="{{ old('limit', config('integrations.outbound.manual_sync_limit', 100)) }}"
+                                class="form-control"
+                            >
+                        </div>
+                        <div class="col-12">
+                            <button type="submit" class="btn btn-success w-100">Disparar sync manual</button>
+                        </div>
                     </form>
                     <a href="{{ route('admin.integraciones.api_tj.inbound-requests.index') }}" class="btn btn-outline-info w-100">Ver inbound requests</a>
                 </div>

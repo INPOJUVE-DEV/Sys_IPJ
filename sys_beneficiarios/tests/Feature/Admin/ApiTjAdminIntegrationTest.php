@@ -1,10 +1,12 @@
 <?php
 
+use App\Jobs\Integrations\ApiTj\RunCardholderSyncJob;
 use App\Models\Beneficiario;
 use App\Models\Integrations\IntegrationInboundRequest;
 use App\Models\Integrations\IntegrationSyncItem;
 use App\Models\Integrations\IntegrationSyncRun;
 use App\Models\User;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Str;
@@ -26,6 +28,8 @@ beforeEach(function () {
         'integrations.payload_encryption_key' => 'test-inbound-payload-key',
         'integrations.outbound.base_url' => 'https://api-tj.test',
         'integrations.outbound.private_key_path' => __FILE__,
+        'integrations.outbound.hash_secret' => 'test-curp-secret',
+        'integrations.outbound.manual_sync_limit' => 100,
     ]);
 
     $this->admin = User::factory()->create();
@@ -126,6 +130,89 @@ it('permite al admin disparar una corrida manual compliant', function () {
     ]);
 });
 
+it('limita la corrida manual al lote solicitado y no intenta procesar todos los beneficiarios elegibles', function () {
+    Queue::fake();
+
+    foreach (range(1, 150) as $index) {
+        Beneficiario::query()->create([
+            'id' => (string) Str::uuid(),
+            'folio_tarjeta' => sprintf('FOL-%03d', $index),
+            'nombre' => 'BENEFICIARIO',
+            'apellido_paterno' => 'PRUEBA',
+            'apellido_materno' => 'API_TJ',
+            'curp' => sprintf('PETA%06dHSPABC%02d', $index, $index % 99),
+            'fecha_nacimiento' => '2000-01-01',
+            'edad' => 24,
+            'sexo' => 'M',
+            'discapacidad' => false,
+            'telefono' => '4441234567',
+            'created_by' => $this->admin->uuid,
+        ]);
+    }
+
+    $response = $this->actingAs($this->admin)
+        ->post(route('admin.integraciones.api_tj.cardholders.sync'), ['limit' => 100]);
+
+    $run = IntegrationSyncRun::query()->latest('created_at')->firstOrFail();
+
+    $response->assertRedirect(route('admin.integraciones.api_tj.sync-runs.show', $run));
+    expect($run->status)->toBe(IntegrationSyncRun::STATUS_QUEUED);
+    expect($run->total_items)->toBe(100);
+    expect($run->items()->count())->toBe(100);
+    expect(Beneficiario::query()->count())->toBe(150);
+
+    Queue::assertPushed(RunCardholderSyncJob::class, fn (RunCardholderSyncJob $job) => $job->syncRunId === $run->id);
+});
+
+it('marca la corrida manual como failed y muestra un mensaje claro cuando ocurre lock wait timeout', function () {
+    Queue::fake();
+
+    Beneficiario::query()->create([
+        'id' => (string) Str::uuid(),
+        'folio_tarjeta' => 'FOL-LOCK-001',
+        'nombre' => 'BENEFICIARIO',
+        'apellido_paterno' => 'LOCK',
+        'apellido_materno' => 'WAIT',
+        'curp' => 'PELA000101HSPABC01',
+        'fecha_nacimiento' => '2000-01-01',
+        'edad' => 24,
+        'sexo' => 'M',
+        'discapacidad' => false,
+        'telefono' => '4441234567',
+        'created_by' => $this->admin->uuid,
+    ]);
+
+    $thrown = false;
+    IntegrationSyncItem::creating(function () use (&$thrown) {
+        if ($thrown) {
+            return;
+        }
+
+        $thrown = true;
+
+        $previous = new PDOException('SQLSTATE[HY000]: General error: 1205 Lock wait timeout exceeded; try restarting transaction');
+        $previous->errorInfo = ['HY000', 1205, 'Lock wait timeout exceeded; try restarting transaction'];
+
+        throw new QueryException('mysql', 'insert into integration_sync_items', [], $previous);
+    });
+
+    try {
+        $response = $this->actingAs($this->admin)
+            ->post(route('admin.integraciones.api_tj.cardholders.sync'), ['limit' => 1]);
+    } finally {
+        IntegrationSyncItem::flushEventListeners();
+    }
+
+    $run = IntegrationSyncRun::query()->latest('created_at')->firstOrFail();
+
+    $response->assertRedirect(route('admin.integraciones.api_tj.sync-runs.show', $run));
+    $response->assertSessionHas('error', $run->error_message);
+    expect($run->status)->toBe(IntegrationSyncRun::STATUS_FAILED);
+    expect($run->error_message)->toContain('lock wait timeout');
+
+    Queue::assertNotPushed(RunCardholderSyncJob::class);
+});
+
 it('rechaza acceso a integraciones para usuarios no admin', function () {
     $capturista = User::factory()->create();
     $capturista->assignRole('capturista');
@@ -134,3 +221,4 @@ it('rechaza acceso a integraciones para usuarios no admin', function () {
         ->get(route('admin.integraciones.api_tj.sync-runs.index'))
         ->assertForbidden();
 });
+
