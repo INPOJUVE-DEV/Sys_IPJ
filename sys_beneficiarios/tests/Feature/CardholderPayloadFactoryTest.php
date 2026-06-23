@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Beneficiario;
+use App\Models\Municipio;
 use App\Models\Tarjeta;
 use App\Models\User;
 use App\Services\Integrations\ApiTj\CardholderPayloadFactory;
@@ -44,6 +45,53 @@ class CardholderPayloadFactoryTest extends TestCase
         $this->assertSame('PELA************01', $item['curp_masked']);
     }
 
+    public function test_it_includes_names_last_name_and_municipio_id_in_payload(): void
+    {
+        $actor = User::factory()->create();
+        Municipio::query()->insert([
+            'id' => 28,
+            'clave' => 28,
+            'nombre' => 'Test Municipio',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        $beneficiario = $this->makeBeneficiario(
+            $actor,
+            'PELD000101HSPABC04',
+            'LEG-004',
+            [
+                'nombre' => '  JUAN CARLOS  ',
+                'apellido_paterno' => 'PEREZ',
+                'apellido_materno' => 'LOPEZ',
+                'municipio_id' => 28,
+            ],
+        );
+
+        $item = app(CardholderPayloadFactory::class)->makeItem($beneficiario, now());
+
+        $this->assertSame('JUAN CARLOS', $item['nombres']);
+        $this->assertSame('PEREZ LOPEZ', $item['apellido']);
+        $this->assertSame(28, $item['municipio_id']);
+    }
+
+    public function test_it_builds_last_name_without_double_spaces_when_maternal_last_name_is_missing(): void
+    {
+        $actor = User::factory()->create();
+        $beneficiario = $this->makeBeneficiario(
+            $actor,
+            'PELE000101HSPABC05',
+            'LEG-005',
+            [
+                'apellido_paterno' => 'PEREZ',
+                'apellido_materno' => '   ',
+            ],
+        );
+
+        $item = app(CardholderPayloadFactory::class)->makeItem($beneficiario, now());
+
+        $this->assertSame('PEREZ', $item['apellido']);
+    }
+
     public function test_it_falls_back_to_folio_tarjeta_when_no_consumed_card_exists(): void
     {
         $actor = User::factory()->create();
@@ -64,9 +112,9 @@ class CardholderPayloadFactoryTest extends TestCase
         app(CardholderPayloadFactory::class)->makeItem($beneficiario, now());
     }
 
-    private function makeBeneficiario(User $actor, string $curp, ?string $folioTarjeta): Beneficiario
+    private function makeBeneficiario(User $actor, string $curp, ?string $folioTarjeta, array $overrides = []): Beneficiario
     {
-        return Beneficiario::query()->create([
+        return Beneficiario::query()->create(array_replace([
             'id' => (string) Str::uuid(),
             'folio_tarjeta' => $folioTarjeta,
             'nombre' => 'TEST',
@@ -81,6 +129,6 @@ class CardholderPayloadFactoryTest extends TestCase
             'municipio_id' => null,
             'seccion_id' => null,
             'created_by' => $actor->uuid,
-        ]);
+        ], $overrides));
     }
 }

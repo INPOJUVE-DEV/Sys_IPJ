@@ -151,10 +151,21 @@ class CardholderSyncServiceTest extends TestCase
         ]);
 
         Http::assertSent(function ($request) {
+            $body = $request->data();
+            $items = $body['items'] ?? [];
+
             return str_ends_with($request->url(), '/api/v1/cardholders/sync')
                 && str_contains($request->body(), '"tarjeta_numero":"TJ-001"')
                 && str_contains($request->body(), '"tarjeta_numero":"LEG-002"')
-                && str_contains($request->body(), '"sync_id":"SYS-IPJ-');
+                && str_contains($request->body(), '"sync_id":"SYS-IPJ-')
+                && ($items[0]['nombres'] ?? null) === 'TEST'
+                && ($items[0]['apellido'] ?? null) === 'PERSONA SYNC'
+                && array_key_exists('municipio_id', $items[0])
+                && ! array_key_exists('telefono', $items[0])
+                && ! array_key_exists('domicilio', $items[0])
+                && ! array_key_exists('id_ine', $items[0])
+                && ! array_key_exists('fecha_nacimiento', $items[0])
+                && ! array_key_exists('sexo', $items[0]);
         });
     }
 

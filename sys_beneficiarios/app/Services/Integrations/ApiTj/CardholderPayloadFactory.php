@@ -29,7 +29,27 @@ class CardholderPayloadFactory
             'tarjeta_numero' => $cardNumber,
             'status' => 'active',
             'synced_at' => ($syncedAt ?? now())->format(DATE_ATOM),
+            'nombres' => $this->cleanString($beneficiario->nombre),
+            'apellido' => $this->fullApellido($beneficiario),
+            'municipio_id' => $beneficiario->municipio_id ? (int) $beneficiario->municipio_id : null,
         ];
+    }
+
+    private function fullApellido(Beneficiario $beneficiario): ?string
+    {
+        $apellido = trim(collect([
+            $beneficiario->apellido_paterno,
+            $beneficiario->apellido_materno,
+        ])->filter(fn ($value) => trim((string) $value) !== '')->implode(' '));
+
+        return $apellido !== '' ? $apellido : null;
+    }
+
+    private function cleanString(?string $value): ?string
+    {
+        $clean = trim((string) $value);
+
+        return $clean !== '' ? $clean : null;
     }
 
     private function resolveCardNumber(Beneficiario $beneficiario): ?string
