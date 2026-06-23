@@ -20,6 +20,7 @@ return [
         'scope' => env('SYS_IPJ_SCOPE', 'cardholders.sync'),
         'kid' => env('SYS_IPJ_JWT_KID', 'sys_ipj-current'),
         'private_key_path' => env('SYS_IPJ_PRIVATE_KEY_PATH', storage_path('app/keys/sys_ipj_private.pem')),
+        'private_key_pem' => env('SYS_IPJ_PRIVATE_KEY_PEM'),
         'ttl_seconds' => (int) env('SYS_IPJ_JWT_TTL_SECONDS', 600),
         'hash_secret' => env('CURP_HASH_SECRET'),
         'timeout_seconds' => (int) env('API_TJ_SYNC_TIMEOUT_SECONDS', 15),

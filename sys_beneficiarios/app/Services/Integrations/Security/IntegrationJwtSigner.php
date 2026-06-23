@@ -19,13 +19,19 @@ class IntegrationJwtSigner
         $subject = trim((string) ($config['subject'] ?? ''));
         $kid = trim((string) ($config['kid'] ?? ''));
         $privateKeyPath = trim((string) ($config['private_key_path'] ?? ''));
+        $privateKeyPem = trim((string) ($config['private_key_pem'] ?? ''));
         $ttlSeconds = max(60, (int) ($config['ttl_seconds'] ?? 600));
 
-        if ($resolvedIssuer === '' || $subject === '' || $kid === '' || $privateKeyPath === '') {
+        if ($resolvedIssuer === '' || $subject === '' || $kid === '' || ($privateKeyPath === '' && $privateKeyPem === '')) {
             throw new RuntimeException('Integration outbound JWT configuration is incomplete.');
         }
 
-        $privateKey = @file_get_contents($privateKeyPath);
+        if ($privateKeyPem !== '') {
+            $privateKey = str_replace('\\n', "\n", $privateKeyPem);
+        } else {
+            $privateKey = @file_get_contents($privateKeyPath);
+        }
+
         if (! is_string($privateKey) || trim($privateKey) === '') {
             throw new RuntimeException('Integration outbound private key is unreadable.');
         }
